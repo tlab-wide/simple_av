@@ -11,7 +11,7 @@ from simple_av_msgs.msg import LocalizationMsg
 from simple_av_msgs.msg import LookAheadMsg
 from v2x_msgs.msg import CooperativeSignalsMessage
 import numpy as np
-from simple_av_msgs.msg import TrafficSignalsArray
+from simple_av_msgs.msg import TrafficSignalsArray, DetectedObjectsArray, DetectedObject
 
 
 class PathCurveDetector:
@@ -74,8 +74,11 @@ class Planning(Node):
             'adjacentLanes': lanelet.get('adjacentLanes', []),
         } for lanelet in self.map_data}
 
-        # Create subscriber to 'simple_av/perception/traffic_signals'  topic
+        # Create subscriber to 'simple_av/perception/traffic_signals' topic
         self.subscriptionTrafficSignal = self.create_subscription(TrafficSignalsArray, 'simple_av/perception/traffic_signals', self.trafficSignal_callback, 10)
+
+        # Create subscriber to 'simple_av/perception/detected_objects' topic
+        self.subscriptionTrafficSignal = self.create_subscription(TrafficSignalsArray, 'simple_av/perception/detected_objects', self.detectedObjects_callback, 10)
 
         # Create subscriber to /sensing/gnss/pose topic
         self.subscriptionPose = self.create_subscription(PoseStamped, '/sensing/gnss/pose', self.pose_callback, 10)
@@ -90,6 +93,7 @@ class Planning(Node):
         self.pose = PoseStamped()  # Initialize pose
         self.location = LocalizationMsg()  # Initialize location
         self.trafficSignal = TrafficSignalsArray() # Initialize traffic signal
+        self.detectedObjects = DetectedObjectsArray() # Initialize traffic signal
 
         self.isPathPlanned = False  # Flag to check if the path has been planned
         self.path_as_lanes = None  # List of lanes from start point to destination
@@ -139,6 +143,14 @@ class Planning(Node):
             msg (PoseStamped): The pose message received from the topic.
         """
         self.trafficSignal = msg
+
+    def detectedObjects_callback(self, msg):
+        """
+        Callback function to update the pose data.
+        Args:
+            msg (PoseStamped): The pose message received from the topic.
+        """
+        self.detectedObjects = msg
 
     def pose_callback(self, msg):
         """
@@ -366,7 +378,7 @@ class Planning(Node):
             for curve in curves:
                 k, v = next(iter(curve.items()))
                 if self.path[look_ahead_point_index - 2] == v or self.path[look_ahead_point_index - 1] == v or self.path[look_ahead_point_index] == v or self.path[look_ahead_point_index+1] == v or self.path[look_ahead_point_index+2] == v:
-                    print("debug - curve started", look_ahead_point_index)
+                    self.get_logger().info("curve started")
                     self.curve_angle = k
                     self.curve_finish_point = self.path[look_ahead_point_index + int(self.lookahead_distance//self.densify_interval)]
                     self.isCurveStarted = True
@@ -376,7 +388,7 @@ class Planning(Node):
         if self.isCurveStarted and not self.isCurveFinished:
             vehicle_pose = {'x': self.pose.pose.position.x, 'y': self.pose.pose.position.y, 'z': self.pose.pose.position.z}
             if self.calculate_distance(vehicle_pose, self.curve_finish_point) <= self.densify_interval * 2:
-                print("debug - curve finished")
+                self.get_logger().info("curve finished")
                 self.isCurveFinished = True
                 self.isCurveStarted = True
                 return False, 0.0
@@ -469,6 +481,7 @@ class Planning(Node):
         _color = None
         if current_lane_traffic_light_id and current_lane_traffic_light_id[0] in v2i_traffic_signals_id:
             color = v2i_traffic_signals_colors[v2i_traffic_signals_id.index(current_lane_traffic_light_id[0])]
+            self.get_logger().info("traffic light detected")
             print(f"traffic light detected, lane = {current_lane}, lightID = {current_lane_traffic_light_id[0]}, color = {color}")
             p1 = lane_obj['stopLinePoseP1']
             p2 = lane_obj['stopLinePoseP2']
@@ -552,7 +565,7 @@ class Planning(Node):
         Perform global path planning to create a path from the current location to the destination.
         """
         if self.location:
-            print("path planning ... ")
+            self.get_logger().info("path planning")
             start_lanelet = self.location.closest_lane_names.data
             self.bfs(start_lanelet, self.dest_lanelet) # Creates the path
             if self.path and self.path_as_lanes:
@@ -569,10 +582,11 @@ class Planning(Node):
         Main planning function to decide between global and local planning.
         """
         if not self.isPathPlanned:
-            print("path planning ... ")
+            self.get_logger().info("path planning")
             self.mission_planning()  # generates the path and dencifies it.
         else:
             if not self.location and not self.pose:
+                self.get_logger().info("path planning")
                 print("error - no location or pose input")
                 return None
             
