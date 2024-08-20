@@ -501,7 +501,7 @@ class Planning(Node):
             elif color == 2:
                 # self.get_logger().info('Amber')
                 isTrafficLightDetected = True
-                task = 'Stop_amber'
+                task = 'Cruise_amber'
                 _color = 'amber'
             else:
                 self.get_logger().error("Unkown traffic light color")
@@ -519,7 +519,7 @@ class Planning(Node):
     
     def collision_avoidance(self):
         isObjectAhead = False
-        status = ""
+        task = ""
         if self.detectedObjects:
             for obj in self.detectedObjects:
                 relative_x_distance = obj.position.x - obj.shape.x / 2 - self.vehicle_length/2
@@ -528,11 +528,11 @@ class Planning(Node):
                 if obj.position.x > 0.0 and (obj.position.y > -1 and obj.position.y < 1) and distance_to_obj < self.lookahead_distance:
                     print("Object is ahead ", obj.position.x," ", obj.position.y, distance_to_obj)
                     isObjectAhead = True
-                    status = "Decelerate"
+                    task = "Decelerate"
                     if distance_to_obj < self.saftey_distance:
                         print("STOP ")
-                        status = 'Halt'
-                return isObjectAhead, status, distance_to_obj, 
+                        task = 'Halt'
+                return isObjectAhead, task, distance_to_obj 
 
 
     def behavioural_planning(self, look_ahead_point, look_ahead_point_index, search_area, search_area_as_lanes):
@@ -545,6 +545,7 @@ class Planning(Node):
         self.collision_avoidance(vehicle_pose)
 
         stop_point = Point(x=self.path[-1]['x'], y=self.path[-1]['y'], z=self.path[-1]['z'])
+
         if isTrafficLightDetected:
             new_x = (p1[0] + p2[0])/2
             new_y = (p1[1] + p2[1])/2
@@ -558,6 +559,8 @@ class Planning(Node):
             if isTrafficLightDetected:
                 if trafficLightColor == "green":
                     self.status.data = 'Cruise_green'
+                elif trafficLightColor == "amber":
+                    self.status.data = 'Cruise_amber'
                 else:
                     self.status.data = 'Park'
             else:
@@ -565,7 +568,7 @@ class Planning(Node):
         elif distance_to_stop_point <= self.stop_distance and look_ahead_point_index > len(self.path) - (self.stop_distance / self.densify_interval + 1):
             self.status.data ='Decelerate'
         elif isTrafficLightDetected and isTurnDetected:
-            if trafficLightColor == 'green' or trafficLightColor == 'unkown':
+            if trafficLightColor == 'green' or trafficLightColor == 'amber' or trafficLightColor == 'unkown':
                 self.status.data = 'Turn'
             else:
                 self.status.data = vehilceTaskForTrafficLight

@@ -169,7 +169,7 @@ class VehicleControl(Node):
         target_speed = self.lookAhead.speed_limit
         accel = 0.0
 
-        if status == "Decelerate" or status == "Stop_red" or status == "Stop_amber":
+        if status == "Decelerate" or status == "Stop_red":
             distance_to_stop = self.calculate_distance(self.lookAhead.stop_point, self.pose.pose.position)
             target_speed = self.calculate_target_speed_for_stop(distance_to_stop, current_speed)
 
@@ -181,7 +181,7 @@ class VehicleControl(Node):
         longitudinal_command.speed = self.velocity_report.longitudinal_velocity
         longitudinal_command.acceleration = accel
 
-        if status == "Decelerate" or status == "Stop_red" or status == "Stop_amber":
+        if status == "Decelerate" or status == "Stop_red":
             self.get_logger().info(
             f'speed: {current_speed}\n'
             f'target speed: {target_speed}\n'
