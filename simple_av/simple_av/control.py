@@ -246,7 +246,6 @@ def main(args=None):
 
     try:
         while rclpy.ok():
-            rclpy.spin_once(node)
             rclpy.spin_once(node, timeout_sec=None)# Set timeout to 0 to avoid delay
             node.control()   
     finally:
