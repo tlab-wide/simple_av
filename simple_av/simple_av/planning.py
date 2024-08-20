@@ -331,7 +331,7 @@ class Planning(Node):
         """
         search_area_indexes_on_path = (self.path.index(search_area[0]), self.path.index(search_area[-1]))
         if current_closest_point_index == len(self.path) - 1:
-            print("debug shiit: ", len(self.path))
+            # print("debug shiit: ", len(self.path))
             return current_closest_point_index, self.path[current_closest_point_index]
             
         # Calculate direction vectors
@@ -347,7 +347,7 @@ class Planning(Node):
         
         # final point in path
         if first_ahead_point >= len(self.path):
-            self.get_logger().error("first_ahead_point >= len(self.path)")
+            # self.get_logger().error("first_ahead_point >= len(self.path)")
             return first_ahead_point, self.path[first_ahead_point]
         
         # print(f'first_ahead_point = {first_ahead_point}, end of search area = {search_area_indexes_on_path[1]}')
@@ -381,7 +381,7 @@ class Planning(Node):
             for curve in curves:
                 k, v = next(iter(curve.items()))
                 if self.path[look_ahead_point_index - 2] == v or self.path[look_ahead_point_index - 1] == v or self.path[look_ahead_point_index] == v or self.path[look_ahead_point_index+1] == v or self.path[look_ahead_point_index+2] == v:
-                    self.get_logger().info("curve started")
+                    # self.get_logger().info("curve started")
                     self.curve_angle = k
                     self.curve_finish_point = self.path[look_ahead_point_index + int(self.lookahead_distance//self.densify_interval)]
                     self.isCurveStarted = True
@@ -391,7 +391,7 @@ class Planning(Node):
         if self.isCurveStarted and not self.isCurveFinished:
             vehicle_pose = {'x': self.pose.pose.position.x, 'y': self.pose.pose.position.y, 'z': self.pose.pose.position.z}
             if self.calculate_distance(vehicle_pose, self.curve_finish_point) <= self.densify_interval * 2:
-                self.get_logger().info("curve finished")
+                # self.get_logger().info("curve finished")
                 self.isCurveFinished = True
                 self.isCurveStarted = True
                 return False, 0.0
@@ -455,7 +455,7 @@ class Planning(Node):
         Perform local path planning to determine the next point for the vehicle.
         """
         if self.pose.pose.position.x == 0.0 and self.pose.pose.position.y == 0.0 and self.pose.pose.position.z == 0.0:
-            self.get_logger().warning("Vehicle Pose is not accessible")
+            # self.get_logger().warning("Vehicle Pose is not accessible")
             return None, None
         vehicle_pose = {'x': self.pose.pose.position.x, 'y': self.pose.pose.position.y, 'z': self.pose.pose.position.z}
         
@@ -484,8 +484,8 @@ class Planning(Node):
         _color = None
         if current_lane_traffic_light_id and current_lane_traffic_light_id[0] in v2i_traffic_signals_id:
             color = v2i_traffic_signals_colors[v2i_traffic_signals_id.index(current_lane_traffic_light_id[0])]
-            self.get_logger().info("traffic light detected")
-            print(f"traffic light detected, lane = {current_lane}, lightID = {current_lane_traffic_light_id[0]}, color = {color}")
+            # self.get_logger().info("traffic light detected")
+            # print(f"traffic light detected, lane = {current_lane}, lightID = {current_lane_traffic_light_id[0]}, color = {color}")
             p1 = lane_obj['stopLinePoseP1']
             p2 = lane_obj['stopLinePoseP2']
             isTrafficLightDetected = True
@@ -502,7 +502,7 @@ class Planning(Node):
                 task = 'Cruise_amber'
                 _color = 'amber'
             else:
-                self.get_logger().error("Unkown traffic light color")
+                # self.get_logger().error("Unkown traffic light color")
                 task = 'Cruise_green'
                 _color = 'unkown'
         else:
@@ -541,11 +541,13 @@ class Planning(Node):
         isObjectAhead = False
         task = ""
         if self.detectedObjects:
-            for obj in self.detectedObjects:
-                relative_x_distance = obj.position.x - obj.shape.x / 2 - self.vehicle_length/2
-                relative_y_distance = obj.position.y - obj.shape.y / 2 - self.vehicle_length/2
+            for obj in self.detectedObjects.objects:
+                relative_x_distance = obj.position.x - obj.shape.x / 2 + self.vehicle_length/2
+                relative_y_distance = obj.position.y - obj.shape.y / 2 + self.vehicle_length/2
                 distance_to_obj = math.sqrt(relative_x_distance**2 + relative_y_distance**2)
-                if relative_x_distance > 0.0 and (relative_y_distance > -1 and relative_y_distance < 1) and distance_to_obj < self.lookahead_distance:
+                print("relative_x_distance ", relative_x_distance, " relative_y_distance ", relative_y_distance)
+                print("distance_to_obj ", distance_to_obj)
+                if relative_x_distance > 0.0 and (obj.position.y > -2 and obj.position.y < 2) and distance_to_obj < self.lookahead_distance:
                     print("Object is ahead ", obj.position.x," ", obj.position.y, distance_to_obj)
                     isObjectAhead = True
                     task = "Decelerate"
@@ -553,6 +555,7 @@ class Planning(Node):
                         print("STOP in safety distance")
                         task = 'Park'
                 return isObjectAhead, task, distance_to_obj, obj
+        return isObjectAhead, task, '', None
 
 
     def behavioural_planning(self, look_ahead_point, look_ahead_point_index, search_area, search_area_as_lanes):
@@ -562,27 +565,29 @@ class Planning(Node):
 
         isTurnDetected = self.curve_handler(look_ahead_point, look_ahead_point_index)
         isTrafficLightDetected, vehilceTaskForTrafficLight, trafficLightColor, p1, p2 = self.manage_traffic_lights(look_ahead_point, look_ahead_point_index, search_area_as_lanes)
-        isObjectAhead, collisonAvoidanceTask, distance_to_obj, object = self.collision_avoidance(vehicle_pose)
+        isObjectAhead, collisonAvoidanceTask, distance_to_obj, object = self.collision_avoidance()
 
         destination = Point(x=self.path[-1]['x'], y=self.path[-1]['y'], z=self.path[-1]['z'])
         distance_to_destination = self.calculate_distance(vehicle_pose, {'x': destination.x, 'y': destination.y, 'z': destination.z})
             
-        if isTrafficLightDetected and trafficLightColor == 'red':
+        if isTrafficLightDetected:
             #calculate stop distacne
             new_x = (p1[0] + p2[0])/2
             new_y = (p1[1] + p2[1])/2
             new_z = (p1[2] + p2[2])/2
             stop_point_for_traffic_light = Point(x=new_x, y=new_y, z=new_z)
             distance_to_traffic_light_stop_point = self.calculate_distance(vehicle_pose, {'x': stop_point_for_traffic_light.x, 'y': stop_point_for_traffic_light.y, 'z': stop_point_for_traffic_light.z})
-            print("traffic light detected, distance to stop, ", distance_to_traffic_light_stop_point)
-        if isObjectAhead and collisonAvoidanceTask == 'Halt' or collisonAvoidanceTask == 'Decelerate':
+            print("traffic light detected, distance to stop, ", trafficLightColor, distance_to_traffic_light_stop_point)
+        if isObjectAhead:
             x,y,z = self.calculate_stop_point(object)
             stop_point_for_collision_avoidance = Point(x=x, y=y, z=z)
             distance_to_collision_avoidance_stop_point = self.calculate_distance(vehicle_pose, {'x': stop_point_for_collision_avoidance.x, 'y': stop_point_for_collision_avoidance.y, 'z': stop_point_for_collision_avoidance.z})
+            print("Object detected, distance to stop", distance_to_collision_avoidance_stop_point)
 
         if isTrafficLightDetected and not isObjectAhead:
+            print("traffic light no object")
             if trafficLightColor == 'red':
-                if distance_to_traffic_light_stop_point <= self.densify_interval * 2:
+                if distance_to_traffic_light_stop_point <= self.densify_interval * 2.5:
                     self.status.data = 'Park'
                 elif distance_to_traffic_light_stop_point <= self.stop_distance:
                     self.status.data ='Decelerate'
@@ -596,6 +601,7 @@ class Planning(Node):
                 else:
                     self.status.data = vehilceTaskForTrafficLight
         elif isTrafficLightDetected and isObjectAhead:
+            print("traffic light with object")
             if distance_to_collision_avoidance_stop_point <= distance_to_traffic_light_stop_point:
                 self.status.data = collisonAvoidanceTask
             elif distance_to_collision_avoidance_stop_point >= distance_to_traffic_light_stop_point and trafficLightColor == 'red':
@@ -638,14 +644,16 @@ class Planning(Node):
         # else:
         #     self.status.data = 'Cruise'
         
-        closest_stop_point = min(distance_to_destination, distance_to_traffic_light_stop_point, distance_to_collision_avoidance_stop_point)
-        if closest_stop_point == distance_to_destination:
-            stop_point = destination
-        elif closest_stop_point == distance_to_traffic_light_stop_point:
-            stop_point = stop_point_for_traffic_light
+        if isObjectAhead and isTrafficLightDetected:
+            closest_stop_point = min(distance_to_destination, distance_to_traffic_light_stop_point, distance_to_collision_avoidance_stop_point)
+            if closest_stop_point == distance_to_destination:
+                stop_point = destination
+            elif closest_stop_point == distance_to_traffic_light_stop_point:
+                stop_point = stop_point_for_traffic_light
+            else:
+                stop_point = stop_point_for_collision_avoidance
         else:
-            stop_point = stop_point_for_collision_avoidance
-
+            stop_point = destination
         return stop_point
            
 
