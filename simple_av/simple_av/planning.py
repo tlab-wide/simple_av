@@ -517,6 +517,29 @@ class Planning(Node):
             p2 = None
         return isTrafficLightDetected, task, _color, p1, p2
     
+    def calculate_stop_point(self, obj):
+        """
+        Calculate the stop point exactly 5 meters behind the object,
+        considering the vehicle's and object's lengths.
+        
+        Parameters:
+            obj: The detected object with position and shape information.
+            
+        Returns:
+            stop_point_x: X coordinate of the stop point.
+            stop_point_y: Y coordinate of the stop point.
+        """
+        # Calculate the back face of the object
+        object_back_x = obj.position.x + (obj.shape.x / 2)
+
+        # Calculate the stop point 5 meters behind the back of the object
+        stop_point_x = object_back_x - self.saftey_distance - (self.vehicle_length / 2)
+
+        # Align the stop point y-coordinate with the object's y-coordinate
+        stop_point_y = obj.position.y
+
+        return stop_point_x, stop_point_y, obj.position.z
+
     def collision_avoidance(self):
         isObjectAhead = False
         task = ""
@@ -525,14 +548,14 @@ class Planning(Node):
                 relative_x_distance = obj.position.x - obj.shape.x / 2 - self.vehicle_length/2
                 relative_y_distance = obj.position.y - obj.shape.y / 2 - self.vehicle_length/2
                 distance_to_obj = math.sqrt(relative_x_distance**2 + relative_y_distance**2)
-                if obj.position.x > 0.0 and (obj.position.y > -1 and obj.position.y < 1) and distance_to_obj < self.lookahead_distance:
+                if relative_x_distance > 0.0 and (relative_y_distance > -1 and relative_y_distance < 1) and distance_to_obj < self.lookahead_distance:
                     print("Object is ahead ", obj.position.x," ", obj.position.y, distance_to_obj)
                     isObjectAhead = True
                     task = "Decelerate"
                     if distance_to_obj < self.saftey_distance:
-                        print("STOP ")
+                        print("STOP in safety distance")
                         task = 'Halt'
-                return isObjectAhead, task, distance_to_obj 
+                return isObjectAhead, task, distance_to_obj, obj
 
 
     def behavioural_planning(self, look_ahead_point, look_ahead_point_index, search_area, search_area_as_lanes):
@@ -542,44 +565,55 @@ class Planning(Node):
 
         isTurnDetected = self.curve_handler(look_ahead_point, look_ahead_point_index)
         isTrafficLightDetected, vehilceTaskForTrafficLight, trafficLightColor, p1, p2 = self.manage_traffic_lights(look_ahead_point, look_ahead_point_index, search_area_as_lanes)
-        self.collision_avoidance(vehicle_pose)
+        isObjectAhead, collisonAvoidanceTask, distance_to_obj, object = self.collision_avoidance(vehicle_pose)
 
         stop_point = Point(x=self.path[-1]['x'], y=self.path[-1]['y'], z=self.path[-1]['z'])
-
-        if isTrafficLightDetected:
+        
+        if isTrafficLightDetected and trafficLightColor == 'red':
+            #calculate stop distacne
             new_x = (p1[0] + p2[0])/2
             new_y = (p1[1] + p2[1])/2
             new_z = (p1[2] + p2[2])/2
-            stop_point = Point(x=new_x, y=new_y, z=new_z)
+            stop_point_for_traffic_light = Point(x=new_x, y=new_y, z=new_z)
             print("traffic light detected, distance to stop, ", self.calculate_distance(vehicle_pose, {'x': stop_point.x, 'y': stop_point.y, 'z': stop_point.z}))
+        if isObjectAhead and collisonAvoidanceTask == 'Halt' or collisonAvoidanceTask == 'Decelerate':
+            x,y,z = self.calculate_stop_point(object)
+            stop_point_for_collision_avoidance = Point(x=x, y=y, z=z)
         
-        distance_to_stop_point = self.calculate_distance(vehicle_pose, {'x': stop_point.x, 'y': stop_point.y, 'z': stop_point.z})
+        
 
-        if distance_to_stop_point <= self.densify_interval * 2:
-            if isTrafficLightDetected:
-                if trafficLightColor == "green":
-                    self.status.data = 'Cruise_green'
-                elif trafficLightColor == "amber":
-                    self.status.data = 'Cruise_amber'
-                else:
-                    self.status.data = 'Park'
-            else:
-                self.status.data = 'Park'
-        elif distance_to_stop_point <= self.stop_distance and look_ahead_point_index > len(self.path) - (self.stop_distance / self.densify_interval + 1):
-            self.status.data ='Decelerate'
-        elif isTrafficLightDetected and isTurnDetected:
-            if trafficLightColor == 'green' or trafficLightColor == 'amber' or trafficLightColor == 'unkown':
-                self.status.data = 'Turn'
-            else:
-                self.status.data = vehilceTaskForTrafficLight
-        elif isTrafficLightDetected:
-            if vehilceTaskForTrafficLight == 'Unknown':
-                vehilceTaskForTrafficLight = 'Cruise_green'
-            self.status.data = vehilceTaskForTrafficLight
-        elif isTurnDetected:
-            self.status.data = 'Turn'
-        else:
-            self.status.data = 'Cruise'
+
+        # distance_to_stop_point = self.calculate_distance(vehicle_pose, {'x': stop_point.x, 'y': stop_point.y, 'z': stop_point.z})
+        # if distance_to_stop_point <= self.densify_interval:
+        #     if isTrafficLightDetected:
+        #         if trafficLightColor == "green":
+        #             self.status.data = 'Cruise_green'
+        #         elif trafficLightColor == "amber":
+        #             self.status.data = 'Cruise_amber'
+        #         else:
+        #             self.status.data = 'Park'
+        #     else:
+        #         self.status.data = 'Park'
+        #     if isObjectAhead:
+        #         if collisonAvoidanceTask == 'Halt':
+        #             self.status.data = 'Park'
+        #         elif collisonAvoidanceTask == 'Decelerate':
+        #             self.status.data ='Decelerate'
+        # elif distance_to_stop_point <= self.stop_distance and look_ahead_point_index > len(self.path) - (self.stop_distance / self.densify_interval + 1):
+        #     self.status.data ='Decelerate'
+        # elif isTrafficLightDetected and isTurnDetected:
+        #     if trafficLightColor == 'green' or trafficLightColor == 'amber' or trafficLightColor == 'unkown':
+        #         self.status.data = 'Turn'
+        #     else:
+        #         self.status.data = vehilceTaskForTrafficLight
+        # elif isTrafficLightDetected:
+        #     if vehilceTaskForTrafficLight == 'Unknown':
+        #         vehilceTaskForTrafficLight = 'Cruise_green'
+        #     self.status.data = vehilceTaskForTrafficLight
+        # elif isTurnDetected:
+        #     self.status.data = 'Turn'
+        # else:
+        #     self.status.data = 'Cruise'
         
         return stop_point
            
