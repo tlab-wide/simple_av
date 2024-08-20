@@ -598,8 +598,13 @@ class Planning(Node):
         elif isTrafficLightDetected and isObjectAhead:
             if distance_to_collision_avoidance_stop_point <= distance_to_traffic_light_stop_point:
                 self.status.data = collisonAvoidanceTask
-            elif distance_to_collision_avoidance_stop_point >= distance_to_traffic_light_stop_point:
+            elif distance_to_collision_avoidance_stop_point >= distance_to_traffic_light_stop_point and trafficLightColor == 'red':
                 self.status.data = vehilceTaskForTrafficLight
+            else:
+                if isTurnDetected:
+                    self.status.data = 'Turn'
+                else:
+                    self.status.data = 'Cruise'
         elif isObjectAhead:
             self.status.data = collisonAvoidanceTask
         elif distance_to_destination <= self.stop_distance and look_ahead_point_index > len(self.path) - (self.stop_distance / self.densify_interval + 1):
@@ -608,8 +613,6 @@ class Planning(Node):
             self.status.data = 'Turn'
         else:
             self.status.data = 'Cruise'
-            
-
         
         # if distance_to_stop_point <= self.densify_interval:
         #     if isTrafficLightDetected:
@@ -634,7 +637,6 @@ class Planning(Node):
         #     self.status.data = 'Turn'
         # else:
         #     self.status.data = 'Cruise'
-        
         
         closest_stop_point = min(distance_to_destination, distance_to_traffic_light_stop_point, distance_to_collision_avoidance_stop_point)
         if closest_stop_point == distance_to_destination:
