@@ -488,24 +488,21 @@ class Planning(Node):
             print(f"traffic light detected, lane = {current_lane}, lightID = {current_lane_traffic_light_id[0]}, color = {color}")
             p1 = lane_obj['stopLinePoseP1']
             p2 = lane_obj['stopLinePoseP2']
+            isTrafficLightDetected = True
             if color == 1:
                 # self.get_logger().info("Red")
-                isTrafficLightDetected = True
                 task = 'Stop_red'
                 _color = 'red'
             elif color == 3:
                 # self.get_logger().info("Green")
-                isTrafficLightDetected = True
                 task = 'Cruise_green'
                 _color = 'green'
             elif color == 2:
                 # self.get_logger().info('Amber')
-                isTrafficLightDetected = True
                 task = 'Cruise_amber'
                 _color = 'amber'
             else:
                 self.get_logger().error("Unkown traffic light color")
-                isTrafficLightDetected = True
                 task = 'Unknown'
                 _color = 'unkown'
         else:
@@ -519,7 +516,7 @@ class Planning(Node):
     
     def calculate_stop_point(self, obj):
         """
-        Calculate the stop point exactly 5 meters behind the object,
+        Calculate the stop point exactly in safety distance behind the object,
         considering the vehicle's and object's lengths.
         
         Parameters:
@@ -530,7 +527,7 @@ class Planning(Node):
             stop_point_y: Y coordinate of the stop point.
         """
         # Calculate the back face of the object
-        object_back_x = obj.position.x + (obj.shape.x / 2)
+        object_back_x = obj.position.x - (obj.shape.x / 2)
 
         # Calculate the stop point 5 meters behind the back of the object
         stop_point_x = object_back_x - self.saftey_distance - (self.vehicle_length / 2)
@@ -579,11 +576,12 @@ class Planning(Node):
         if isObjectAhead and collisonAvoidanceTask == 'Halt' or collisonAvoidanceTask == 'Decelerate':
             x,y,z = self.calculate_stop_point(object)
             stop_point_for_collision_avoidance = Point(x=x, y=y, z=z)
-        
-        
+        distance_to_traffic_light_stop_point = self.calculate_distance(vehicle_pose, {'x': stop_point_for_traffic_light.x, 'y': stop_point_for_traffic_light.y, 'z': stop_point_for_traffic_light.z})
+        distance_to_collision_avoidance_stop_point = self.calculate_distance(vehicle_pose, {'x': stop_point_for_collision_avoidance.x, 'y': stop_point_for_collision_avoidance.y, 'z': stop_point_for_collision_avoidance.z})
 
+        if isTrafficLightDetected
 
-        # distance_to_stop_point = self.calculate_distance(vehicle_pose, {'x': stop_point.x, 'y': stop_point.y, 'z': stop_point.z})
+        
         # if distance_to_stop_point <= self.densify_interval:
         #     if isTrafficLightDetected:
         #         if trafficLightColor == "green":
