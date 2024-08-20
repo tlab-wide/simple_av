@@ -105,6 +105,8 @@ class Planning(Node):
         self.speed_limit = 10.0 # meters/second
         self.lookahead_distance = self.base_speed * 2 # meters
         self.stop_distance = self.base_speed * 4 # meters
+        self.saftey_distance = 20.0 #meters
+        self.vehicle_length = 5.0 #meters
         self.status = String() # Cruise, Decelerate, PrepareToStop, Turn
         
         self.isCurveFinished = False
@@ -513,16 +515,23 @@ class Planning(Node):
             p1 = None
             p2 = None
         return isTrafficLightDetected, task, _color, p1, p2
-
+    
+    def collision_avoidance(self, vehicle_pose):
+        for obj in self.detectedObjects.objects:
+            print("label", obj.label)
+            print(f"Position: {obj.position.x}, {obj.position.y}, {obj.position.z}")
+            print(f"Orientation: {obj.orientation.x}, {obj.orientation.y}, {obj.orientation.z}, {obj.orientation.w}")
+            print(f"Shape: {obj.shape.x}, {obj.shape.y}, {obj.shape.z}")
 
     def behavioural_planning(self, look_ahead_point, look_ahead_point_index, search_area, search_area_as_lanes):
         
         # print("behavioural planning ... ")
         vehicle_pose = {'x': self.pose.pose.position.x, 'y': self.pose.pose.position.y, 'z': self.pose.pose.position.z}
-        
+
         isTurnDetected = self.curve_handler(look_ahead_point, look_ahead_point_index)
         isTrafficLightDetected, vehilceTaskForTrafficLight, trafficLightColor, p1, p2 = self.manage_traffic_lights(look_ahead_point, look_ahead_point_index, search_area_as_lanes)
-        
+        self.collision_avoidance(vehicle_pose)
+
         stop_point = Point(x=self.path[-1]['x'], y=self.path[-1]['y'], z=self.path[-1]['z'])
         if isTrafficLightDetected:
             new_x = (p1[0] + p2[0])/2
@@ -585,6 +594,7 @@ class Planning(Node):
             self.get_logger().info("path planning")
             self.mission_planning()  # generates the path and dencifies it.
         else:
+
             if not self.location and not self.pose:
                 self.get_logger().info("path planning")
                 print("error - no location or pose input")
