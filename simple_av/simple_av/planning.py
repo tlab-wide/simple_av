@@ -105,8 +105,9 @@ class Planning(Node):
         self.speed_limit = 10.0 # meters/second
         self.lookahead_distance = self.base_speed * 2 # meters
         self.stop_distance = self.base_speed * 4 # meters
-        self.saftey_distance = 20.0 #meters
-        self.vehicle_length = 5.0 #meters
+        self.saftey_distance = 5.0 #meters
+        self.vehicle_length = 4.8895 #meters
+        self.vehicle_width = 1.895 #meters
         self.status = String() # Cruise, Decelerate, PrepareToStop, Turn
         
         self.isCurveFinished = False
@@ -516,12 +517,23 @@ class Planning(Node):
             p2 = None
         return isTrafficLightDetected, task, _color, p1, p2
     
-    def collision_avoidance(self, vehicle_pose):
-        for obj in self.detectedObjects.objects:
-            print("label", obj.label)
-            print(f"Position: {obj.position.x}, {obj.position.y}, {obj.position.z}")
-            print(f"Orientation: {obj.orientation.x}, {obj.orientation.y}, {obj.orientation.z}, {obj.orientation.w}")
-            print(f"Shape: {obj.shape.x}, {obj.shape.y}, {obj.shape.z}")
+    def collision_avoidance(self):
+        isObjectAhead = False
+        status = ""
+        if self.detectedObjects:
+            for obj in self.detectedObjects:
+                relative_x_distance = obj.position.x - obj.shape.x / 2 - self.vehicle_length/2
+                relative_y_distance = obj.position.y - obj.shape.y / 2 - self.vehicle_length/2
+                distance_to_obj = math.sqrt(relative_x_distance**2 + relative_y_distance**2)
+                if obj.position.x > 0.0 and (obj.position.y > -1 and obj.position.y < 1) and distance_to_obj < self.lookahead_distance:
+                    print("Object is ahead ", obj.position.x," ", obj.position.y, distance_to_obj)
+                    isObjectAhead = True
+                    status = "Decelerate"
+                    if distance_to_obj < self.saftey_distance:
+                        print("STOP ")
+                        status = 'Halt'
+                return isObjectAhead, status, distance_to_obj, 
+
 
     def behavioural_planning(self, look_ahead_point, look_ahead_point_index, search_area, search_area_as_lanes):
         
