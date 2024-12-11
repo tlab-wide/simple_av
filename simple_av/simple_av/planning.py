@@ -96,9 +96,9 @@ class Planning(Node):
         self.detectedObjects = DetectedObjectsArray() # Initialize traffic signal
 
         self.isPathPlanned = False  # Flag to check if the path has been planned
-        self.path_as_lanes = None  # List of lanes from start point to destination
+        self.path_as_lanes = None  # List of lanes from start lane to destination
         self.path = None  # List of points in order of path_as_lanes
-        self.route = None # List of lanes from start point to destination
+        self.route = None # List of lanes from start lane to destination
         self.current_lane_index = 0
         
         self.base_speed = 10.0 # meters/second
@@ -123,7 +123,8 @@ class Planning(Node):
         self.curve_finish_point = None
         
         # self.dest_lanelet = "lanelet149"
-        self.dest_lanelet = "lanelet513"
+        # self.dest_lanelet = "lanelet513"
+        self.dest_lanelet = "lanelet63"
         
     
     def load_map_data(self):
@@ -373,7 +374,6 @@ class Planning(Node):
 
 
     def curve_detector(self, curves, look_ahead_point, look_ahead_point_index):
-        
         if look_ahead_point_index >= len(self.path) - 5 and look_ahead_point_index <= len(self.path):
             return False, 0.0
 
@@ -424,6 +424,7 @@ class Planning(Node):
         except:
             # vehicle is out of path
             self.get_logger().warning("Vehicle is out of the Path")
+            # TODO: Do something when the vehicle is out of the path 
             lane_index = self.current_lane_index
         if lane_index in range(self.current_lane_index, self.current_lane_index + self.search_depth):
             self.current_lane_index = lane_index
@@ -662,7 +663,7 @@ class Planning(Node):
         Perform global path planning to create a path from the current location to the destination.
         """
         if self.location:
-            self.get_logger().info("path planning")
+            # self.get_logger().info("path planning")
             start_lanelet = self.location.closest_lane_names.data
             self.bfs(start_lanelet, self.dest_lanelet) # Creates the path
             if self.path and self.path_as_lanes:
@@ -679,17 +680,16 @@ class Planning(Node):
         Main planning function to decide between global and local planning.
         """
         if not self.isPathPlanned:
-            self.get_logger().info("path planning")
+            self.get_logger().info("Misson planning")
             self.mission_planning()  # generates the path and dencifies it.
         else:
-
             if not self.location and not self.pose:
                 self.get_logger().info("path planning")
-                print("error - no location or pose input")
+                print("error - no location/pose input")
                 return None
             
             if self.initial_lane != self.path_as_lanes[0]:
-                self.get_logger().error("The start lane from localization Node is not the first lane in path")
+                self.get_logger().error("Contradiction between Location initial Lane and the first Lane on the path")
                 return
             
             search_area, search_area_as_lanes = self.create_search_area()
