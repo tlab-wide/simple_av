@@ -101,8 +101,8 @@ class Planning(Node):
         self.route = None # List of lanes from start lane to destination
         self.current_lane_index = 0
         
-        self.base_speed = 10.0 # meters/second
-        self.speed_limit = 10.0 # meters/second
+        self.base_speed = 5.0 # meters/second
+        self.speed_limit = 5.0 # meters/second
         self.lookahead_distance = self.base_speed * 2 # meters
         self.stop_distance = self.base_speed * 4 # meters
         self.saftey_distance = 5.0 #meters
@@ -464,9 +464,16 @@ class Planning(Node):
         
         look_ahead_point_index, look_ahead_point = self.find_lookahead_point(vehicle_pose, current_closest_point_to_vehicle, search_area)
         
-        for i in range(len(self.path[look_ahead_point_index-15:])):
-            if self.path[i]['x'] == self.location.closest_point.x and self.path[i]['y'] == self.location.closest_point.y and self.path[i]['z'] == self.location.closest_point.z:
-                self.localization_closest_point_index = i
+        left_slide = look_ahead_point_index - 20 if look_ahead_point_index - 20 > 0 else 0
+        right_slide = look_ahead_point_index + 10 if look_ahead_point_index + 10 <= len(self.path) else len(self.path) 
+        print(left_slide, right_slide)
+        for i in range(len(self.path[left_slide:right_slide])):
+            point_index = i + left_slide
+            if self.path[point_index]['x'] == self.location.closest_point.x and self.path[point_index]['y'] == self.location.closest_point.y and self.path[point_index]['z'] == self.location.closest_point.z:
+                self.localization_closest_point_index = point_index
+        # for i in range(len(self.path[look_ahead_point_index-15:])):
+        #     if self.path[i]['x'] == self.location.closest_point.x and self.path[i]['y'] == self.location.closest_point.y and self.path[i]['z'] == self.location.closest_point.z:
+        #         self.localization_closest_point_index = i
             
         return look_ahead_point_index, look_ahead_point
     
@@ -707,7 +714,7 @@ class Planning(Node):
             lookahead_point.status = self.status
             lookahead_point.speed_limit = self.speed_limit
         
-            print(self.status.data, self.location.closest_lane_names.data, self.route[self.current_lane_index], look_ahead_point_index, self.localization_closest_point_index, len(self.path), self.speed_limit)
+            print(self.status.data, self.location.closest_lane_names.data, self.route[self.current_lane_index], len(self.path), self.localization_closest_point_index, look_ahead_point_index, self.speed_limit)
             self.planning_publisher.publish(lookahead_point)
     
 
