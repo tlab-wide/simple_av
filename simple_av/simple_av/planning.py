@@ -74,7 +74,7 @@ class Planning(Node):
             'adjacentLanes': lanelet.get('adjacentLanes', []),
         } for lanelet in self.map_data}
 
-        # Create subscriber to 'simple_av/perception/traffic_signals' topic
+        # Create subscriber to 'simple_av/perception/traffic_signals' topic /v2x/traffic_signals1
         self.subscriptionTrafficSignal = self.create_subscription(TrafficSignalsArray, 'simple_av/perception/traffic_signals', self.trafficSignal_callback, 10)
 
         # Create subscriber to 'simple_av/perception/detected_objects' topic
@@ -101,11 +101,11 @@ class Planning(Node):
         self.route = None # List of lanes from start lane to destination
         self.current_lane_index = 0
         
-        self.base_speed = 5.0 # meters/second
-        self.speed_limit = 5.0 # meters/second
+        self.base_speed = 10.0 # meters/second
+        self.speed_limit = 10.0 # meters/second
         self.lookahead_distance = self.base_speed * 2 # meters
         self.stop_distance = self.base_speed * 4 # meters
-        self.saftey_distance = 5.0 #meters
+        self.saftey_distance = 10.0 #meters
         self.vehicle_length = 4.8895 #meters
         self.vehicle_width = 1.895 #meters
         self.status = String() # Cruise, Decelerate, PrepareToStop, Turn
@@ -115,8 +115,7 @@ class Planning(Node):
         self.curve_angle = 0.0
         
         self.densify_interval = 2.0 # meters
-
-        self.localization_closest_point_index = 0
+        
         self.initial_lane = None
         self.search_depth = 3
 
@@ -460,22 +459,13 @@ class Planning(Node):
             return None, None, None
         vehicle_pose = {'x': self.pose.pose.position.x, 'y': self.pose.pose.position.y, 'z': self.pose.pose.position.z}
         
-        current_closest_point_to_vehicle = self.find_closest_waypoint_to_vehicle(vehicle_pose, search_area)
-        
-        look_ahead_point_index, look_ahead_point = self.find_lookahead_point(vehicle_pose, current_closest_point_to_vehicle, search_area)
-        
-        left_slide = look_ahead_point_index - 20 if look_ahead_point_index - 20 > 0 else 0
-        right_slide = look_ahead_point_index + 10 if look_ahead_point_index + 10 <= len(self.path) else len(self.path) 
-        print(left_slide, right_slide)
-        for i in range(len(self.path[left_slide:right_slide])):
-            point_index = i + left_slide
-            if self.path[point_index]['x'] == self.location.closest_point.x and self.path[point_index]['y'] == self.location.closest_point.y and self.path[point_index]['z'] == self.location.closest_point.z:
-                self.localization_closest_point_index = point_index
+        current_closest_point_to_vehicle_index = self.find_closest_waypoint_to_vehicle(vehicle_pose, search_area)
+        look_ahead_point_index, look_ahead_point = self.find_lookahead_point(vehicle_pose, current_closest_point_to_vehicle_index, search_area)
             
-        return look_ahead_point_index, look_ahead_point, current_closest_point_to_vehicle
+        return look_ahead_point_index, look_ahead_point, current_closest_point_to_vehicle_index
     
     
-    def manage_traffic_lights(self, look_ahead_point, look_ahead_point_index, search_area_as_lanes):
+    def manage_traffic_lights(self):
       
         v2i_traffic_signals_id = list(self.trafficSignal.v2i_traffic_signals_id)
         v2i_traffic_signals_colors = list(self.trafficSignal.v2i_traffic_signals_colors)
@@ -495,15 +485,15 @@ class Planning(Node):
             p2 = lane_obj['stopLinePoseP2']
             isTrafficLightDetected = True
             if color == 1:
-                # self.get_logger().info("Red")
+                self.get_logger().info("Red")
                 task = 'Stop_red'
                 _color = 'red'
             elif color == 3:
-                # self.get_logger().info("Green")
+                self.get_logger().info("Green")
                 task = 'Cruise_green'
                 _color = 'green'
             elif color == 2:
-                # self.get_logger().info('Amber')
+                self.get_logger().info('Amber')
                 task = 'Cruise_amber'
                 _color = 'amber'
             else:
@@ -511,7 +501,7 @@ class Planning(Node):
                 task = 'Cruise_green'
                 _color = 'unkown'
         else:
-            # self.get_logger().info("no traffic light")
+            self.get_logger().info("no traffic light")
             isTrafficLightDetected = False
             task = 'Cruise'
             _color = 'unkown'
@@ -569,7 +559,7 @@ class Planning(Node):
         vehicle_pose = {'x': self.pose.pose.position.x, 'y': self.pose.pose.position.y, 'z': self.pose.pose.position.z}
 
         isTurnDetected = self.curve_handler(look_ahead_point, look_ahead_point_index)
-        isTrafficLightDetected, vehilceTaskForTrafficLight, trafficLightColor, p1, p2 = self.manage_traffic_lights(look_ahead_point, look_ahead_point_index, search_area_as_lanes)
+        isTrafficLightDetected, vehilceTaskForTrafficLight, trafficLightColor, p1, p2 = self.manage_traffic_lights()
         isObjectAhead, collisonAvoidanceTask, distance_to_obj, object = self.collision_avoidance()
 
         destination = Point(x=self.path[-1]['x'], y=self.path[-1]['y'], z=self.path[-1]['z'])
@@ -698,7 +688,7 @@ class Planning(Node):
             
             search_area, search_area_as_lanes = self.create_search_area()
             
-            look_ahead_point_index, look_ahead_point, curren_point_index = self.local_planning(search_area, search_area_as_lanes)
+            look_ahead_point_index, look_ahead_point, current_closest_point_to_vehicle_index = self.local_planning(search_area, search_area_as_lanes)
             if not look_ahead_point and not look_ahead_point_index:
                 return
 
@@ -711,7 +701,7 @@ class Planning(Node):
             lookahead_point.status = self.status
             lookahead_point.speed_limit = self.speed_limit
         
-            print(self.status.data, self.location.closest_lane_names.data, self.route[self.current_lane_index], self.localization_closest_point_index, curren_point_index, look_ahead_point_index, self.speed_limit)
+            print(self.status.data, self.location.closest_lane_names.data, self.route[self.current_lane_index], current_closest_point_to_vehicle_index, look_ahead_point_index, self.speed_limit)
             self.planning_publisher.publish(lookahead_point)
     
 
