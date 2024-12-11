@@ -324,7 +324,7 @@ class Localization(Node):
         - Continues to update self.closest_point, self.closest_lane_name, and self.min_distance accordingly.
         """
         if not self.isGlobalPositioningDone:
-            # self.get_logger().info(f"global positioning, {self.isGlobalPositioningDone}")
+            self.get_logger().info(f"global positioning, {self.isGlobalPositioningDone}")
             self.closest_point, self.closest_lane_name, self.min_distance = self.global_positioning()
         else:
             # self.get_logger().info("Local positioning")
