@@ -6,6 +6,7 @@ from geometry_msgs.msg import PoseStamped, Point
 from autoware_auto_vehicle_msgs.msg import VelocityReport
 from autoware_auto_vehicle_msgs.msg import GearCommand
 from autoware_auto_control_msgs.msg import AckermannControlCommand, AckermannLateralCommand, LongitudinalCommand
+from autoware_auto_vehicle_msgs.msg import TurnIndicatorsCommand
 from rclpy.qos import QoSProfile, DurabilityPolicy, HistoryPolicy, ReliabilityPolicy
 from simple_av_msgs.msg import LookAheadMsg
 import time
@@ -96,6 +97,7 @@ class VehicleControl(Node):
 
         self.control_publisher = self.create_publisher(AckermannControlCommand, '/control/command/control_cmd', qos_profile)
         self.gear_publisher = self.create_publisher(GearCommand, '/control/command/gear_cmd', qos_profile)
+        self.turn_indicator_publisher = self.create_publisher(TurnIndicatorsCommand, '/control/command/turn_indicators_cmd', qos_profile)
 
         self.pid_controller = PIDController(p_gain=1.5, i_gain=0.5, d_gain=0.125)
         self.wheel_base = 2.75 # meters
@@ -123,17 +125,27 @@ class VehicleControl(Node):
         return np.sqrt((point1.x - point2.x)**2 + (point1.y - point2.y)**2)
 
     def control(self):
-
         if not self.velocity_report and not self.lookAhead and not self.pose and not self.ground_truth:
             return
 
+        # Steer and Velocity Control
         control_msg = AckermannControlCommand()
+    
         control_msg.stamp = self.get_clock().now().to_msg()
-
         control_msg.lateral = self.get_lateral_command(self.lookAhead.status.data)
         control_msg.longitudinal = self.get_longitudinal_command(self.lookAhead.status.data)
-        self.control_publisher.publish(control_msg)
 
+        # Turn Indicator Light Control
+        turn_indicator_msg = TurnIndicatorsCommand()
+        turn_indicator_msg.stamp = self.get_clock().now().to_msg()
+        if self.lookAhead.status.data == 'Turn':
+            print("DEBUG TI, vehicle is Turning ...")
+            steering_angle = control_msg.lateral.steering_tire_angle
+            turn_indicator_msg.command = TurnIndicatorsCommand.ENABLE_LEFT if steering_angle >= 0 else TurnIndicatorsCommand.ENABLE_RIGHT
+        else:
+            turn_indicator_msg.command = TurnIndicatorsCommand.DISABLE
+        
+        # Gear Control
         gear_msg = GearCommand()
         gear_msg.stamp = self.get_clock().now().to_msg()
         if self.lookAhead.status.data == "Park":
@@ -142,6 +154,9 @@ class VehicleControl(Node):
         else:
             print("drive")
             gear_msg.command = GearCommand.DRIVE
+
+        self.control_publisher.publish(control_msg)
+        self.turn_indicator_publisher.publish(turn_indicator_msg)
         self.gear_publisher.publish(gear_msg)  
 
     
