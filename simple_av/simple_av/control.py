@@ -139,7 +139,6 @@ class VehicleControl(Node):
         turn_indicator_msg = TurnIndicatorsCommand()
         turn_indicator_msg.stamp = self.get_clock().now().to_msg()
         if self.lookAhead.status.data == 'Turn':
-            print("DEBUG TI, vehicle is Turning ...")
             steering_angle = control_msg.lateral.steering_tire_angle
             turn_indicator_msg.command = TurnIndicatorsCommand.ENABLE_LEFT if steering_angle >= 0 else TurnIndicatorsCommand.ENABLE_RIGHT
         else:

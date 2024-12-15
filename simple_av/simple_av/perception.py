@@ -77,7 +77,7 @@ class Perception(Node):
         traffic_signals_msg.v2i_traffic_signals_id = v2i_traffic_signals_id
         traffic_signals_msg.v2i_traffic_signals_colors = v2i_traffic_signals_colors
         self.publisher_traffic_signals.publish(traffic_signals_msg)
-        self.get_logger().info('Published traffic signal data')
+        # self.get_logger().info('Published traffic signal data')
 
         # Handle detected objects
         detected_objects_list = self.handle_detected_objects()
@@ -86,7 +86,17 @@ class Perception(Node):
         detected_objects_msg = DetectedObjectsArray()
         detected_objects_msg.objects = detected_objects_list
         self.publisher_detected_objects.publish(detected_objects_msg)
-        self.get_logger().info('Published detected objects data')
+        # self.get_logger().info('Published detected objects data')
+        # print("number of objects: ", len(detected_objects_msg.objects))
+        for obj in detected_objects_msg.objects:
+            if obj.label == 2:
+                vehicle_type = 'Truck' if obj.label == 2 else 'Car'
+                # print(obj.label, vehicle_type)
+                print(obj.position)
+                # print(obj.orientation)
+                print(obj.shape)
+                print("------------------------")
+
 
 def main(args=None):
     rclpy.init(args=args)
