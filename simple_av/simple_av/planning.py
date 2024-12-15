@@ -552,7 +552,6 @@ class Planning(Node):
                 return isObjectAhead, task, distance_to_obj, obj
         return isObjectAhead, task, '', None
 
-
     def behavioural_planning(self, look_ahead_point, look_ahead_point_index, search_area, search_area_as_lanes):
         
         # print("behavioural planning ... ")
@@ -614,42 +613,6 @@ class Planning(Node):
             self.status.data = 'Turn'
         else:
             self.status.data = 'Cruise'
-        
-        # if distance_to_stop_point <= self.densify_interval:
-        #     if isTrafficLightDetected:
-        #         if trafficLightColor == "green":
-        #             self.status.data = 'Cruise_green'
-        #         elif trafficLightColor == "amber":
-        #             self.status.data = 'Cruise_amber'
-        #         else:
-        #             self.status.data = 'Park'
-        # elif distance_to_stop_point <= self.stop_distance and look_ahead_point_index > len(self.path) - (self.stop_distance / self.densify_interval + 1):
-        #     self.status.data ='Decelerate'
-        # elif isTrafficLightDetected and isTurnDetected:
-        #     if trafficLightColor == 'green' or trafficLightColor == 'amber' or trafficLightColor == 'unkown':
-        #         self.status.data = 'Turn'
-        #     else:
-        #         self.status.data = vehilceTaskForTrafficLight
-        # elif isTrafficLightDetected:
-        #     if vehilceTaskForTrafficLight == 'Unknown':
-        #         vehilceTaskForTrafficLight = 'Cruise_green'
-        #     self.status.data = vehilceTaskForTrafficLight
-        # elif isTurnDetected:
-        #     self.status.data = 'Turn'
-        # else:
-        #     self.status.data = 'Cruise'
-        
-        if isObjectAhead and isTrafficLightDetected:
-            closest_stop_point = min(distance_to_destination, distance_to_traffic_light_stop_point, distance_to_collision_avoidance_stop_point)
-            if closest_stop_point == distance_to_destination:
-                stop_point = destination
-            elif closest_stop_point == distance_to_traffic_light_stop_point:
-                stop_point = stop_point_for_traffic_light
-            else:
-                stop_point = stop_point_for_collision_avoidance
-        else:
-            stop_point = destination
-        return stop_point
            
 
     def mission_planning(self):

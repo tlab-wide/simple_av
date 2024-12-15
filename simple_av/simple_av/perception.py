@@ -4,6 +4,7 @@ from geometry_msgs.msg import Point, Quaternion, Vector3
 from simple_av_msgs.msg import LocalizationMsg, TrafficSignalsArray, DetectedObject, DetectedObjectsArray
 from v2x_msgs.msg import CooperativeSignalsMessage
 from autoware_auto_perception_msgs.msg import DetectedObjects
+import math
 
 class Perception(Node):
     def __init__(self):
@@ -21,6 +22,9 @@ class Perception(Node):
         # Initialize the publishers
         self.publisher_traffic_signals = self.create_publisher(TrafficSignalsArray, 'simple_av/perception/traffic_signals', 10)
         self.publisher_detected_objects = self.create_publisher(DetectedObjectsArray, 'simple_av/perception/detected_objects', 10)
+
+        self.vehicle_length = 4.8895 #meters
+        self.vehicle_width = 1.895 #meters
 
     def trafficSignal_callback(self, msg):
         """Callback function to update the traffic signal data."""
@@ -42,12 +46,18 @@ class Perception(Node):
 
             # Extract pose (position and orientation)
             pose = obj.kinematics.pose_with_covariance.pose
-            detected_obj_msg.position = Point(x=pose.position.x, y=pose.position.y, z=pose.position.z)
+            detected_obj_msg.relative_position = Point(x=pose.position.x, y=pose.position.y, z=pose.position.z)
             detected_obj_msg.orientation = Quaternion(x=pose.orientation.x, y=pose.orientation.y, z=pose.orientation.z, w=pose.orientation.w)
 
             # Extract shape (dimensions)
             shape = obj.shape.dimensions
             detected_obj_msg.shape = Vector3(x=shape.x, y=shape.y, z=shape.z)
+
+            relative_x_distance = pose.position.x - shape.x / 2 - self.vehicle_length/2
+            relative_y_distance = pose.position.y - shape.y / 2 - self.vehicle_width/2
+            detected_obj_msg.relative_distance = Point(x=relative_x_distance, y=relative_y_distance, z=pose.position.z)
+
+            detected_obj_msg.distance = math.sqrt(relative_x_distance**2 + relative_y_distance**2)
 
             detected_objects_list.append(detected_obj_msg)
 
@@ -87,15 +97,15 @@ class Perception(Node):
         detected_objects_msg.objects = detected_objects_list
         self.publisher_detected_objects.publish(detected_objects_msg)
         # self.get_logger().info('Published detected objects data')
-        # print("number of objects: ", len(detected_objects_msg.objects))
+        print("number of objects: ", len(detected_objects_msg.objects))
         for obj in detected_objects_msg.objects:
-            if obj.label == 2:
-                vehicle_type = 'Truck' if obj.label == 2 else 'Car'
-                # print(obj.label, vehicle_type)
-                print(obj.position)
-                # print(obj.orientation)
+            if obj.label != 7:
+                print(obj.label)
+                print(obj.relative_position.x, obj.relative_position.y, obj.relative_position.z)
+                print(obj.relative_distance.x, obj.relative_distance.y)
+                print(obj.distance)
                 print(obj.shape)
-                print("------------------------")
+                print("---------------------")
 
 
 def main(args=None):
