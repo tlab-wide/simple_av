@@ -34,6 +34,33 @@ class Perception(Node):
         """Callback function to update the pose data."""
         self.detectedObjects = msg
 
+    def object_direction(self, x, y):
+        if y <= 2.0 and y >= -2.0:
+            # above or behind the vehicle
+            if x >=0:
+                # object is above the vehicle
+                return 'S'
+            else:
+                # object is behind the vehicle
+                return 'N'
+        elif y > 2.0:
+            # right side of the vehicle
+            if x >=0:
+                # object is above the vehicle
+                return 'SE'
+            else:
+                # object is behind the vehicle
+                return 'NE'
+        else: 
+            # left side of the vehicle
+            if x >=0:
+                # object is above the vehicle
+                return 'SW'
+            else:
+                # object is behind the vehicle
+                return 'NW'
+
+
     def handle_detected_objects(self):
         detected_objects_list = []
 
@@ -48,6 +75,9 @@ class Perception(Node):
             pose = obj.kinematics.pose_with_covariance.pose
             detected_obj_msg.relative_position = Point(x=pose.position.x, y=pose.position.y, z=pose.position.z)
             detected_obj_msg.orientation = Quaternion(x=pose.orientation.x, y=pose.orientation.y, z=pose.orientation.z, w=pose.orientation.w)
+
+            # Finding the object direction
+            detected_obj_msg.Direction = self.object_direction(pose.position.x, pose.position.y)
 
             # Extract shape (dimensions)
             shape = obj.shape.dimensions
@@ -77,7 +107,7 @@ class Perception(Node):
                 v2i_traffic_signals_id.append(map_primitive_id)
                 v2i_traffic_signals_colors.append(color)
         return v2i_traffic_signals_id, v2i_traffic_signals_colors
-    
+
     def perception(self):
         # Handle traffic signals
         v2i_traffic_signals_id, v2i_traffic_signals_colors = self.get_trafficSignals()

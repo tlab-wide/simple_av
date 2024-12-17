@@ -7,6 +7,9 @@ geometry_msgs/Point relative_position
 # relative distance of the detected object
 geometry_msgs/Point relative_distance
 
+# Direction of the object (above, behind, left, right)
+std_msgs/String Direction
+
 # Orientation of the detected object
 geometry_msgs/Quaternion orientation
 
