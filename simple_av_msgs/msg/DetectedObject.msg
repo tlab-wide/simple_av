@@ -7,9 +7,6 @@ geometry_msgs/Point relative_position
 # relative distance of the detected object
 geometry_msgs/Point relative_distance
 
-# Direction of the object (above, behind, left, right)
-std_msgs/String Direction
-
 # Orientation of the detected object
 geometry_msgs/Quaternion orientation
 
@@ -18,3 +15,6 @@ geometry_msgs/Vector3 shape
 
 # relative distance of the vehicle with the detected object
 float64 distance
+
+# Direction of the object (above, behind, left, right)
+std_msgs/String direction

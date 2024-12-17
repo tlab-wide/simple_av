@@ -34,31 +34,32 @@ class Perception(Node):
         """Callback function to update the pose data."""
         self.detectedObjects = msg
 
+    # Getting the direction of the object from Automated vehicle point of view
     def object_direction(self, x, y):
-        if y <= 2.0 and y >= -2.0:
+        if y <= 2.25 and y >= -2.25:
             # above or behind the vehicle
             if x >=0:
                 # object is above the vehicle
-                return 'S'
+                return 'above'
             else:
                 # object is behind the vehicle
-                return 'N'
+                return 'behind'
         elif y > 2.0:
-            # right side of the vehicle
+            # Left side of the vehicle
             if x >=0:
                 # object is above the vehicle
-                return 'SE'
-            else:
-                # object is behind the vehicle
                 return 'NE'
-        else: 
-            # left side of the vehicle
-            if x >=0:
-                # object is above the vehicle
-                return 'SW'
             else:
                 # object is behind the vehicle
-                return 'NW'
+                return 'SW'
+        else: 
+            # Right side of the vehicle
+            if x >=0:
+                # object is above the vehicle
+                return 'NE'
+            else:
+                # object is behind the vehicle
+                return 'SE'
 
 
     def handle_detected_objects(self):
@@ -77,7 +78,7 @@ class Perception(Node):
             detected_obj_msg.orientation = Quaternion(x=pose.orientation.x, y=pose.orientation.y, z=pose.orientation.z, w=pose.orientation.w)
 
             # Finding the object direction
-            detected_obj_msg.Direction = self.object_direction(pose.position.x, pose.position.y)
+            detected_obj_msg.direction.data = self.object_direction(pose.position.x, pose.position.y)
 
             # Extract shape (dimensions)
             shape = obj.shape.dimensions
@@ -130,11 +131,12 @@ class Perception(Node):
         print("number of objects: ", len(detected_objects_msg.objects))
         for obj in detected_objects_msg.objects:
             if obj.label != 7:
-                print(obj.label)
-                print(obj.relative_position.x, obj.relative_position.y, obj.relative_position.z)
-                print(obj.relative_distance.x, obj.relative_distance.y)
-                print(obj.distance)
-                print(obj.shape)
+                print("vehicle type:", obj.label)
+                print("Direction from vehicle POV: ", obj.direction.data)
+                print("Object relative Position from Vehicle: ", obj.relative_position.x, obj.relative_position.y, obj.relative_position.z)
+                # print(obj.relative_distance.x, obj.relative_distance.y)
+                print("Object Orientation: ", obj.orientation)
+                print("object shape size: ", obj.shape)
                 print("---------------------")
 
 
