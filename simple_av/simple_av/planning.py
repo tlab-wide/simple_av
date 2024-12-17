@@ -535,7 +535,7 @@ class Planning(Node):
     def object_detection(self):
         if not self.detectedObjects:
             self
-            self.get_logger().warning("No Perception / no object detected !")
+            self.get_logger().warning("No Perception / no object detected!")
             return []
 
         isObjectAhead = False
@@ -548,10 +548,37 @@ class Planning(Node):
             if object_direction == 'above':
                 objects_ahead.append(obj)
         
-        print("Object(s) detected in the path")
+        if objects_ahead:
+            print("Object(s) detected in the path")
+        else:
+            print("No Object in the path")
 
         return objects_ahead
+    
+    def collision_avoidance(self, objects_ahead):
+        if not objects_ahead:
+            print("No objects ahead")
+            return None
+
+        print("number of objects ahead: ", len(objects_ahead))
+        for obj in objects_ahead:
+            print("---------------------")
+            print("vehicle type:", obj.label)
+            print("Direction from vehicle POV: ", obj.direction.data)
+            print("Object relative Position from Vehicle: ", obj.relative_position.x, obj.relative_position.y)
+            print(obj.relative_distance.x, obj.relative_distance.y)
+            print("object shape size: ", obj.shape)
+            print("---------------------")
         
+        nearest_object_distance = float('inf')
+        distance_to_objects_ahead = [obj.relative_distance.x for obj in objects_ahead]
+        closest_object = objects_ahead(distance_to_objects_ahead.index(min(distance_to_objects_ahead)))        
+        distance_to_closest_object = closest_object.relative_distance.x
+        print('Distance to the closest object: ', distance_to_closest_object)
+
+        if distance_to_closest_object < self.stop_distance:
+            self.get_logger().warning("Imediate threat. Objects ahead in danger zone")
+
 
     def behavioural_planning(self, look_ahead_point, look_ahead_point_index, search_area, search_area_as_lanes):
         
@@ -560,7 +587,9 @@ class Planning(Node):
 
         isTurnDetected = self.curve_handler(look_ahead_point, look_ahead_point_index)
         isTrafficLightDetected, vehilceTaskForTrafficLight, trafficLightColor, p1, p2 = self.manage_traffic_lights()
-        isObjectAhead, collisonAvoidanceTask, distance_to_obj, object = self.collision_avoidance()
+        
+        objects_ahead = self.object_detection()
+        self.collision_avoidance(objects_ahead)
 
         destination = Point(x=self.path[-1]['x'], y=self.path[-1]['y'], z=self.path[-1]['z'])
         distance_to_destination = self.calculate_distance(vehicle_pose, {'x': destination.x, 'y': destination.y, 'z': destination.z})
@@ -573,11 +602,11 @@ class Planning(Node):
             stop_point_for_traffic_light = Point(x=new_x, y=new_y, z=new_z)
             distance_to_traffic_light_stop_point = self.calculate_distance(vehicle_pose, {'x': stop_point_for_traffic_light.x, 'y': stop_point_for_traffic_light.y, 'z': stop_point_for_traffic_light.z})
             print("traffic light detected, distance to stop, ", trafficLightColor, distance_to_traffic_light_stop_point)
-        if isObjectAhead:
-            x,y,z = self.calculate_stop_point(object)
-            stop_point_for_collision_avoidance = Point(x=x, y=y, z=z)
-            distance_to_collision_avoidance_stop_point = self.calculate_distance(vehicle_pose, {'x': stop_point_for_collision_avoidance.x, 'y': stop_point_for_collision_avoidance.y, 'z': stop_point_for_collision_avoidance.z})
-            print("Object detected, distance to stop", distance_to_collision_avoidance_stop_point)
+        # if isObjectAhead:
+        #     x,y,z = self.calculate_stop_point(object)
+        #     stop_point_for_collision_avoidance = Point(x=x, y=y, z=z)
+        #     distance_to_collision_avoidance_stop_point = self.calculate_distance(vehicle_pose, {'x': stop_point_for_collision_avoidance.x, 'y': stop_point_for_collision_avoidance.y, 'z': stop_point_for_collision_avoidance.z})
+        #     print("Object detected, distance to stop", distance_to_collision_avoidance_stop_point)
 
         
 
@@ -667,7 +696,7 @@ class Planning(Node):
             lookahead_point.status = self.status
             lookahead_point.speed_limit = self.speed_limit
         
-            print(self.status.data, self.location.closest_lane_names.data, self.route[self.current_lane_index], current_closest_point_to_vehicle_index, look_ahead_point_index, self.speed_limit)
+            # print(self.status.data, self.location.closest_lane_names.data, self.route[self.current_lane_index], current_closest_point_to_vehicle_index, look_ahead_point_index, self.speed_limit)
             self.planning_publisher.publish(lookahead_point)
     
 
