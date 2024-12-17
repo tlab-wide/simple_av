@@ -105,7 +105,7 @@ class Planning(Node):
         self.speed_limit = 10.0 # meters/second
         self.lookahead_distance = self.base_speed * 2 # meters
         self.stop_distance = self.base_speed * 4 # meters
-        self.saftey_distance = 10.0 #meters
+        self.saftey_distance = 5.0 #meters
         self.vehicle_length = 4.8895 #meters
         self.vehicle_width = 1.895 #meters
         self.status = String() # Cruise, Decelerate, PrepareToStop, Turn
@@ -532,25 +532,26 @@ class Planning(Node):
 
         return stop_point_x, stop_point_y, obj.position.z
 
-    def collision_avoidance(self):
+    def object_detection(self):
+        if not self.detectedObjects:
+            self
+            self.get_logger().warning("No Perception / no object detected !")
+            return []
+
         isObjectAhead = False
         task = ""
-        if self.detectedObjects:
-            for obj in self.detectedObjects.objects:
-                relative_x_distance = obj.position.x - obj.shape.x / 2 + self.vehicle_length/2
-                relative_y_distance = obj.position.y - obj.shape.y / 2 + self.vehicle_length/2
-                distance_to_obj = math.sqrt(relative_x_distance**2 + relative_y_distance**2)
-                print("relative_x_distance ", relative_x_distance, " relative_y_distance ", relative_y_distance)
-                print("distance_to_obj ", distance_to_obj)
-                if relative_x_distance > 0.0 and (obj.position.y > -2 and obj.position.y < 2) and distance_to_obj < self.lookahead_distance:
-                    print("Object is ahead ", obj.position.x," ", obj.position.y, distance_to_obj)
-                    isObjectAhead = True
-                    task = "Decelerate"
-                    if distance_to_obj <= self.saftey_distance:
-                        print("STOP in safety distance")
-                        task = 'Park'
-                return isObjectAhead, task, distance_to_obj, obj
-        return isObjectAhead, task, '', None
+        objects_ahead = []
+        
+        for obj in self.detectedObjects.objects:
+            object_direction = obj.direction
+            vertical_distance_to_obj = obj.relative_distance.x
+            if object_direction == 'above':
+                objects_ahead.append(obj)
+        
+        print("Object(s) detected in the path")
+
+        return objects_ahead
+        
 
     def behavioural_planning(self, look_ahead_point, look_ahead_point_index, search_area, search_area_as_lanes):
         
@@ -578,41 +579,43 @@ class Planning(Node):
             distance_to_collision_avoidance_stop_point = self.calculate_distance(vehicle_pose, {'x': stop_point_for_collision_avoidance.x, 'y': stop_point_for_collision_avoidance.y, 'z': stop_point_for_collision_avoidance.z})
             print("Object detected, distance to stop", distance_to_collision_avoidance_stop_point)
 
-        if isTrafficLightDetected and not isObjectAhead:
-            print("traffic light no object")
-            if trafficLightColor == 'red':
-                if distance_to_traffic_light_stop_point <= self.densify_interval * 2.5:
-                    self.status.data = 'Park'
-                elif distance_to_traffic_light_stop_point <= self.stop_distance:
-                    self.status.data ='Decelerate'
-                else:
-                    self.status.data = 'Cruise'
-            else:
-                self.status.data = 'Cruise_green'
-            if isTurnDetected:
-                if trafficLightColor == 'green' or trafficLightColor == 'amber' or trafficLightColor == 'unkown':
-                    self.status.data = 'Turn'
-                else:
-                    self.status.data = vehilceTaskForTrafficLight
-        elif isTrafficLightDetected and isObjectAhead:
-            print("traffic light with object")
-            if distance_to_collision_avoidance_stop_point <= distance_to_traffic_light_stop_point:
-                self.status.data = collisonAvoidanceTask
-            elif distance_to_collision_avoidance_stop_point >= distance_to_traffic_light_stop_point and trafficLightColor == 'red':
-                self.status.data = vehilceTaskForTrafficLight
-            else:
-                if isTurnDetected:
-                    self.status.data = 'Turn'
-                else:
-                    self.status.data = 'Cruise'
-        elif isObjectAhead:
-            self.status.data = collisonAvoidanceTask
-        elif distance_to_destination <= self.stop_distance and look_ahead_point_index > len(self.path) - (self.stop_distance / self.densify_interval + 1):
-            self.status.data ='Decelerate'
-        elif isTurnDetected:
-            self.status.data = 'Turn'
-        else:
-            self.status.data = 'Cruise'
+        
+
+        # if isTrafficLightDetected and not isObjectAhead:
+        #     print("traffic light no object")
+        #     if trafficLightColor == 'red':
+        #         if distance_to_traffic_light_stop_point <= self.densify_interval * 2.5:
+        #             self.status.data = 'Park'
+        #         elif distance_to_traffic_light_stop_point <= self.stop_distance:
+        #             self.status.data ='Decelerate'
+        #         else:
+        #             self.status.data = 'Cruise'
+        #     else:
+        #         self.status.data = 'Cruise_green'
+        #     if isTurnDetected:
+        #         if trafficLightColor == 'green' or trafficLightColor == 'amber' or trafficLightColor == 'unkown':
+        #             self.status.data = 'Turn'
+        #         else:
+        #             self.status.data = vehilceTaskForTrafficLight
+        # elif isTrafficLightDetected and isObjectAhead:
+        #     print("traffic light with object")
+        #     if distance_to_collision_avoidance_stop_point <= distance_to_traffic_light_stop_point:
+        #         self.status.data = collisonAvoidanceTask
+        #     elif distance_to_collision_avoidance_stop_point >= distance_to_traffic_light_stop_point and trafficLightColor == 'red':
+        #         self.status.data = vehilceTaskForTrafficLight
+        #     else:
+        #         if isTurnDetected:
+        #             self.status.data = 'Turn'
+        #         else:
+        #             self.status.data = 'Cruise'
+        # elif isObjectAhead:
+        #     self.status.data = collisonAvoidanceTask
+        # elif distance_to_destination <= self.stop_distance and look_ahead_point_index > len(self.path) - (self.stop_distance / self.densify_interval + 1):
+        #     self.status.data ='Decelerate'
+        # elif isTurnDetected:
+        #     self.status.data = 'Turn'
+        # else:
+        #     self.status.data = 'Cruise'
            
 
     def mission_planning(self):
