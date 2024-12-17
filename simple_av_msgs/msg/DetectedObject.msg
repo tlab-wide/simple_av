@@ -10,6 +10,9 @@ geometry_msgs/Point relative_distance
 # Orientation of the detected object
 geometry_msgs/Quaternion orientation
 
+# Object Yaw from vehicel POV
+float64 yaw
+
 # Shape of the detected object (dimensions: x, y, z)
 geometry_msgs/Vector3 shape
 
