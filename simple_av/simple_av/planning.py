@@ -544,28 +544,19 @@ class Planning(Node):
             if object_direction == 'above':
                 objects_ahead.append(obj)
         
-        if objects_ahead:
-            print("Object(s) detected in the path")
-        else:
-            print("No Object in the path")
-
-        return objects_ahead
-    
-    def collision_avoidance(self, objects_ahead):
         if not objects_ahead:
-            print("No objects ahead")
-            return None
-
+            print("No Objects ahead")
+            return None            
         print("number of objects ahead: ", len(objects_ahead))
         for obj in objects_ahead:
             print("---------------------")
             print("vehicle type:", obj.label)
             print("Direction from vehicle POV: ", obj.direction.data)
             print("Object relative Position from Vehicle: ", obj.relative_position.x, obj.relative_position.y)
-            print(obj.relative_distance.x, obj.relative_distance.y)
+            print("vertical distance the object: ", obj.relative_distance.x)
             print("object shape size: ", obj.shape)
             print("---------------------")
-        
+            
         distance_to_objects_ahead = [obj.relative_distance.x for obj in objects_ahead]
         closest_object = objects_ahead[distance_to_objects_ahead.index(min(distance_to_objects_ahead))]     
         distance_to_closest_object = closest_object.relative_distance.x
@@ -573,6 +564,9 @@ class Planning(Node):
 
         if distance_to_closest_object < self.stop_distance:
             self.get_logger().warning("Imediate threat. Objects ahead in danger zone")
+    
+    def collision_avoidance(self, objects_ahead):
+        pass
 
 
     def behavioural_planning(self, look_ahead_point, look_ahead_point_index, search_area, search_area_as_lanes):
