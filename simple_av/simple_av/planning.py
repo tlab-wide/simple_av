@@ -534,17 +534,13 @@ class Planning(Node):
 
     def object_detection(self):
         if not self.detectedObjects:
-            self
             self.get_logger().warning("No Perception / no object detected!")
             return []
 
-        isObjectAhead = False
-        task = ""
         objects_ahead = []
         
         for obj in self.detectedObjects.objects:
-            object_direction = obj.direction
-            vertical_distance_to_obj = obj.relative_distance.x
+            object_direction = obj.direction.data
             if object_direction == 'above':
                 objects_ahead.append(obj)
         
@@ -570,9 +566,8 @@ class Planning(Node):
             print("object shape size: ", obj.shape)
             print("---------------------")
         
-        nearest_object_distance = float('inf')
         distance_to_objects_ahead = [obj.relative_distance.x for obj in objects_ahead]
-        closest_object = objects_ahead(distance_to_objects_ahead.index(min(distance_to_objects_ahead)))        
+        closest_object = objects_ahead[distance_to_objects_ahead.index(min(distance_to_objects_ahead))]     
         distance_to_closest_object = closest_object.relative_distance.x
         print('Distance to the closest object: ', distance_to_closest_object)
 
@@ -692,7 +687,8 @@ class Planning(Node):
             # publishing
             lookahead_point = LookAheadMsg()
             lookahead_point.look_ahead_point = Point(x=look_ahead_point['x'], y=look_ahead_point['y'], z=look_ahead_point['z'])
-            lookahead_point.stop_point = stop_point
+            lookahead_point.stop_point = Point(x=self.path[-1]['x'], y=self.path[-1]['y'], z=self.path[-1]['z'])
+            # lookahead_point.stop_point = stop_point
             lookahead_point.status = self.status
             lookahead_point.speed_limit = self.speed_limit
         
