@@ -4,6 +4,9 @@ from geometry_msgs.msg import Point, Quaternion, Vector3
 from simple_av_msgs.msg import LocalizationMsg, TrafficSignalsArray, DetectedObject, DetectedObjectsArray
 from v2x_msgs.msg import CooperativeSignalsMessage
 from autoware_auto_perception_msgs.msg import DetectedObjects
+from geometry_msgs.msg import PoseStamped
+from math import atan2, asin
+import math
 
 class Perception(Node):
     def __init__(self):
@@ -14,13 +17,23 @@ class Perception(Node):
         
         # Create subscriber for /OBU/Sensing topic. This topic publishes the information of detected objects from the POV of the vehicle.
         self.subscriptionPose = self.create_subscription(DetectedObjects, '/OBU/Sensing', self.detectedObjects_callback, 10)
-
+        self.subscriptionPose = self.create_subscription(
+            PoseStamped,
+            '/awsim/ground_truth/vehicle/pose',
+            self.groundTruth_callback,
+            10
+        )
         self.trafficSignal = CooperativeSignalsMessage()  # Initialize traffic signal
         self.detectedObjects = DetectedObjects()  # Initialize detected objects message
 
         # Initialize the publishers
         self.publisher_traffic_signals = self.create_publisher(TrafficSignalsArray, 'simple_av/perception/traffic_signals', 10)
         self.publisher_detected_objects = self.create_publisher(DetectedObjectsArray, 'simple_av/perception/detected_objects', 10)
+
+        self.ground_truth_msg = PoseStamped()
+
+        self.vehicle_length = 4.8895 #meters
+        self.vehicle_width = 1.895 #meters
 
     def trafficSignal_callback(self, msg):
         """Callback function to update the traffic signal data."""
@@ -29,6 +42,50 @@ class Perception(Node):
     def detectedObjects_callback(self, msg):
         """Callback function to update the pose data."""
         self.detectedObjects = msg
+
+    def groundTruth_callback(self, msg):
+        self.ground_truth_msg = msg
+
+    def get_groundTruth_msg(self):
+        return self.ground_truth_msg
+
+    # Getting the direction of the object from Automated vehicle point of view
+    def object_direction(self, x, y):
+        if y <= 2.25 and y >= -2.25:
+            # above or behind the vehicle
+            if x >=0:
+                # object is above the vehicle
+                return 'above'
+            else:
+                # object is behind the vehicle
+                return 'behind'
+        elif y > 2.0:
+            # Left side of the vehicle
+            if x >=0:
+                # object is above the vehicle
+                return 'NE'
+            else:
+                # object is behind the vehicle
+                return 'SW'
+        else: 
+            # Right side of the vehicle
+            if x >=0:
+                # object is above the vehicle
+                return 'NE'
+            else:
+                # object is behind the vehicle
+                return 'SE'
+
+    def quaternion_to_yaw(self, q):
+        """
+        Convert a geometry_msgs.msg.Quaternion to a yaw angle in radians.
+        :param q: Quaternion (x, y, z, w)
+        :return: yaw angle in radians
+        """
+        t3 = 2.0 * (q.w * q.z + q.x * q.y)
+        t4 = 1.0 - 2.0 * (q.y * q.y + q.z * q.z)
+        yaw = atan2(t3, t4)  # Angle around z-axis
+        return yaw
 
     def handle_detected_objects(self):
         detected_objects_list = []
@@ -42,12 +99,25 @@ class Perception(Node):
 
             # Extract pose (position and orientation)
             pose = obj.kinematics.pose_with_covariance.pose
-            detected_obj_msg.position = Point(x=pose.position.x, y=pose.position.y, z=pose.position.z)
+            detected_obj_msg.relative_position = Point(x=pose.position.x, y=pose.position.y, z=pose.position.z)
             detected_obj_msg.orientation = Quaternion(x=pose.orientation.x, y=pose.orientation.y, z=pose.orientation.z, w=pose.orientation.w)
+
+            # Calculatin Yaw of the object from Vehicle POV
+            q = Quaternion(x=pose.orientation.x, y=pose.orientation.y, z=pose.orientation.z, w=pose.orientation.w)
+            detected_obj_msg.yaw = math.degrees(self.quaternion_to_yaw(q))
+
+            # Finding the object direction
+            detected_obj_msg.direction.data = self.object_direction(pose.position.x, pose.position.y)
 
             # Extract shape (dimensions)
             shape = obj.shape.dimensions
             detected_obj_msg.shape = Vector3(x=shape.x, y=shape.y, z=shape.z)
+
+            relative_x_distance = pose.position.x - shape.x / 2 - self.vehicle_length/2
+            relative_y_distance = pose.position.y - shape.y / 2 - self.vehicle_width/2
+            detected_obj_msg.relative_distance = Point(x=relative_x_distance, y=relative_y_distance, z=pose.position.z)
+
+            detected_obj_msg.distance = math.sqrt(relative_x_distance**2 + relative_y_distance**2)
 
             detected_objects_list.append(detected_obj_msg)
 
@@ -67,7 +137,7 @@ class Perception(Node):
                 v2i_traffic_signals_id.append(map_primitive_id)
                 v2i_traffic_signals_colors.append(color)
         return v2i_traffic_signals_id, v2i_traffic_signals_colors
-    
+
     def perception(self):
         # Handle traffic signals
         v2i_traffic_signals_id, v2i_traffic_signals_colors = self.get_trafficSignals()
@@ -87,15 +157,22 @@ class Perception(Node):
         detected_objects_msg.objects = detected_objects_list
         self.publisher_detected_objects.publish(detected_objects_msg)
         # self.get_logger().info('Published detected objects data')
-        # print("number of objects: ", len(detected_objects_msg.objects))
+        ground_truth = self.get_groundTruth_msg()
+        q = Quaternion(x=ground_truth.pose.orientation.x, y=ground_truth.pose.orientation.y, z=ground_truth.pose.orientation.z, w=ground_truth.pose.orientation.w)
+        yaw_degree_vehicle = math.degrees(self.quaternion_to_yaw(q))
+
+        print("number of objects: ", len(detected_objects_msg.objects))
         for obj in detected_objects_msg.objects:
-            if obj.label == 2:
-                vehicle_type = 'Truck' if obj.label == 2 else 'Car'
-                # print(obj.label, vehicle_type)
-                print(obj.position)
-                # print(obj.orientation)
-                print(obj.shape)
-                print("------------------------")
+            if obj.label != 7:
+                print("vehicle type:", obj.label)
+                print("Direction from vehicle POV: ", obj.direction.data)
+                print("Object relative Position from Vehicle: ", obj.relative_position.x, obj.relative_position.y)
+                print(obj.relative_distance.x, obj.relative_distance.y)
+                print("Object Orientation: ", obj.orientation)
+                print("yaw: ", obj.yaw)
+                # print("vehicle angle: ", yaw_degree_vehicle)
+                print("object shape size: ", obj.shape)
+                print("---------------------")
 
 
 def main(args=None):

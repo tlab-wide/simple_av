@@ -338,7 +338,6 @@ class Localization(Node):
         localization_result.minimal_distance = min_distance
         self.localization_publisher.publish(localization_result)
 
-
 def main(args=None):
     rclpy.init(args=args)
     node = Localization()
