@@ -549,12 +549,12 @@ class Planning(Node):
     
     def collision_avoidance(self, closest_object_ahead, vehicle_pose):
         if not closest_object_ahead:
-            return None, None
+            return None, None, None
         
         distance_to_closest_object = closest_object_ahead.relative_distance.x
         if distance_to_closest_object > self.stop_distance:
             self.get_logger().info("No immediate danger")
-            return None, None
+            return None, None, None
         self.get_logger().warning("Imediate threat. Objects ahead in danger zone")
         
         object_absolute_pose = self.get_object_absolute_position(vehicle_pose, closest_object_ahead)
@@ -570,7 +570,7 @@ class Planning(Node):
 
         distance_to_stop_point = self.calculate_distance(vehicle_pose, {'x': stop_point.x, 'y': stop_point.y, 'z': stop_point.z})
         print("Distance to stop", distance_to_stop_point)
-        return stop_point, None
+        return True, stop_point, None
     
     def behavioural_planning(self, look_ahead_point, look_ahead_point_index, search_area, search_area_as_lanes):
         # print("behavioural planning ... ")
@@ -592,7 +592,7 @@ class Planning(Node):
             print("traffic light detected, distance to stop, ", trafficLightColor, distance_to_traffic_light_stop_point)
         
         closest_object_ahead = self.object_detection()
-        stop_point, task = self.collision_avoidance(closest_object_ahead, vehicle_pose)
+        isObjectAhead, stop_point_for_collison_avoidance, task = self.collision_avoidance(closest_object_ahead, vehicle_pose)
 
         # if isTrafficLightDetected and not isObjectAhead:
         #     print("traffic light no object")
@@ -621,14 +621,16 @@ class Planning(Node):
         #             self.status.data = 'Turn'
         #         else:
         #             self.status.data = 'Cruise'
-        # elif isObjectAhead:
-        #     self.status.data = collisonAvoidanceTask
-        # elif distance_to_destination <= self.stop_distance and look_ahead_point_index > len(self.path) - (self.stop_distance / self.densify_interval + 1):
-        #     self.status.data ='Decelerate'
-        # elif isTurnDetected:
-        #     self.status.data = 'Turn'
-        # else:
-        #     self.status.data = 'Cruise'
+        if isObjectAhead:
+            self.status.data = 'Decelerate'
+            return stop_point_for_collison_avoidance
+        elif distance_to_destination <= self.stop_distance and look_ahead_point_index > len(self.path) - (self.stop_distance / self.densify_interval + 1):
+            self.status.data ='Decelerate'
+        elif isTurnDetected:
+            self.status.data = 'Turn'
+        else:
+            self.status.data = 'Cruise'
+        return destination
            
 
     def mission_planning(self):
@@ -676,8 +678,7 @@ class Planning(Node):
             # publishing
             lookahead_point = LookAheadMsg()
             lookahead_point.look_ahead_point = Point(x=look_ahead_point['x'], y=look_ahead_point['y'], z=look_ahead_point['z'])
-            lookahead_point.stop_point = Point(x=self.path[-1]['x'], y=self.path[-1]['y'], z=self.path[-1]['z'])
-            # lookahead_point.stop_point = stop_point
+            lookahead_point.stop_point = stop_point
             lookahead_point.status = self.status
             lookahead_point.speed_limit = self.speed_limit
         
