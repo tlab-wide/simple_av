@@ -104,7 +104,7 @@ class Planning(Node):
         self.base_speed = 10.0 # meters/second
         self.speed_limit = 10.0 # meters/second
         self.lookahead_distance = self.base_speed * 2 # meters
-        self.stop_distance = self.base_speed * 4 # meters
+        self.stop_distance = self.base_speed * 3 # meters
         self.saftey_distance = 5.0 #meters
         self.vehicle_length = 4.8895 #meters
         self.vehicle_width = 1.895 #meters
@@ -549,12 +549,12 @@ class Planning(Node):
     
     def collision_avoidance(self, closest_object_ahead, vehicle_pose):
         if not closest_object_ahead:
-            return None, None, None
+            return False, None, 'Cruise'
         
         distance_to_closest_object = closest_object_ahead.relative_distance.x
         if distance_to_closest_object > self.stop_distance:
             self.get_logger().info("No immediate danger")
-            return None, None, None
+            return False, None, 'Cruise'
         self.get_logger().warning("Imediate threat. Objects ahead in danger zone")
         
         object_absolute_pose = self.get_object_absolute_position(vehicle_pose, closest_object_ahead)
@@ -570,7 +570,12 @@ class Planning(Node):
 
         distance_to_stop_point = self.calculate_distance(vehicle_pose, {'x': stop_point.x, 'y': stop_point.y, 'z': stop_point.z})
         print("Distance to stop", distance_to_stop_point)
-        return True, stop_point, None
+
+        task = 'Decelerate'
+        if distance_to_stop_point <= 1.0:
+            task = 'Park'
+
+        return True, stop_point, task
     
     def behavioural_planning(self, look_ahead_point, look_ahead_point_index, search_area, search_area_as_lanes):
         # print("behavioural planning ... ")
@@ -622,7 +627,7 @@ class Planning(Node):
         #         else:
         #             self.status.data = 'Cruise'
         if isObjectAhead:
-            self.status.data = 'Decelerate'
+            self.status.data = task
             return stop_point_for_collison_avoidance
         elif distance_to_destination <= self.stop_distance and look_ahead_point_index > len(self.path) - (self.stop_distance / self.densify_interval + 1):
             self.status.data ='Decelerate'
