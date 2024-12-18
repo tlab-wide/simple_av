@@ -20,4 +20,4 @@ geometry_msgs/Vector3 shape
 float64 distance
 
 # Direction of the object (above, behind, left, right)
-std_msgs/String direction
+std_msgs/String direction'

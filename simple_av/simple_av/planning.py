@@ -104,7 +104,7 @@ class Planning(Node):
         self.base_speed = 10.0 # meters/second
         self.speed_limit = 10.0 # meters/second
         self.lookahead_distance = self.base_speed * 2 # meters
-        self.stop_distance = self.base_speed * 3 # meters
+        self.stop_distance = self.base_speed * 2 # meters
         self.saftey_distance = 5.0 #meters
         self.vehicle_length = 4.8895 #meters
         self.vehicle_width = 1.895 #meters
