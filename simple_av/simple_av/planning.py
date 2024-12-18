@@ -422,7 +422,7 @@ class Planning(Node):
             lane_index = self.route.index(self.location.closest_lane_names.data)
         except:
             # vehicle is out of path
-            self.get_logger().warning("Vehicle is out of the Path")
+            # self.get_logger().warning("Vehicle is out of the Path")
             # TODO: Do something when the vehicle is out of the path 
             lane_index = self.current_lane_index
         if lane_index in range(self.current_lane_index, self.current_lane_index + self.search_depth):
@@ -508,37 +508,13 @@ class Planning(Node):
             p1 = None
             p2 = None
         return isTrafficLightDetected, task, _color, p1, p2
-    
-    def calculate_stop_point(self, obj):
-        """
-        Calculate the stop point exactly in safety distance behind the object,
-        considering the vehicle's and object's lengths.
-        
-        Parameters:
-            obj: The detected object with position and shape information.
-            
-        Returns:
-            stop_point_x: X coordinate of the stop point.
-            stop_point_y: Y coordinate of the stop point.
-        """
-        # Calculate the back face of the object
-        object_back_x = obj.position.x - (obj.shape.x / 2)
-
-        # Calculate the stop point 5 meters behind the back of the object
-        stop_point_x = object_back_x - self.saftey_distance - (self.vehicle_length / 2)
-
-        # Align the stop point y-coordinate with the object's y-coordinate
-        stop_point_y = obj.position.y
-
-        return stop_point_x, stop_point_y, obj.position.z
 
     def object_detection(self):
         if not self.detectedObjects:
             self.get_logger().warning("No Perception / no object detected!")
-            return []
+            return None
 
         objects_ahead = []
-        
         for obj in self.detectedObjects.objects:
             object_direction = obj.direction.data
             if object_direction == 'above':
@@ -547,6 +523,7 @@ class Planning(Node):
         if not objects_ahead:
             print("No Objects ahead")
             return None            
+        
         print("number of objects ahead: ", len(objects_ahead))
         for obj in objects_ahead:
             print("---------------------")
@@ -555,34 +532,56 @@ class Planning(Node):
             print("Object relative Position from Vehicle: ", obj.relative_position.x, obj.relative_position.y)
             print("vertical distance the object: ", obj.relative_distance.x)
             print("object shape size: ", obj.shape)
-            print("---------------------")
-            
+            print("---------------------")    
         distance_to_objects_ahead = [obj.relative_distance.x for obj in objects_ahead]
         closest_object = objects_ahead[distance_to_objects_ahead.index(min(distance_to_objects_ahead))]     
         distance_to_closest_object = closest_object.relative_distance.x
         print('Distance to the closest object: ', distance_to_closest_object)
-
-        if distance_to_closest_object < self.stop_distance:
-            self.get_logger().warning("Imediate threat. Objects ahead in danger zone")
+        return closest_object
     
-    def collision_avoidance(self, objects_ahead):
-        pass
-
-
-    def behavioural_planning(self, look_ahead_point, look_ahead_point_index, search_area, search_area_as_lanes):
+    def get_object_absolute_position(self, vehicle_pose, object):
+        print("vehicle absolute pos: ", vehicle_pose['x'], vehicle_pose['y'], vehicle_pose['z'])
+        obj_x = vehicle_pose['x'] + object.relative_position.x
+        obj_y = vehicle_pose['y'] + object.relative_position.y
+        obj_z = vehicle_pose['z'] + object.relative_position.z
+        object_absolute_pose = Point(x=obj_x, y=obj_y, z=obj_z)
+        return object_absolute_pose
+    
+    def collision_avoidance(self, closest_object_ahead, vehicle_pose):
+        if not closest_object_ahead:
+            return None, None
         
+        distance_to_closest_object = closest_object_ahead.relative_distance.x
+        if distance_to_closest_object > self.stop_distance:
+            self.get_logger().info("No immediate danger")
+            return None, None
+        self.get_logger().warning("Imediate threat. Objects ahead in danger zone")
+        
+        object_absolute_pose = self.get_object_absolute_position(vehicle_pose, closest_object_ahead)
+        print("Object absolute pos: ", object_absolute_pose.x , object_absolute_pose.y, object_absolute_pose.z)
+        
+        # Calculate the position of the back side of the object
+        object_back_x = object_absolute_pose.x - (closest_object_ahead.shape.x / 2)
+        # Calculate the stop point 5 meters behind the back of the object
+        stop_point_x = object_back_x - self.saftey_distance - (self.vehicle_length / 2)
+        
+        stop_point = Point(x=stop_point_x, y=object_absolute_pose.y, z=object_absolute_pose.z)
+        print("Stop point behind the object: ", stop_point_x , object_absolute_pose.y, object_absolute_pose.z)
+
+        distance_to_stop_point = self.calculate_distance(vehicle_pose, {'x': stop_point.x, 'y': stop_point.y, 'z': stop_point.z})
+        print("Distance to stop", distance_to_stop_point)
+        return stop_point, None
+    
+    def behavioural_planning(self, look_ahead_point, look_ahead_point_index, search_area, search_area_as_lanes):
         # print("behavioural planning ... ")
         vehicle_pose = {'x': self.pose.pose.position.x, 'y': self.pose.pose.position.y, 'z': self.pose.pose.position.z}
 
         isTurnDetected = self.curve_handler(look_ahead_point, look_ahead_point_index)
-        isTrafficLightDetected, vehilceTaskForTrafficLight, trafficLightColor, p1, p2 = self.manage_traffic_lights()
-        
-        objects_ahead = self.object_detection()
-        self.collision_avoidance(objects_ahead)
 
         destination = Point(x=self.path[-1]['x'], y=self.path[-1]['y'], z=self.path[-1]['z'])
         distance_to_destination = self.calculate_distance(vehicle_pose, {'x': destination.x, 'y': destination.y, 'z': destination.z})
             
+        isTrafficLightDetected, vehilceTaskForTrafficLight, trafficLightColor, p1, p2 = self.manage_traffic_lights()
         if isTrafficLightDetected:
             #calculate stop distacne
             new_x = (p1[0] + p2[0])/2
@@ -591,13 +590,9 @@ class Planning(Node):
             stop_point_for_traffic_light = Point(x=new_x, y=new_y, z=new_z)
             distance_to_traffic_light_stop_point = self.calculate_distance(vehicle_pose, {'x': stop_point_for_traffic_light.x, 'y': stop_point_for_traffic_light.y, 'z': stop_point_for_traffic_light.z})
             print("traffic light detected, distance to stop, ", trafficLightColor, distance_to_traffic_light_stop_point)
-        # if isObjectAhead:
-        #     x,y,z = self.calculate_stop_point(object)
-        #     stop_point_for_collision_avoidance = Point(x=x, y=y, z=z)
-        #     distance_to_collision_avoidance_stop_point = self.calculate_distance(vehicle_pose, {'x': stop_point_for_collision_avoidance.x, 'y': stop_point_for_collision_avoidance.y, 'z': stop_point_for_collision_avoidance.z})
-        #     print("Object detected, distance to stop", distance_to_collision_avoidance_stop_point)
-
         
+        closest_object_ahead = self.object_detection()
+        stop_point, task = self.collision_avoidance(closest_object_ahead, vehicle_pose)
 
         # if isTrafficLightDetected and not isObjectAhead:
         #     print("traffic light no object")
