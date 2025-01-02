@@ -55,8 +55,9 @@ class PIDController:
 
 
 class VehicleControl(Node):
-    def __init__(self):
+    def __init__(self, vehicle_type):
         super().__init__('control')
+        self.vehicle_type = vehicle_type
 
         qos_profile = QoSProfile(
             reliability=ReliabilityPolicy.RELIABLE,
@@ -100,7 +101,10 @@ class VehicleControl(Node):
         self.turn_indicator_publisher = self.create_publisher(TurnIndicatorsCommand, '/control/command/turn_indicators_cmd', qos_profile)
 
         self.pid_controller = PIDController(p_gain=1.5, i_gain=0.5, d_gain=0.125)
-        self.wheel_base = 2.75 # meters
+        if self.vehicle_type == 'Bus':
+            self.wheel_base = 6.0 # meters
+        else:
+            self.wheel_base = 2.75 # meters
 
         self.previous_steering_angle = 0
         self.steering_gain = 0.2  # Proportional gain for steering
@@ -256,7 +260,7 @@ class VehicleControl(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-    node = VehicleControl()
+    node = VehicleControl('Lexus')
 
     try:
         while rclpy.ok():
