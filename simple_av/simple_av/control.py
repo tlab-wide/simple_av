@@ -260,7 +260,7 @@ class VehicleControl(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-    node = VehicleControl('Lexus')
+    node = VehicleControl('Bus')
 
     try:
         while rclpy.ok():

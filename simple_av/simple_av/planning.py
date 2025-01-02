@@ -698,7 +698,7 @@ class Planning(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-    node = Planning('Lexus')
+    node = Planning('Bus')
     try:
         while rclpy.ok():
             rclpy.spin_once(node, timeout_sec=None)# Set timeout to 0 to avoid delay
