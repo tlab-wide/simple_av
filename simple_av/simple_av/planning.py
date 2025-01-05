@@ -106,7 +106,6 @@ class Planning(Node):
         self.speed_limit = 10.0 # meters/second
         self.lookahead_distance = self.base_speed * 2 # meters
         self.stop_distance = self.base_speed * 2 # meters
-        self.saftey_distance = 5.0 #meters
         self.status = String() # Cruise, Decelerate, PrepareToStop, Turn
         if self.vehilce_type == 'Bus':
             self.vehicle_length = 10.0 #meters
@@ -114,6 +113,8 @@ class Planning(Node):
         else:
             self.vehicle_length = 4.8895 #meters
             self.vehicle_width = 1.895 #meters
+
+        self.saftey_distance = 5.0 + self.vehicle_length/2 #meters
         
         self.isCurveFinished = False
         self.isCurveStarted = False
@@ -547,17 +548,17 @@ class Planning(Node):
             print("bounding_box front: ", obj.bounding_box[3])
             print("object shape size: ", obj.shape)
             print("---------------------")    
-        distance_to_objects_ahead = [obj.relative_distance.x for obj in objects_ahead]
+        distance_to_objects_ahead = [obj.distance for obj in objects_ahead]
         closest_object = objects_ahead[distance_to_objects_ahead.index(min(distance_to_objects_ahead))]     
-        distance_to_closest_object = closest_object.relative_distance.x
+        distance_to_closest_object = closest_object.distance
         print('Distance to the closest object: ', distance_to_closest_object)
         return closest_object
     
     def get_object_absolute_position(self, vehicle_pose, object):
         print("vehicle absolute pos: ", vehicle_pose['x'], vehicle_pose['y'], vehicle_pose['z'])
-        obj_x = vehicle_pose['x'] + object.relative_position.x
-        obj_y = vehicle_pose['y'] + object.relative_position.y
-        obj_z = vehicle_pose['z'] + object.relative_position.z
+        obj_x = vehicle_pose['x'] + object.x
+        obj_y = vehicle_pose['y'] + object.y
+        obj_z = vehicle_pose['z'] + object.z
         object_absolute_pose = Point(x=obj_x, y=obj_y, z=obj_z)
         return object_absolute_pose
     
@@ -565,22 +566,25 @@ class Planning(Node):
         if not closest_object_ahead:
             return False, None, 'Cruise'
         
-        distance_to_closest_object = closest_object_ahead.relative_distance.x
+        distance_to_closest_object = closest_object_ahead.distance
         if distance_to_closest_object > self.stop_distance:
             self.get_logger().info("No immediate danger")
             return False, None, 'Cruise'
         self.get_logger().warning("Imediate threat. Objects ahead in danger zone")
         
-        object_absolute_pose = self.get_object_absolute_position(vehicle_pose, closest_object_ahead)
+        object_absolute_pose = self.get_object_absolute_position(vehicle_pose, closest_object_ahead.position)
         print("Object absolute pos: ", object_absolute_pose.x , object_absolute_pose.y, object_absolute_pose.z)
+
+        nearest_side_absulute_pose = self.get_object_absolute_position(vehicle_pose, closest_object_ahead.bounding_box[closest_object_ahead.nearest_object_side])
+        print("nears side absolute pos: ", nearest_side_absulute_pose.x , nearest_side_absulute_pose.y, nearest_side_absulute_pose.z)
+        # # Calculate the position of the back side of the object
+        # object_back_x = object_absolute_pose.x - (closest_object_ahead.shape.x / 2)
+        # # Calculate the stop point in a safe distance behind the object
+
+        # stop_point_x = object_back_x - self.saftey_distance - (self.vehicle_length / 2)
         
-        # Calculate the position of the back side of the object
-        object_back_x = object_absolute_pose.x - (closest_object_ahead.shape.x / 2)
-        # Calculate the stop point 5 meters behind the back of the object
-        stop_point_x = object_back_x - self.saftey_distance - (self.vehicle_length / 2)
-        
-        stop_point = Point(x=stop_point_x, y=object_absolute_pose.y, z=object_absolute_pose.z)
-        print("Stop point behind the object: ", stop_point_x , object_absolute_pose.y, object_absolute_pose.z)
+        stop_point = Point(x=nearest_side_absulute_pose - self.saftey_distance, y=nearest_side_absulute_pose.y, z=nearest_side_absulute_pose.z)
+        print("Stop point behind the object: ", stop_point)
 
         distance_to_stop_point = self.calculate_distance(vehicle_pose, {'x': stop_point.x, 'y': stop_point.y, 'z': stop_point.z})
         print("Distance to stop", distance_to_stop_point)
