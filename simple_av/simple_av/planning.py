@@ -61,8 +61,9 @@ class PathCurveDetector:
 
 
 class Planning(Node):
-    def __init__(self):
+    def __init__(self, vehilce_type):
         super().__init__('Planning')
+        self.vehilce_type = vehilce_type
         # Load the Json map
         self.map_data = self.load_map_data()
         self.map_data = self.map_data["LaneLetsArray"]
@@ -106,9 +107,13 @@ class Planning(Node):
         self.lookahead_distance = self.base_speed * 2 # meters
         self.stop_distance = self.base_speed * 2 # meters
         self.saftey_distance = 5.0 #meters
-        self.vehicle_length = 4.8895 #meters
-        self.vehicle_width = 1.895 #meters
         self.status = String() # Cruise, Decelerate, PrepareToStop, Turn
+        if self.vehilce_type == 'Bus':
+            self.vehicle_length = 10.0 #meters
+            self.vehicle_width = 2.9 #meters
+        else:
+            self.vehicle_length = 4.8895 #meters
+            self.vehicle_width = 1.895 #meters
         
         self.isCurveFinished = False
         self.isCurveStarted = False
@@ -693,7 +698,7 @@ class Planning(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-    node = Planning()
+    node = Planning('Bus')
     try:
         while rclpy.ok():
             rclpy.spin_once(node, timeout_sec=None)# Set timeout to 0 to avoid delay
