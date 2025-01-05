@@ -87,7 +87,7 @@ class Perception(Node):
         yaw = atan2(t3, t4)  # Angle around z-axis
         return yaw
     
-    def calculate_bounding_box(self, shape, pose, is_from_rsu):
+    def calculate_bounding_box(self, shape, pose):
         """
         Calculate the bounding box of an object based on its shape and position.
 
@@ -132,7 +132,18 @@ class Perception(Node):
             shape = obj.shape.dimensions
             detected_obj_msg.shape = Vector3(x=shape.x, y=shape.y, z=shape.z)
 
+            # Bounding Box
+            detected_obj_msg.bounding_box = self.calculate_bounding_box(shape, detected_obj_msg.relative_position)
+
             # Relative Distance
+            distances = []
+            for objetc_side in detected_obj_msg.bounding_box:
+                distances.append(math.sqrt(objetc_side.x**2 + objetc_side.y**2))
+            detected_obj_msg.distance = min(distances)
+            side = distances.index(min(distances))
+            sides = ['left', 'right', 'back', 'front']
+            detected_obj_msg.object_side.data = sides[side]
+
             relative_x_distance = pose.position.x - shape.x / 2 - self.vehicle_length/2
             relative_y_distance = pose.position.y - shape.y / 2 - self.vehicle_width/2
             detected_obj_msg.relative_distance = Point(x=relative_x_distance, y=relative_y_distance, z=pose.position.z)
@@ -140,8 +151,6 @@ class Perception(Node):
             # Distance
             detected_obj_msg.distance = math.sqrt(relative_x_distance**2 + relative_y_distance**2)
             
-            # Bounding Box
-            detected_obj_msg.bounding_box = self.calculate_bounding_box(shape, detected_obj_msg.relative_position, detected_obj_msg.is_from_rsu)
 
             detected_objects_list.append(detected_obj_msg)
 
@@ -188,13 +197,16 @@ class Perception(Node):
         print("number of objects: ", len(detected_objects_msg.objects))
         for obj in detected_objects_msg.objects:
             if obj.label != 7:
+                print("is RSU:", obj.is_from_rsu)
                 print("vehicle type:", obj.label)
-                print("Direction from vehicle POV: ", obj.direction.data)
+                print("Direction from vehicle POV: ", obj.relative_direction.data)
                 print("Object relative Position from Vehicle: ", obj.relative_position.x, obj.relative_position.y)
-                print(obj.relative_distance.x, obj.relative_distance.y)
-                print("Object Orientation: ", obj.orientation)
-                print("yaw: ", obj.yaw)
-                # print("vehicle angle: ", yaw_degree_vehicle)
+                print("closest side of the object: ", obj.object_side.data)
+                print("bounding_box left: ", obj.bounding_box[0])
+                print("bounding_box right: ", obj.bounding_box[1])
+                print("bounding_box back: ", obj.bounding_box[2])
+                print("bounding_box front: ", obj.bounding_box[3])
+                print("DEBUG - min dist: ", obj.distance) 
                 print("object shape size: ", obj.shape)
                 print("---------------------")
 
