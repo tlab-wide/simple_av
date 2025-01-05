@@ -63,7 +63,7 @@ class Perception(Node):
             # Left side of the vehicle
             if x >=0:
                 # object is above the vehicle
-                return 'NE'
+                return 'NW'
             else:
                 # object is behind the vehicle
                 return 'SW'
@@ -100,12 +100,14 @@ class Perception(Node):
         """
         half_length = shape.x / 2
         half_width = shape.y / 2
+        # Left, Right, Back, Front
         bounding_box = [
-            Point(x=pose.position.x, y=pose.position.y - half_width, z=pose.position.z), # Left
-            Point(x=pose.position.x, y=pose.position.y + half_width, z=pose.position.z), # Right
-            Point(x=pose.position.x - half_length, y=pose.position.y, z=pose.position.z), # Back
-            Point(x=pose.position.x + half_length, y=pose.position.y, z=pose.position.z), # Front
+            Point(x=pose.x, y=pose.y - half_width, z=pose.z), 
+            Point(x=pose.x, y=pose.y + half_width, z=pose.z),
+            Point(x=pose.x - half_length, y=pose.y, z=pose.z),
+            Point(x=pose.x + half_length, y=pose.y, z=pose.z)
         ]
+        return bounding_box
 
     def handle_detected_objects(self):
         detected_objects_list = []
@@ -144,12 +146,12 @@ class Perception(Node):
             sides = ['left', 'right', 'back', 'front']
             detected_obj_msg.object_side.data = sides[side]
 
-            relative_x_distance = pose.position.x - shape.x / 2 - self.vehicle_length/2
-            relative_y_distance = pose.position.y - shape.y / 2 - self.vehicle_width/2
-            detected_obj_msg.relative_distance = Point(x=relative_x_distance, y=relative_y_distance, z=pose.position.z)
+            # relative_x_distance = pose.position.x - shape.x / 2 - self.vehicle_length/2
+            # relative_y_distance = pose.position.y - shape.y / 2 - self.vehicle_width/2
+            # detected_obj_msg.relative_distance = Point(x=relative_x_distance, y=relative_y_distance, z=pose.position.z)
 
-            # Distance
-            detected_obj_msg.distance = math.sqrt(relative_x_distance**2 + relative_y_distance**2)
+            # # Distance
+            # detected_obj_msg.distance = math.sqrt(relative_x_distance**2 + relative_y_distance**2)
             
 
             detected_objects_list.append(detected_obj_msg)
