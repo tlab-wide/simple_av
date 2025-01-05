@@ -1,3 +1,6 @@
+# Whether the data is from RSU (true) or vehicle-mounted sensors (false)
+bool is_from_rsu
+
 # Detected object label
 int32 label
 
@@ -10,9 +13,6 @@ geometry_msgs/Point relative_distance
 # Orientation of the detected object
 geometry_msgs/Quaternion orientation
 
-# Object Yaw from vehicel POV
-float64 yaw
-
 # Shape of the detected object (dimensions: x, y, z)
 geometry_msgs/Vector3 shape
 
@@ -20,4 +20,7 @@ geometry_msgs/Vector3 shape
 float64 distance
 
 # Direction of the object (above, behind, left, right)
-std_msgs/String direction'
+std_msgs/String relative_direction
+
+# x,y positions of 4 side of the vehicle
+geometry_msgs/Point[4] bounding_box

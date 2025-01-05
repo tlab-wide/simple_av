@@ -521,7 +521,7 @@ class Planning(Node):
 
         objects_ahead = []
         for obj in self.detectedObjects.objects:
-            object_direction = obj.direction.data
+            object_direction = obj.relative_direction.data
             if object_direction == 'above':
                 objects_ahead.append(obj)
         
@@ -533,7 +533,7 @@ class Planning(Node):
         for obj in objects_ahead:
             print("---------------------")
             print("vehicle type:", obj.label)
-            print("Direction from vehicle POV: ", obj.direction.data)
+            print("Relative Direction from vehicle POV: ", obj.relative_direction.data)
             print("Object relative Position from Vehicle: ", obj.relative_position.x, obj.relative_position.y)
             print("vertical distance the object: ", obj.relative_distance.x)
             print("object shape size: ", obj.shape)

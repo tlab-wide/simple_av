@@ -97,17 +97,19 @@ class Perception(Node):
             if obj.classification:
                 detected_obj_msg.label = obj.classification[0].label  # Assuming the first classification is the main one
 
+            detected_obj_msg.is_from_rsu = False
+
             # Extract pose (position and orientation)
             pose = obj.kinematics.pose_with_covariance.pose
             detected_obj_msg.relative_position = Point(x=pose.position.x, y=pose.position.y, z=pose.position.z)
             detected_obj_msg.orientation = Quaternion(x=pose.orientation.x, y=pose.orientation.y, z=pose.orientation.z, w=pose.orientation.w)
 
-            # Calculatin Yaw of the object from Vehicle POV
-            q = Quaternion(x=pose.orientation.x, y=pose.orientation.y, z=pose.orientation.z, w=pose.orientation.w)
-            detected_obj_msg.yaw = math.degrees(self.quaternion_to_yaw(q))
+            # # Calculatin Yaw of the object from Vehicle POV
+            # q = Quaternion(x=pose.orientation.x, y=pose.orientation.y, z=pose.orientation.z, w=pose.orientation.w)
+            # detected_obj_msg.yaw = math.degrees(self.quaternion_to_yaw(q))
 
-            # Finding the object direction
-            detected_obj_msg.direction.data = self.object_direction(pose.position.x, pose.position.y)
+            # Finding the object relative direction
+            detected_obj_msg.relative_direction.data = self.object_direction(pose.position.x, pose.position.y)
 
             # Extract shape (dimensions)
             shape = obj.shape.dimensions
