@@ -86,6 +86,26 @@ class Perception(Node):
         t4 = 1.0 - 2.0 * (q.y * q.y + q.z * q.z)
         yaw = atan2(t3, t4)  # Angle around z-axis
         return yaw
+    
+    def calculate_bounding_box(self, shape, pose, is_from_rsu):
+        """
+        Calculate the bounding box of an object based on its shape and position.
+
+        Args:
+            shape (geometry_msgs/Vector3): Dimensions of the object (length, width, height).
+            pose (geometry_msgs/Point): Position of the object's center.
+
+        Returns:
+            list[geometry_msgs/Point]: List of Points representing the bounding box corners.
+        """
+        half_length = shape.x / 2
+        half_width = shape.y / 2
+        bounding_box = [
+            Point(x=pose.position.x, y=pose.position.y - half_width, z=pose.position.z), # Left
+            Point(x=pose.position.x, y=pose.position.y + half_width, z=pose.position.z), # Right
+            Point(x=pose.position.x - half_length, y=pose.position.y, z=pose.position.z), # Back
+            Point(x=pose.position.x + half_length, y=pose.position.y, z=pose.position.z), # Front
+        ]
 
     def handle_detected_objects(self):
         detected_objects_list = []
@@ -93,33 +113,35 @@ class Perception(Node):
         for obj in self.detectedObjects.objects:
             detected_obj_msg = DetectedObject()
 
-            # Extract label
+            # label
             if obj.classification:
                 detected_obj_msg.label = obj.classification[0].label  # Assuming the first classification is the main one
 
+            # Sensor Type - is_from_rsu
             detected_obj_msg.is_from_rsu = False
 
-            # Extract pose (position and orientation)
+            # pose (position and orientation)
             pose = obj.kinematics.pose_with_covariance.pose
             detected_obj_msg.relative_position = Point(x=pose.position.x, y=pose.position.y, z=pose.position.z)
             detected_obj_msg.orientation = Quaternion(x=pose.orientation.x, y=pose.orientation.y, z=pose.orientation.z, w=pose.orientation.w)
 
-            # # Calculatin Yaw of the object from Vehicle POV
-            # q = Quaternion(x=pose.orientation.x, y=pose.orientation.y, z=pose.orientation.z, w=pose.orientation.w)
-            # detected_obj_msg.yaw = math.degrees(self.quaternion_to_yaw(q))
-
-            # Finding the object relative direction
+            # relative direction
             detected_obj_msg.relative_direction.data = self.object_direction(pose.position.x, pose.position.y)
 
-            # Extract shape (dimensions)
+            # Objects shape (dimensions)
             shape = obj.shape.dimensions
             detected_obj_msg.shape = Vector3(x=shape.x, y=shape.y, z=shape.z)
 
+            # Relative Distance
             relative_x_distance = pose.position.x - shape.x / 2 - self.vehicle_length/2
             relative_y_distance = pose.position.y - shape.y / 2 - self.vehicle_width/2
             detected_obj_msg.relative_distance = Point(x=relative_x_distance, y=relative_y_distance, z=pose.position.z)
 
+            # Distance
             detected_obj_msg.distance = math.sqrt(relative_x_distance**2 + relative_y_distance**2)
+            
+            # Bounding Box
+            detected_obj_msg.bounding_box = self.calculate_bounding_box(shape, detected_obj_msg.relative_position, detected_obj_msg.is_from_rsu)
 
             detected_objects_list.append(detected_obj_msg)
 
