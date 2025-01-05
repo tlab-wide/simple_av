@@ -528,14 +528,23 @@ class Planning(Node):
         if not objects_ahead:
             print("No Objects ahead")
             return None            
-        
+        sides = ['left', 'right', 'back', 'front']
         print("number of objects ahead: ", len(objects_ahead))
         for obj in objects_ahead:
             print("---------------------")
+            print("Sensor type: ", obj.is_from_rsu)
             print("vehicle type:", obj.label)
             print("Relative Direction from vehicle POV: ", obj.relative_direction.data)
-            print("Object relative Position from Vehicle: ", obj.relative_position.x, obj.relative_position.y)
-            print("vertical distance the object: ", obj.relative_distance.x)
+            if obj.is_from_rsu:
+                print("Object Position: ", obj.relative_position.x, obj.relative_position.y)
+            else:
+                print("Object relative Position from Vehicle: ", obj.relative_position.x, obj.relative_position.y)
+            print("Distance the object: ", obj.distance)
+            print("closest side of the object: ", sides[obj.nearest_object_side])
+            print("bounding_box left: ", obj.bounding_box[0])
+            print("bounding_box right: ", obj.bounding_box[1])
+            print("bounding_box back: ", obj.bounding_box[2])
+            print("bounding_box front: ", obj.bounding_box[3])
             print("object shape size: ", obj.shape)
             print("---------------------")    
         distance_to_objects_ahead = [obj.relative_distance.x for obj in objects_ahead]

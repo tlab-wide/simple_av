@@ -124,10 +124,10 @@ class Perception(Node):
 
             # pose (position and orientation)
             pose = obj.kinematics.pose_with_covariance.pose
-            detected_obj_msg.relative_position = Point(x=pose.position.x, y=pose.position.y, z=pose.position.z)
+            detected_obj_msg.position = Point(x=pose.position.x, y=pose.position.y, z=pose.position.z)
             detected_obj_msg.orientation = Quaternion(x=pose.orientation.x, y=pose.orientation.y, z=pose.orientation.z, w=pose.orientation.w)
 
-            # relative direction
+            # relative direction TODO: for RSU the absulute position must be reformated to relative pose to calculate direction
             detected_obj_msg.relative_direction.data = self.object_direction(pose.position.x, pose.position.y)
 
             # Objects shape (dimensions)
@@ -135,7 +135,7 @@ class Perception(Node):
             detected_obj_msg.shape = Vector3(x=shape.x, y=shape.y, z=shape.z)
 
             # Bounding Box
-            detected_obj_msg.bounding_box = self.calculate_bounding_box(shape, detected_obj_msg.relative_position)
+            detected_obj_msg.bounding_box = self.calculate_bounding_box(shape, detected_obj_msg.position)
 
             # Relative Distance
             distances = []
@@ -143,8 +143,8 @@ class Perception(Node):
                 distances.append(math.sqrt(objetc_side.x**2 + objetc_side.y**2))
             detected_obj_msg.distance = min(distances)
             side = distances.index(min(distances))
-            sides = ['left', 'right', 'back', 'front']
-            detected_obj_msg.object_side.data = sides[side]
+            detected_obj_msg.nearest_object_side = side
+
 
             # relative_x_distance = pose.position.x - shape.x / 2 - self.vehicle_length/2
             # relative_y_distance = pose.position.y - shape.y / 2 - self.vehicle_width/2
@@ -195,15 +195,15 @@ class Perception(Node):
         ground_truth = self.get_groundTruth_msg()
         q = Quaternion(x=ground_truth.pose.orientation.x, y=ground_truth.pose.orientation.y, z=ground_truth.pose.orientation.z, w=ground_truth.pose.orientation.w)
         yaw_degree_vehicle = math.degrees(self.quaternion_to_yaw(q))
-
+        sides = ['left', 'right', 'back', 'front']
         print("number of objects: ", len(detected_objects_msg.objects))
         for obj in detected_objects_msg.objects:
             if obj.label != 7:
                 print("is RSU:", obj.is_from_rsu)
                 print("vehicle type:", obj.label)
                 print("Direction from vehicle POV: ", obj.relative_direction.data)
-                print("Object relative Position from Vehicle: ", obj.relative_position.x, obj.relative_position.y)
-                print("closest side of the object: ", obj.object_side.data)
+                print("Object relative Position from Vehicle: ", obj.position.x, obj.position.y)
+                print("closest side of the object: ", sides[obj.nearest_object_side])
                 print("bounding_box left: ", obj.bounding_box[0])
                 print("bounding_box right: ", obj.bounding_box[1])
                 print("bounding_box back: ", obj.bounding_box[2])
