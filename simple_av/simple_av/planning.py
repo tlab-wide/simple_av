@@ -105,7 +105,7 @@ class Planning(Node):
         self.base_speed = 10.0 # meters/second
         self.speed_limit = 10.0 # meters/second
         self.lookahead_distance = self.base_speed * 2 # meters
-        self.stop_distance = self.base_speed * 2 # meters
+        self.stop_distance = self.base_speed * 2.5 # meters
         self.status = String() # Cruise, Decelerate, PrepareToStop, Turn
         if self.vehilce_type == 'Bus':
             self.vehicle_length = 10.0 #meters
@@ -537,9 +537,9 @@ class Planning(Node):
             print("vehicle type:", obj.label)
             print("Relative Direction from vehicle POV: ", obj.relative_direction.data)
             if obj.is_from_rsu:
-                print("Object Position: ", obj.relative_position.x, obj.relative_position.y)
+                print("Object Position: ", obj.position.x, obj.position.y)
             else:
-                print("Object relative Position from Vehicle: ", obj.relative_position.x, obj.relative_position.y)
+                print("Object relative Position from Vehicle: ", obj.position.x, obj.position.y)
             print("Distance the object: ", obj.distance)
             print("closest side of the object: ", sides[obj.nearest_object_side])
             print("bounding_box left: ", obj.bounding_box[0])
@@ -583,7 +583,7 @@ class Planning(Node):
 
         # stop_point_x = object_back_x - self.saftey_distance - (self.vehicle_length / 2)
         
-        stop_point = Point(x=nearest_side_absulute_pose - self.saftey_distance, y=nearest_side_absulute_pose.y, z=nearest_side_absulute_pose.z)
+        stop_point = Point(x=nearest_side_absulute_pose.x - self.saftey_distance, y=nearest_side_absulute_pose.y, z=nearest_side_absulute_pose.z)
         print("Stop point behind the object: ", stop_point)
 
         distance_to_stop_point = self.calculate_distance(vehicle_pose, {'x': stop_point.x, 'y': stop_point.y, 'z': stop_point.z})
