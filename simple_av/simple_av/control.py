@@ -107,7 +107,7 @@ class VehicleControl(Node):
         self.pid_controller = PIDController(p_gain=1.5, i_gain=0.5, d_gain=0.125)
         self.vehicle_length = self.vehicle_config['dimensions']['length'] #meters
         self.vehicle_width = self.vehicle_config['dimensions']['width'] #meters
-        self.vehicle_wheel_base = self.vehicle_config['dimensions']['wheel_base'] #meters
+        self.wheel_base = self.vehicle_config['dimensions']['wheel_base'] #meters
         
         self.previous_steering_angle = 0
         self.steering_gain = 0.2  # Proportional gain for steering
@@ -278,7 +278,7 @@ class VehicleControl(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-    node = VehicleControl('Bus')
+    node = VehicleControl('lexus')
 
     try:
         while rclpy.ok():

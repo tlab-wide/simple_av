@@ -11,14 +11,6 @@ import yaml
 import os
 from ament_index_python.packages import get_package_share_directory
 
-        # config = self.load_vehicle_config('bus')
-        # # print(config)
-        # print(config['model'])
-        # print(config['dimensions'])
-        # print(config['dimensions']['length'])
-        # print(type(config['dimensions']['length']))
-        # print(config['dimensions']['wheel_base'])
-        # print(config['max_speed'])
 
 class Perception(Node):
     def __init__(self, vehicle_type):
@@ -245,7 +237,7 @@ class Perception(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-    node = Perception()
+    node = Perception('lexus')
     try:
         while rclpy.ok():
             rclpy.spin_once(node, timeout_sec=0)  # Set timeout to 0 to avoid delay
