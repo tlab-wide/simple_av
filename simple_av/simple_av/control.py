@@ -13,6 +13,9 @@ import time
 import math
 from collections import deque
 import numpy as np
+import yaml
+import os
+from ament_index_python.packages import get_package_share_directory
 
 
 class PIDController:
@@ -58,6 +61,7 @@ class VehicleControl(Node):
     def __init__(self, vehicle_type):
         super().__init__('control')
         self.vehicle_type = vehicle_type
+        self.vehicle_config = self.load_vehicle_config(vehicle_type)
 
         qos_profile = QoSProfile(
             reliability=ReliabilityPolicy.RELIABLE,
@@ -101,14 +105,28 @@ class VehicleControl(Node):
         self.turn_indicator_publisher = self.create_publisher(TurnIndicatorsCommand, '/control/command/turn_indicators_cmd', qos_profile)
 
         self.pid_controller = PIDController(p_gain=1.5, i_gain=0.5, d_gain=0.125)
-        if self.vehicle_type == 'Bus':
-            self.wheel_base = 6.0 # meters
-        else:
-            self.wheel_base = 2.75 # meters
-
+        self.vehicle_length = self.vehicle_config['dimensions']['length'] #meters
+        self.vehicle_width = self.vehicle_config['dimensions']['width'] #meters
+        self.vehicle_wheel_base = self.vehicle_config['dimensions']['wheel_base'] #meters
+        
         self.previous_steering_angle = 0
         self.steering_gain = 0.2  # Proportional gain for steering
         self.maximum_accel = 4.0
+
+    def load_vehicle_config(self, vehicle_type="lexus"):
+        # Path to the YAML file
+        package_share_directory = get_package_share_directory('simple_av')
+        config_path = os.path.join(package_share_directory, "resource", "vehicle_config.yaml")
+
+        # Load the configuration file
+        with open(config_path, "r") as file:
+            config = yaml.safe_load(file)
+
+        # Retrieve the specific vehicle's configuration
+        if vehicle_type in config["vehicles"]:
+            return config["vehicles"][vehicle_type]
+        else:
+            raise ValueError(f"Vehicle type '{vehicle_type}' not found in the configuration.")
 
     def pose_callback(self, msg):
         self.pose = msg

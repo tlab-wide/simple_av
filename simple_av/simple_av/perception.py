@@ -11,10 +11,21 @@ import yaml
 import os
 from ament_index_python.packages import get_package_share_directory
 
+        # config = self.load_vehicle_config('bus')
+        # # print(config)
+        # print(config['model'])
+        # print(config['dimensions'])
+        # print(config['dimensions']['length'])
+        # print(type(config['dimensions']['length']))
+        # print(config['dimensions']['wheel_base'])
+        # print(config['max_speed'])
+
 class Perception(Node):
-    def __init__(self):
+    def __init__(self, vehicle_type):
         super().__init__('Perception')
 
+        self.vehicle_type = vehicle_type
+        self.vehicle_config = self.load_vehicle_config(vehicle_type)
         # Create subscriber for /v2x/traffic_signals1 topic
         self.subscriptionPose = self.create_subscription(CooperativeSignalsMessage, '/v2x/traffic_signals1', self.trafficSignal_callback, 10)
         
@@ -35,8 +46,8 @@ class Perception(Node):
 
         self.ground_truth_msg = PoseStamped()
 
-        self.vehicle_length = 4.8895 #meters
-        self.vehicle_width = 1.895 #meters
+        self.vehicle_length = self.vehicle_config['dimensions']['length'] #meters
+        self.vehicle_width = self.vehicle_config['dimensions']['width'] #meters
 
     def trafficSignal_callback(self, msg):
         """Callback function to update the traffic signal data."""

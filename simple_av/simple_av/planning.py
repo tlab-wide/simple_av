@@ -2,6 +2,7 @@ import rclpy
 from rclpy.node import Node
 import json
 import os
+import yaml
 from ament_index_python.packages import get_package_share_directory
 from geometry_msgs.msg import PoseStamped, Point
 from std_msgs.msg import String
@@ -61,9 +62,12 @@ class PathCurveDetector:
 
 
 class Planning(Node):
-    def __init__(self, vehilce_type):
+    def __init__(self, vehicle_type):
         super().__init__('Planning')
-        self.vehilce_type = vehilce_type
+        
+        self.vehicle_type = vehicle_type
+        self.vehicle_config = self.load_vehicle_config(vehicle_type)
+        
         # Load the Json map
         self.map_data = self.load_map_data()
         self.map_data = self.map_data["LaneLetsArray"]
@@ -107,13 +111,9 @@ class Planning(Node):
         self.lookahead_distance = self.base_speed * 2 # meters
         self.stop_distance = self.base_speed * 2.5 # meters
         self.status = String() # Cruise, Decelerate, PrepareToStop, Turn
-        if self.vehilce_type == 'Bus':
-            self.vehicle_length = 10.0 #meters
-            self.vehicle_width = 2.9 #meters
-        else:
-            self.vehicle_length = 4.8895 #meters
-            self.vehicle_width = 1.895 #meters
-
+        self.vehicle_length = self.vehicle_config['dimensions']['length'] #meters
+        self.vehicle_width = self.vehicle_config['dimensions']['width'] #meters
+        
         self.saftey_distance = 5.0 + self.vehicle_length/2 #meters
         
         self.isCurveFinished = False
@@ -130,7 +130,21 @@ class Planning(Node):
         # self.dest_lanelet = "lanelet149"
         # self.dest_lanelet = "lanelet513"
         self.dest_lanelet = "lanelet63"
-        
+    
+    def load_vehicle_config(self, vehicle_type="lexus"):
+        # Path to the YAML file
+        package_share_directory = get_package_share_directory('simple_av')
+        config_path = os.path.join(package_share_directory, "resource", "vehicle_config.yaml")
+
+        # Load the configuration file
+        with open(config_path, "r") as file:
+            config = yaml.safe_load(file)
+
+        # Retrieve the specific vehicle's configuration
+        if vehicle_type in config["vehicles"]:
+            return config["vehicles"][vehicle_type]
+        else:
+            raise ValueError(f"Vehicle type '{vehicle_type}' not found in the configuration.")
     
     def load_map_data(self):
         """
