@@ -109,12 +109,13 @@ class Planning(Node):
         self.base_speed = 10.0 # meters/second
         self.speed_limit = 10.0 # meters/second
         self.lookahead_distance = self.base_speed * 2 # meters
-        self.stop_distance = self.base_speed * 2.5 # meters
+        self.stop_distance = self.base_speed * 2 # meters
         self.status = String() # Cruise, Decelerate, PrepareToStop, Turn
         self.vehicle_length = self.vehicle_config['dimensions']['length'] #meters
         self.vehicle_width = self.vehicle_config['dimensions']['width'] #meters
 
-        self.saftey_distance = 5.0 + self.vehicle_length/2 #meters
+        # self.saftey_distance = 2.0 + self.vehicle_length/2 #meters
+        self.saftey_distance = 2.0 #meters
         
         self.isCurveFinished = False
         self.isCurveStarted = False
@@ -725,7 +726,7 @@ class Planning(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-    node = Planning('lexus')
+    node = Planning('bus')
     try:
         while rclpy.ok():
             rclpy.spin_once(node, timeout_sec=None)# Set timeout to 0 to avoid delay
