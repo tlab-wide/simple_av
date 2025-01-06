@@ -15,3 +15,7 @@ control:
     - PID for speed
     - pure pursuit for steering
     - nonlinear deceleration curve for braking
+
+bug:
+    - vehicle never stop completly or park behind a static object. at first the vehicle slows down almost to the 
+    complete stop then surpasses the stop point and slowly increase its speed. 
