@@ -2,6 +2,7 @@ import rclpy
 from rclpy.node import Node
 import json
 import os
+import yaml
 from ament_index_python.packages import get_package_share_directory
 from geometry_msgs.msg import PoseStamped, Point
 from std_msgs.msg import String
@@ -61,9 +62,12 @@ class PathCurveDetector:
 
 
 class Planning(Node):
-    def __init__(self, vehilce_type):
+    def __init__(self, vehicle_type):
         super().__init__('Planning')
-        self.vehilce_type = vehilce_type
+        
+        self.vehicle_type = vehicle_type
+        self.vehicle_config = self.load_vehicle_config(vehicle_type)
+        
         # Load the Json map
         self.map_data = self.load_map_data()
         self.map_data = self.map_data["LaneLetsArray"]
@@ -106,14 +110,12 @@ class Planning(Node):
         self.speed_limit = 10.0 # meters/second
         self.lookahead_distance = self.base_speed * 2 # meters
         self.stop_distance = self.base_speed * 2 # meters
-        self.saftey_distance = 5.0 #meters
         self.status = String() # Cruise, Decelerate, PrepareToStop, Turn
-        if self.vehilce_type == 'Bus':
-            self.vehicle_length = 10.0 #meters
-            self.vehicle_width = 2.9 #meters
-        else:
-            self.vehicle_length = 4.8895 #meters
-            self.vehicle_width = 1.895 #meters
+        self.vehicle_length = self.vehicle_config['dimensions']['length'] #meters
+        self.vehicle_width = self.vehicle_config['dimensions']['width'] #meters
+
+        # self.saftey_distance = 2.0 + self.vehicle_length/2 #meters
+        self.saftey_distance = 2.0 #meters
         
         self.isCurveFinished = False
         self.isCurveStarted = False
@@ -129,7 +131,21 @@ class Planning(Node):
         # self.dest_lanelet = "lanelet149"
         # self.dest_lanelet = "lanelet513"
         self.dest_lanelet = "lanelet63"
-        
+    
+    def load_vehicle_config(self, vehicle_type="lexus"):
+        # Path to the YAML file
+        package_share_directory = get_package_share_directory('simple_av')
+        config_path = os.path.join(package_share_directory, "resource", "vehicle_config.yaml")
+
+        # Load the configuration file
+        with open(config_path, "r") as file:
+            config = yaml.safe_load(file)
+
+        # Retrieve the specific vehicle's configuration
+        if vehicle_type in config["vehicles"]:
+            return config["vehicles"][vehicle_type]
+        else:
+            raise ValueError(f"Vehicle type '{vehicle_type}' not found in the configuration.")
     
     def load_map_data(self):
         """
@@ -521,34 +537,43 @@ class Planning(Node):
 
         objects_ahead = []
         for obj in self.detectedObjects.objects:
-            object_direction = obj.direction.data
+            object_direction = obj.relative_direction.data
             if object_direction == 'above':
                 objects_ahead.append(obj)
         
         if not objects_ahead:
             print("No Objects ahead")
             return None            
-        
+        sides = ['left', 'right', 'back', 'front']
         print("number of objects ahead: ", len(objects_ahead))
         for obj in objects_ahead:
             print("---------------------")
+            print("Sensor type: ", obj.is_from_rsu)
             print("vehicle type:", obj.label)
-            print("Direction from vehicle POV: ", obj.direction.data)
-            print("Object relative Position from Vehicle: ", obj.relative_position.x, obj.relative_position.y)
-            print("vertical distance the object: ", obj.relative_distance.x)
+            print("Relative Direction from vehicle POV: ", obj.relative_direction.data)
+            if obj.is_from_rsu:
+                print("Object Position: ", obj.position.x, obj.position.y)
+            else:
+                print("Object relative Position from Vehicle: ", obj.position.x, obj.position.y)
+            print("Distance the object: ", obj.distance)
+            print("closest side of the object: ", sides[obj.nearest_object_side])
+            print("bounding_box left: ", obj.bounding_box[0])
+            print("bounding_box right: ", obj.bounding_box[1])
+            print("bounding_box back: ", obj.bounding_box[2])
+            print("bounding_box front: ", obj.bounding_box[3])
             print("object shape size: ", obj.shape)
             print("---------------------")    
-        distance_to_objects_ahead = [obj.relative_distance.x for obj in objects_ahead]
+        distance_to_objects_ahead = [obj.distance for obj in objects_ahead]
         closest_object = objects_ahead[distance_to_objects_ahead.index(min(distance_to_objects_ahead))]     
-        distance_to_closest_object = closest_object.relative_distance.x
+        distance_to_closest_object = closest_object.distance
         print('Distance to the closest object: ', distance_to_closest_object)
         return closest_object
     
     def get_object_absolute_position(self, vehicle_pose, object):
         print("vehicle absolute pos: ", vehicle_pose['x'], vehicle_pose['y'], vehicle_pose['z'])
-        obj_x = vehicle_pose['x'] + object.relative_position.x
-        obj_y = vehicle_pose['y'] + object.relative_position.y
-        obj_z = vehicle_pose['z'] + object.relative_position.z
+        obj_x = vehicle_pose['x'] + object.x
+        obj_y = vehicle_pose['y'] + object.y
+        obj_z = vehicle_pose['z'] + object.z
         object_absolute_pose = Point(x=obj_x, y=obj_y, z=obj_z)
         return object_absolute_pose
     
@@ -556,22 +581,25 @@ class Planning(Node):
         if not closest_object_ahead:
             return False, None, 'Cruise'
         
-        distance_to_closest_object = closest_object_ahead.relative_distance.x
+        distance_to_closest_object = closest_object_ahead.distance
         if distance_to_closest_object > self.stop_distance:
             self.get_logger().info("No immediate danger")
             return False, None, 'Cruise'
         self.get_logger().warning("Imediate threat. Objects ahead in danger zone")
         
-        object_absolute_pose = self.get_object_absolute_position(vehicle_pose, closest_object_ahead)
+        object_absolute_pose = self.get_object_absolute_position(vehicle_pose, closest_object_ahead.position)
         print("Object absolute pos: ", object_absolute_pose.x , object_absolute_pose.y, object_absolute_pose.z)
+
+        nearest_side_absulute_pose = self.get_object_absolute_position(vehicle_pose, closest_object_ahead.bounding_box[closest_object_ahead.nearest_object_side])
+        print("nears side absolute pos: ", nearest_side_absulute_pose.x , nearest_side_absulute_pose.y, nearest_side_absulute_pose.z)
+        # # Calculate the position of the back side of the object
+        # object_back_x = object_absolute_pose.x - (closest_object_ahead.shape.x / 2)
+        # # Calculate the stop point in a safe distance behind the object
+
+        # stop_point_x = object_back_x - self.saftey_distance - (self.vehicle_length / 2)
         
-        # Calculate the position of the back side of the object
-        object_back_x = object_absolute_pose.x - (closest_object_ahead.shape.x / 2)
-        # Calculate the stop point 5 meters behind the back of the object
-        stop_point_x = object_back_x - self.saftey_distance - (self.vehicle_length / 2)
-        
-        stop_point = Point(x=stop_point_x, y=object_absolute_pose.y, z=object_absolute_pose.z)
-        print("Stop point behind the object: ", stop_point_x , object_absolute_pose.y, object_absolute_pose.z)
+        stop_point = Point(x=nearest_side_absulute_pose.x - self.saftey_distance, y=nearest_side_absulute_pose.y, z=nearest_side_absulute_pose.z)
+        print("Stop point behind the object: ", stop_point)
 
         distance_to_stop_point = self.calculate_distance(vehicle_pose, {'x': stop_point.x, 'y': stop_point.y, 'z': stop_point.z})
         print("Distance to stop", distance_to_stop_point)
@@ -698,7 +726,7 @@ class Planning(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-    node = Planning('Bus')
+    node = Planning('bus')
     try:
         while rclpy.ok():
             rclpy.spin_once(node, timeout_sec=None)# Set timeout to 0 to avoid delay
