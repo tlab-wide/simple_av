@@ -1,0 +1,17 @@
+Version 1.1.0
+
+vehicle moves in the defined path using the V3_map.json
+localization: return current lanelet use global and local search on the json map with pose/gnss
+perception: 
+    - Reads traffic light messages and object detection messages from AWSIM. 
+    - convert object detection messages to: bounding_box, distance from nearest side of the objects bounding_box
+    - publishes the traffic light and DetecetdObjects messages.
+    - Do not use Quaternion values of vehicle or objects Orientation for detection 
+planning: 
+    - plan the route and the movement of the vehilce (Crusing, Turning, line change)
+    - Dont use traffic light messages
+    - Does Collision avoidance (not using Orientation values in this version). does not collide to objects from nither sides of the objects
+control: 
+    - PID for speed
+    - pure pursuit for steering
+    - nonlinear deceleration curve for braking
