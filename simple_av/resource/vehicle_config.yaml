@@ -1,0 +1,19 @@
+vehicles:
+  lexus:
+    model: "RX450H"
+    dimensions:
+      length: 4.8895  # meters
+      width: 1.895   # meters
+      height: 1.6  # meters
+      wheel_base: 2.75  # meters
+    max_speed: 30.0  # m/s
+
+  bus:
+    model: "TierIV"
+    dimensions:
+      length: 10.0  # meters
+      width: 2.9    # meters
+      height: 3.2   # meters
+      wheel_base: 4.5  # meters
+    max_speed: 20.0  # m/s
+    

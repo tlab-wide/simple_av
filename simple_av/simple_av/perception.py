@@ -7,6 +7,9 @@ from autoware_auto_perception_msgs.msg import DetectedObjects
 from geometry_msgs.msg import PoseStamped
 from math import atan2, asin
 import math
+import yaml
+import os
+from ament_index_python.packages import get_package_share_directory
 
 class Perception(Node):
     def __init__(self):
@@ -48,6 +51,21 @@ class Perception(Node):
 
     def get_groundTruth_msg(self):
         return self.ground_truth_msg
+    
+    def load_vehicle_config(self, vehicle_type="lexus"):
+        # Path to the YAML file
+        package_share_directory = get_package_share_directory('simple_av')
+        config_path = os.path.join(package_share_directory, "resource", "vehicle_config.yaml")
+
+        # Load the configuration file
+        with open(config_path, "r") as file:
+            config = yaml.safe_load(file)
+
+        # Retrieve the specific vehicle's configuration
+        if vehicle_type in config["vehicles"]:
+            return config["vehicles"][vehicle_type]
+        else:
+            raise ValueError(f"Vehicle type '{vehicle_type}' not found in the configuration.")
 
     # Getting the direction of the object from Automated vehicle point of view
     def object_direction(self, x, y):
@@ -174,6 +192,7 @@ class Perception(Node):
         return v2i_traffic_signals_id, v2i_traffic_signals_colors
 
     def perception(self):
+
         # Handle traffic signals
         v2i_traffic_signals_id, v2i_traffic_signals_colors = self.get_trafficSignals()
 
