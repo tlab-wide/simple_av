@@ -111,7 +111,7 @@ class VehicleControl(Node):
         
         self.previous_steering_angle = 0
         self.steering_gain = 0.2  # Proportional gain for steering
-        self.maximum_accel = 4.0
+        self.maximum_accel = self.vehicle_config['max_acceleration']
 
     def load_vehicle_config(self, vehicle_type="lexus"):
         # Path to the YAML file
@@ -236,7 +236,7 @@ class VehicleControl(Node):
     def calculate_target_speed_for_stop(self, distance_to_stop, current_speed):
         # Gradual deceleration based on distance and current speed
         # Using a nonlinear deceleration curve for smoother braking
-        return min(self.lookAhead.speed_limit, current_speed * (distance_to_stop / (self.lookAhead.speed_limit * 3))**0.8)
+        return min(self.lookAhead.speed_limit, current_speed * (distance_to_stop / (self.lookAhead.speed_limit * 3))**0.7)
 
     def filter(self, new_value, previous_value, gain):
         return gain * previous_value + (1 - gain) * new_value
