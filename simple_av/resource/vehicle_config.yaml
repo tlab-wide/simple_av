@@ -7,6 +7,7 @@ vehicles:
       height: 1.6  # meters
       wheel_base: 2.75  # meters
     max_speed: 30.0  # m/s
+    max_acceleration: 3.8 #m/s^2
 
   bus:
     model: "TierIV"
@@ -16,4 +17,5 @@ vehicles:
       height: 3.2   # meters
       wheel_base: 4.5  # meters
     max_speed: 20.0  # m/s
+    max_acceleration: 1.4 #m/s^2
     

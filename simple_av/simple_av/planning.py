@@ -109,7 +109,7 @@ class Planning(Node):
         self.base_speed = 10.0 # meters/second
         self.speed_limit = 10.0 # meters/second
         self.lookahead_distance = self.base_speed * 2 # meters
-        self.stop_distance = self.base_speed * 2 # meters
+        self.stop_distance = self.base_speed * 2.5 # meters
         self.status = String() # Cruise, Decelerate, PrepareToStop, Turn
         self.vehicle_length = self.vehicle_config['dimensions']['length'] #meters
         self.vehicle_width = self.vehicle_config['dimensions']['width'] #meters
@@ -192,7 +192,7 @@ class Planning(Node):
         """
         self.location = msg
 
-    def calculate_distance(self, point1, point2, z=True):
+    def calculate_distance(self, point1, point2, z=False):
         """
         Calculate the Euclidean distance between two points.
         Args:
@@ -591,7 +591,7 @@ class Planning(Node):
         print("Object absolute pos: ", object_absolute_pose.x , object_absolute_pose.y, object_absolute_pose.z)
 
         nearest_side_absulute_pose = self.get_object_absolute_position(vehicle_pose, closest_object_ahead.bounding_box[closest_object_ahead.nearest_object_side])
-        print("nears side absolute pos: ", nearest_side_absulute_pose.x , nearest_side_absulute_pose.y, nearest_side_absulute_pose.z)
+        # print("nears side absolute pos: ", nearest_side_absulute_pose.x , nearest_side_absulute_pose.y, nearest_side_absulute_pose.z)
         # # Calculate the position of the back side of the object
         # object_back_x = object_absolute_pose.x - (closest_object_ahead.shape.x / 2)
         # # Calculate the stop point in a safe distance behind the object
@@ -605,8 +605,8 @@ class Planning(Node):
         print("Distance to stop", distance_to_stop_point)
 
         task = 'Decelerate'
-        if distance_to_stop_point <= 1.0:
-            task = 'Park'
+        # if distance_to_stop_point <= 2.0:
+        #     task = 'Park'
 
         return True, stop_point, task
     

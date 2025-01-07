@@ -104,14 +104,14 @@ class VehicleControl(Node):
         self.gear_publisher = self.create_publisher(GearCommand, '/control/command/gear_cmd', qos_profile)
         self.turn_indicator_publisher = self.create_publisher(TurnIndicatorsCommand, '/control/command/turn_indicators_cmd', qos_profile)
 
-        self.pid_controller = PIDController(p_gain=1.5, i_gain=0.5, d_gain=0.125)
+        self.pid_controller = PIDController(p_gain=1.2, i_gain=20.0, d_gain=0.5)
         self.vehicle_length = self.vehicle_config['dimensions']['length'] #meters
         self.vehicle_width = self.vehicle_config['dimensions']['width'] #meters
         self.wheel_base = self.vehicle_config['dimensions']['wheel_base'] #meters
         
         self.previous_steering_angle = 0
         self.steering_gain = 0.2  # Proportional gain for steering
-        self.maximum_accel = 4.0
+        self.maximum_accel = self.vehicle_config['max_acceleration']
 
     def load_vehicle_config(self, vehicle_type="lexus"):
         # Path to the YAML file
@@ -203,15 +203,19 @@ class VehicleControl(Node):
 
         current_speed = self.velocity_report.longitudinal_velocity if self.velocity_report else 0.0
         target_speed = self.lookAhead.speed_limit
-        accel = 0.0
 
         if status == "Decelerate" or status == "Stop_red":
             distance_to_stop = self.calculate_distance(self.lookAhead.stop_point, self.pose.pose.position)
             target_speed = self.calculate_target_speed_for_stop(distance_to_stop, current_speed)
-
+            if distance_to_stop <= 0.5:
+                self.get_logger().warning("Full stop!")
+                target_speed = 0.0
+        
         accel = self.pid_controller.updatePID(current_speed, target_speed)
         if accel > self.maximum_accel:
             accel = self.maximum_accel
+        if accel < -3.0:
+            accel = -3.0
 
         longitudinal_command = LongitudinalCommand()
         longitudinal_command.speed = self.velocity_report.longitudinal_velocity
@@ -220,6 +224,7 @@ class VehicleControl(Node):
         if status == "Decelerate" or status == "Stop_red":
             self.get_logger().info(
             f'speed: {current_speed}\n'
+            f'accel: {accel}\n'
             f'target speed: {target_speed}\n'
             f'stop distance: {self.calculate_distance(self.lookAhead.stop_point, self.pose.pose.position)}\n'
             f'status : {self.lookAhead.status.data}\n'
@@ -227,6 +232,7 @@ class VehicleControl(Node):
         else:
             self.get_logger().info(
                 f'speed: {current_speed}\n'
+                f'accel: {accel}\n'
                 f'target speed: {target_speed}\n'
                 f'status : {self.lookAhead.status.data}\n'
             )
@@ -236,7 +242,12 @@ class VehicleControl(Node):
     def calculate_target_speed_for_stop(self, distance_to_stop, current_speed):
         # Gradual deceleration based on distance and current speed
         # Using a nonlinear deceleration curve for smoother braking
-        return min(self.lookAhead.speed_limit, current_speed * (distance_to_stop / (self.lookAhead.speed_limit * 3))**0.8)
+        
+        # Adjusted deceleration factor
+        target_speed = current_speed * (distance_to_stop / (self.lookAhead.speed_limit * 2.5))**0.5
+        
+        # Clamp for realistic behavior
+        return min(self.lookAhead.speed_limit, max(0.75, target_speed))
 
     def filter(self, new_value, previous_value, gain):
         return gain * previous_value + (1 - gain) * new_value
