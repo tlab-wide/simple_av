@@ -208,7 +208,10 @@ class VehicleControl(Node):
         if status == "Decelerate" or status == "Stop_red":
             distance_to_stop = self.calculate_distance(self.lookAhead.stop_point, self.pose.pose.position)
             target_speed = self.calculate_target_speed_for_stop(distance_to_stop, current_speed)
-
+            if distance_to_stop <= 0.5 and current_speed < 0.1:
+                print("Full stop!")
+                target_speed = 0.0
+        
         accel = self.pid_controller.updatePID(current_speed, target_speed)
         if accel > self.maximum_accel:
             accel = self.maximum_accel

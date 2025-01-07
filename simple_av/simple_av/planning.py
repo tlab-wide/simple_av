@@ -192,7 +192,7 @@ class Planning(Node):
         """
         self.location = msg
 
-    def calculate_distance(self, point1, point2, z=True):
+    def calculate_distance(self, point1, point2, z=False):
         """
         Calculate the Euclidean distance between two points.
         Args:
@@ -605,8 +605,8 @@ class Planning(Node):
         print("Distance to stop", distance_to_stop_point)
 
         task = 'Decelerate'
-        if distance_to_stop_point <= 2.0:
-            task = 'Park'
+        # if distance_to_stop_point <= 2.0:
+        #     task = 'Park'
 
         return True, stop_point, task
     
