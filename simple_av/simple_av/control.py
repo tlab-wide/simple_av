@@ -112,6 +112,7 @@ class VehicleControl(Node):
         self.previous_steering_angle = 0
         self.steering_gain = 0.2  # Proportional gain for steering
         self.maximum_accel = self.vehicle_config['max_acceleration']
+        self.maximum_braking_accel = self.vehicle_config['max_braking_accel']
 
     def load_vehicle_config(self, vehicle_type="lexus"):
         # Path to the YAML file
@@ -214,8 +215,8 @@ class VehicleControl(Node):
         accel = self.pid_controller.updatePID(current_speed, target_speed)
         if accel > self.maximum_accel:
             accel = self.maximum_accel
-        if accel < -3.0:
-            accel = -3.0
+        if accel < self.maximum_braking_accel:
+            accel = self.maximum_braking_accel
 
         longitudinal_command = LongitudinalCommand()
         longitudinal_command.speed = self.velocity_report.longitudinal_velocity
