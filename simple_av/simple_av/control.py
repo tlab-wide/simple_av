@@ -104,7 +104,7 @@ class VehicleControl(Node):
         self.gear_publisher = self.create_publisher(GearCommand, '/control/command/gear_cmd', qos_profile)
         self.turn_indicator_publisher = self.create_publisher(TurnIndicatorsCommand, '/control/command/turn_indicators_cmd', qos_profile)
 
-        self.pid_controller = PIDController(p_gain=1.5, i_gain=20.0, d_gain=0.125)
+        self.pid_controller = PIDController(p_gain=1.2, i_gain=20.0, d_gain=0.5)
         self.vehicle_length = self.vehicle_config['dimensions']['length'] #meters
         self.vehicle_width = self.vehicle_config['dimensions']['width'] #meters
         self.wheel_base = self.vehicle_config['dimensions']['wheel_base'] #meters
@@ -222,6 +222,7 @@ class VehicleControl(Node):
         if status == "Decelerate" or status == "Stop_red":
             self.get_logger().info(
             f'speed: {current_speed}\n'
+            f'accel: {accel}\n'
             f'target speed: {target_speed}\n'
             f'stop distance: {self.calculate_distance(self.lookAhead.stop_point, self.pose.pose.position)}\n'
             f'status : {self.lookAhead.status.data}\n'
@@ -229,6 +230,7 @@ class VehicleControl(Node):
         else:
             self.get_logger().info(
                 f'speed: {current_speed}\n'
+                f'accel: {accel}\n'
                 f'target speed: {target_speed}\n'
                 f'status : {self.lookAhead.status.data}\n'
             )
@@ -240,10 +242,10 @@ class VehicleControl(Node):
         # Using a nonlinear deceleration curve for smoother braking
         
         # Adjusted deceleration factor
-        target_speed = current_speed * (distance_to_stop / (self.lookAhead.speed_limit * 3))**0.5
+        target_speed = current_speed * (distance_to_stop / (self.lookAhead.speed_limit * 2))**0.5
         
         # Clamp for realistic behavior
-        return min(self.lookAhead.speed_limit, max(0.5, target_speed))
+        return min(self.lookAhead.speed_limit, max(0.75, target_speed))
 
     def filter(self, new_value, previous_value, gain):
         return gain * previous_value + (1 - gain) * new_value
