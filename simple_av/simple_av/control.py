@@ -203,16 +203,17 @@ class VehicleControl(Node):
 
         current_speed = self.velocity_report.longitudinal_velocity if self.velocity_report else 0.0
         target_speed = self.lookAhead.speed_limit
-        accel = 0.0
 
+        accel = self.pid_controller.updatePID(current_speed, target_speed)
         if status == "Decelerate" or status == "Stop_red":
             distance_to_stop = self.calculate_distance(self.lookAhead.stop_point, self.pose.pose.position)
             target_speed = self.calculate_target_speed_for_stop(distance_to_stop, current_speed)
-            if distance_to_stop <= 0.5 and current_speed < 0.1:
+            if distance_to_stop <= 0.5 and current_speed <= 0.2:
                 print("Full stop!")
-                target_speed = 0.0
+                accel = 0.0
+            else:
+                accel = self.pid_controller.updatePID(current_speed, target_speed)
         
-        accel = self.pid_controller.updatePID(current_speed, target_speed)
         if accel > self.maximum_accel:
             accel = self.maximum_accel
 
@@ -239,7 +240,7 @@ class VehicleControl(Node):
     def calculate_target_speed_for_stop(self, distance_to_stop, current_speed):
         # Gradual deceleration based on distance and current speed
         # Using a nonlinear deceleration curve for smoother braking
-        return min(self.lookAhead.speed_limit, current_speed * (distance_to_stop / (self.lookAhead.speed_limit * 3))**0.7)
+        return min(self.lookAhead.speed_limit, current_speed * (distance_to_stop / (self.lookAhead.speed_limit * 3))**0.5)
 
     def filter(self, new_value, previous_value, gain):
         return gain * previous_value + (1 - gain) * new_value
