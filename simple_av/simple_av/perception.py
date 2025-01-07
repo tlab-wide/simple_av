@@ -133,17 +133,16 @@ class Perception(Node):
         return bounding_box
     
     def get_rsu_object_relative_position(self, vehicle_pose, object):
-        print("vehicle absolute pos: ", vehicle_pose['x'], vehicle_pose['y'], vehicle_pose['z'])
-        obj_x = vehicle_pose['x'] - object.x
+        obj_x = object.x - vehicle_pose['x']
         obj_y = vehicle_pose['y'] - object.y
-        obj_z = vehicle_pose['z'] - object.z
+        obj_z = object.z - vehicle_pose['z']
         object_relative_pose = Point(x=obj_x, y=obj_y, z=obj_z)
         return object_relative_pose
 
     def handle_detected_objects(self, detected_objects, is_from_rsu):
         detected_objects_list = []
-        vehicle_pose = {'x': self.pose.pose.position.x, 'y': self.pose.pose.position.y, 'z': self.pose.pose.position.z}
-
+        vehicle_pose = {'x': self.vehicle_pose.pose.position.x, 'y': self.vehicle_pose.pose.position.y, 'z': self.vehicle_pose.pose.position.z}
+        print("vehicle pose: ", vehicle_pose['x'], vehicle_pose['y'])
         for obj in detected_objects.objects:
             detected_obj_msg = DetectedObject()
 
@@ -157,25 +156,20 @@ class Perception(Node):
             # pose (position and orientation)
             if is_from_rsu:
                 pose = obj.kinematics.initial_pose_with_covariance.pose
+                object_relative_pose = self.get_rsu_object_relative_position(vehicle_pose, pose.position)
+                detected_obj_msg.position = Point(x=object_relative_pose.x, y=object_relative_pose.y, z=object_relative_pose.z)
             else:
                 pose = obj.kinematics.pose_with_covariance.pose
-            detected_obj_msg.position = Point(x=pose.position.x, y=pose.position.y, z=pose.position.z)
+                detected_obj_msg.position = Point(x=pose.position.x, y=pose.position.y, z=pose.position.z)
+            
             detected_obj_msg.orientation = Quaternion(x=pose.orientation.x, y=pose.orientation.y, z=pose.orientation.z, w=pose.orientation.w)
-
-            # relative direction TODO: for RSU the absulute position must be reformated to relative pose to calculate direction
             
-            if is_from_rsu: #converting rsu absulute position to relative
-                object_relative_pose = self.get_rsu_object_relative_position(vehicle_pose, detected_obj_msg.position)
-                detected_obj_msg.relative_direction.data = self.object_direction(object_relative_pose.x, object_relative_pose.y)
-            else:
-                detected_obj_msg.relative_direction.data = self.object_direction(pose.position.x, pose.position.y)
+            # if is_from_rsu: #converting rsu absulute position to relative
+            #     object_relative_pose = self.get_rsu_object_relative_position(vehicle_pose, detected_obj_msg.position)
+            #     detected_obj_msg.relative_direction.data = self.object_direction(object_relative_pose.x, object_relative_pose.y)
+            # else:
+            detected_obj_msg.relative_direction.data = self.object_direction(pose.position.x, pose.position.y)
             
-            print("is RSU:", detected_obj_msg.is_from_rsu)
-            print("vehicle type:", detected_obj_msg.label)
-            print("Object Position: ", detected_obj_msg.position.x, detected_obj_msg.position.y)
-            print("Direction from vehicle POV: ", detected_obj_msg.relative_direction.data)
-            print("--------------------------------")
-            return
             # Objects shape (dimensions)
             shape = obj.shape.dimensions
             detected_obj_msg.shape = Vector3(x=shape.x, y=shape.y, z=shape.z)
@@ -211,12 +205,6 @@ class Perception(Node):
         return v2i_traffic_signals_id, v2i_traffic_signals_colors
 
     def perception(self):
-        
-        self.handle_detected_objects(self.detectedObjects, False)
-        self.handle_detected_objects(self.RSU_detectedObjects, True)
-
-        return
-
         # Handle traffic signals
         v2i_traffic_signals_id, v2i_traffic_signals_colors = self.get_trafficSignals()
 
@@ -228,16 +216,15 @@ class Perception(Node):
         # self.get_logger().info('Published traffic signal data')
 
         # Handle detected objects
-        detected_objects_list = self.handle_detected_objects()
+        # detected_objects_list = self.handle_detected_objects()
+        detected_objects_list = self.handle_detected_objects(self.RSU_detectedObjects, True)
 
         # Create and publish detected objects message
         detected_objects_msg = DetectedObjectsArray()
         detected_objects_msg.objects = detected_objects_list
         self.publisher_detected_objects.publish(detected_objects_msg)
         # self.get_logger().info('Published detected objects data')
-        ground_truth = self.get_groundTruth_msg()
-        q = Quaternion(x=ground_truth.pose.orientation.x, y=ground_truth.pose.orientation.y, z=ground_truth.pose.orientation.z, w=ground_truth.pose.orientation.w)
-        yaw_degree_vehicle = math.degrees(self.quaternion_to_yaw(q))
+
         sides = ['left', 'right', 'back', 'front']
         print("number of objects: ", len(detected_objects_msg.objects))
         for obj in detected_objects_msg.objects:
@@ -245,7 +232,10 @@ class Perception(Node):
                 print("is RSU:", obj.is_from_rsu)
                 print("vehicle type:", obj.label)
                 print("Direction from vehicle POV: ", obj.relative_direction.data)
-                print("Object relative Position from Vehicle: ", obj.position.x, obj.position.y)
+                if obj.is_from_rsu:
+                    print("Object Position: ", obj.position.x, obj.position.y)
+                else:
+                    print("Object relative Position from Vehicle: ", obj.position.x, obj.position.y)
                 print("closest side of the object: ", sides[obj.nearest_object_side])
                 print("bounding_box left: ", obj.bounding_box[0])
                 print("bounding_box right: ", obj.bounding_box[1])
