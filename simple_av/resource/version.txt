@@ -1,4 +1,4 @@
-Version 1.1.0
+Version 1.1.1
 
 vehicle moves in the defined path using the V3_map.json
 localization: return current lanelet use global and local search on the json map with pose/gnss
@@ -19,3 +19,7 @@ control:
 bug:
     - vehicle never stop completly or park behind a static object. at first the vehicle slows down almost to the 
     complete stop then surpasses the stop point and slowly increase its speed. 
+
+bug fixed: 
+    - Vehicle full stops behind the objevt, Stop is more realestic now. applied a limitation of -3 m/s^2 on the braking 
+    for being more real.

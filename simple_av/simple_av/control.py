@@ -214,6 +214,8 @@ class VehicleControl(Node):
         accel = self.pid_controller.updatePID(current_speed, target_speed)
         if accel > self.maximum_accel:
             accel = self.maximum_accel
+        if accel < -3.0:
+            accel = -3.0
 
         longitudinal_command = LongitudinalCommand()
         longitudinal_command.speed = self.velocity_report.longitudinal_velocity
@@ -242,7 +244,7 @@ class VehicleControl(Node):
         # Using a nonlinear deceleration curve for smoother braking
         
         # Adjusted deceleration factor
-        target_speed = current_speed * (distance_to_stop / (self.lookAhead.speed_limit * 2))**0.5
+        target_speed = current_speed * (distance_to_stop / (self.lookAhead.speed_limit * 2.5))**0.5
         
         # Clamp for realistic behavior
         return min(self.lookAhead.speed_limit, max(0.75, target_speed))
