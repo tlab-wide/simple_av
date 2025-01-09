@@ -13,7 +13,8 @@ import os
 from ament_index_python.packages import get_package_share_directory
 from scipy.spatial.transform import Rotation as R
 import numpy as np
-import tf_transformations as tf
+# import transformations as tf
+from transformations import euler_from_quaternion
 
 
 class Perception(Node):
@@ -164,27 +165,21 @@ class Perception(Node):
         transformed_vector = inverse_rotation.apply(np.array([vector.x, vector.y, vector.z]))
         return transformed_vector
 
-    def quaternion_to_euler(self, orientation):
-        # Extract quaternion from Pose message
-        x = orientation.x
-        y = orientation.y
-        z = orientation.z
-        w = orientation.w
-
-        # Convert quaternion to Euler angles
-        roll, pitch, yaw = tf.euler_from_quaternion([x, y, z, w])
-        self.get_logger().info(f"Roll: {roll}, Pitch: {pitch}, Yaw: {yaw}")
+    def quaternion_to_euler_numpy(self, orientation):
+        t3 = 2.0 * (orientation.w * orientation.z + orientation.x * orientation.y)
+        t4 = 1.0 - 2.0 * (orientation.y**2 + orientation.z**2)
+        yaw = np.arctan2(t3, t4)
         return yaw
-
 
     def handle_detected_objects(self, detected_objects, is_from_rsu):
         detected_objects_list = []
         vehicle_pose = {'x': self.vehicle_pose.pose.position.x, 'y': self.vehicle_pose.pose.position.y, 'z': self.vehicle_pose.pose.position.z}
         print("vehicle pose: ", vehicle_pose['x'], vehicle_pose['y'])
         print("vehicle orientations: ", self.vehicle_pose.pose.orientation.x, self.vehicle_pose.pose.orientation.y, self.vehicle_pose.pose.orientation.z, self.vehicle_pose.pose.orientation.w)
-        yaw = self.quaternion_to_euler(self.vehicle_pose.pose.orientation)
-        print("yaw degree angel: ", math.degrees(yaw))
-        self.get_logger().warning("*****")
+        yaw = self.quaternion_to_euler_numpy(self.vehicle_pose.pose.orientation)
+        print("yaw degree: ", math.degrees(yaw), yaw)
+        # self.get_logger().warning("*****")
+        print("--------------------------------")
         
         return
         if self.vehicle_pose.pose.orientation.x == 0.0 and self.vehicle_pose.pose.orientation.y == 0.0 and self.vehicle_pose.pose.orientation.z == 0.0 and self.vehicle_pose.pose.orientation.w == 0.0:
