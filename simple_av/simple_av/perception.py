@@ -179,28 +179,21 @@ class Perception(Node):
             if is_from_rsu:
                 pose = obj.kinematics.initial_pose_with_covariance.pose
                 detected_obj_msg.orientation = Quaternion(x=pose.orientation.x, y=pose.orientation.y, z=pose.orientation.z, w=pose.orientation.w)
-                print("object abs position: ", pose.position.x, pose.position.y, pose.position.z)
+                # print("object abs position: ", pose.position.x, pose.position.y, pose.position.z)
                 object_relative_pose = self.get_rsu_object_relative_position(vehicle_pose, pose.position)
-                inverse_rotated_pose = self.apply_inverse_quaternion_rotation(self.vehicle_pose.pose.orientation, object_relative_pose)
-                direction_for_inverse = self.object_direction(inverse_rotated_pose[0], inverse_rotated_pose[1])
-                print("Position after inverse rotation:", inverse_rotated_pose)
-                print("direction after inverse rotation:", direction_for_inverse)
-                detected_obj_msg.position = Point()
+                object_relative_pose = self.apply_inverse_quaternion_rotation(self.vehicle_pose.pose.orientation, object_relative_pose)
+                detected_obj_msg.position = Point(x=object_relative_pose.x, y=object_relative_pose.y, z=object_relative_pose.z)
+                detected_obj_msg.relative_direction.data = self.object_direction(object_relative_pose.x, object_relative_pose.y)
             else:
                 pose = obj.kinematics.pose_with_covariance.pose
                 detected_obj_msg.orientation = Quaternion(x=pose.orientation.x, y=pose.orientation.y, z=pose.orientation.z, w=pose.orientation.w)
-                print("object relative pose: ", pose.position.x, pose.position.y, pose.position.z)
+                # print("object relative pose: ", pose.position.x, pose.position.y, pose.position.z)
                 detected_obj_msg.position = Point(x=pose.position.x, y=pose.position.y, z=pose.position.z)
                 detected_obj_msg.relative_direction.data = self.object_direction(pose.position.x, pose.position.y)
             
             # Objects shape (dimensions)
             shape = obj.shape.dimensions
             detected_obj_msg.shape = Vector3(x=shape.x, y=shape.y, z=shape.z)
-
-            print("object direction from vehicle POV: ",detected_obj_msg.relative_direction.data)
-            print("object lable: ",detected_obj_msg.label)
-            print("object shape: ",shape.x, shape.y, shape.z)
-            print("-----------------------")
             
             # Bounding Box
             detected_obj_msg.bounding_box = self.calculate_bounding_box(shape, detected_obj_msg.position)
@@ -237,6 +230,7 @@ class Perception(Node):
             return 
         if self.vehicle_pose.pose.position.x == 0.0 and self.vehicle_pose.pose.position.y == 0.0 and self.vehicle_pose.pose.position.z == 0.0:
             return
+        
         # Handle traffic signals
         v2i_traffic_signals_id, v2i_traffic_signals_colors = self.get_trafficSignals()
 
@@ -265,10 +259,7 @@ class Perception(Node):
                 print("is RSU:", obj.is_from_rsu)
                 print("vehicle type:", obj.label)
                 print("Direction from vehicle POV: ", obj.relative_direction.data)
-                if obj.is_from_rsu:
-                    print("Object Position: ", obj.position.x, obj.position.y)
-                else:
-                    print("Object relative Position from Vehicle: ", obj.position.x, obj.position.y)
+                print("Object relative Position from Vehicle: ", obj.position.x, obj.position.y)
                 print("closest side of the object: ", sides[obj.nearest_object_side])
                 print("bounding_box left: ", obj.bounding_box[0])
                 print("bounding_box right: ", obj.bounding_box[1])
