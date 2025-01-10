@@ -16,7 +16,6 @@ import numpy as np
 # import transformations as tf
 from transformations import euler_from_quaternion
 
-
 class Perception(Node):
     def __init__(self, vehicle_type):
         super().__init__('Perception')
@@ -86,7 +85,7 @@ class Perception(Node):
             else:
                 # object is behind the vehicle
                 return 'behind'
-        elif y > 2.0:
+        elif y > 2.25:
             # Left side of the vehicle
             if x >=0:
                 # object is above the vehicle
@@ -138,8 +137,8 @@ class Perception(Node):
     
     def get_rsu_object_relative_position(self, vehicle_pose, object):
         # Hands of God - the following is not a sloppy bug. its decided after some painful debuging.
-        obj_x = (1) * (object.x - vehicle_pose['x'])
-        obj_y = (1) * (object.y - vehicle_pose['y'])
+        obj_x = object.x - vehicle_pose['x']
+        obj_y = object.y - vehicle_pose['y']
         obj_z = object.z - vehicle_pose['z']
         object_relative_pose = Point(x=obj_x, y=obj_y, z=obj_z)
         return object_relative_pose
@@ -150,20 +149,12 @@ class Perception(Node):
         obj_z = vehicle_pose['z'] + object.z
         object_absolute_pose = Point(x=obj_x, y=obj_y, z=obj_z)
         return object_absolute_pose
-    
-    def apply_orientation(self, quaternion, vector):
-        quaternion = [quaternion.w, quaternion.x, quaternion.y, quaternion.z]
-        position = np.array([vector.x, vector.y, vector.z])
-        rotation = R.from_quat(quaternion)
-        rotated_position = rotation.apply(position)
-        return rotated_position
-    
-    def apply_inverse_quaternion(self, quaternion, vector):
-        quaternion = np.array([quaternion.w, quaternion.x, quaternion.y, quaternion.z])
-        rotation = R.from_quat(quaternion)
+
+    def apply_inverse_quaternion_rotation(self, quaternion, vector):
+        rotation = R.from_quat(np.array([quaternion.x, quaternion.y, quaternion.z, quaternion.w]))
         inverse_rotation = rotation.inv()
         transformed_vector = inverse_rotation.apply(np.array([vector.x, vector.y, vector.z]))
-        return transformed_vector
+        return Point(x=transformed_vector[0], y=transformed_vector[1], z=transformed_vector[2])
 
     def quaternion_to_euler_numpy(self, orientation):
         t3 = 2.0 * (orientation.w * orientation.z + orientation.x * orientation.y)
@@ -175,15 +166,6 @@ class Perception(Node):
         detected_objects_list = []
         vehicle_pose = {'x': self.vehicle_pose.pose.position.x, 'y': self.vehicle_pose.pose.position.y, 'z': self.vehicle_pose.pose.position.z}
         print("vehicle pose: ", vehicle_pose['x'], vehicle_pose['y'])
-        print("vehicle orientations: ", self.vehicle_pose.pose.orientation.x, self.vehicle_pose.pose.orientation.y, self.vehicle_pose.pose.orientation.z, self.vehicle_pose.pose.orientation.w)
-        yaw = self.quaternion_to_euler_numpy(self.vehicle_pose.pose.orientation)
-        print("yaw degree: ", math.degrees(yaw), yaw)
-        # self.get_logger().warning("*****")
-        print("--------------------------------")
-        
-        return
-        if self.vehicle_pose.pose.orientation.x == 0.0 and self.vehicle_pose.pose.orientation.y == 0.0 and self.vehicle_pose.pose.orientation.z == 0.0 and self.vehicle_pose.pose.orientation.w == 0.0:
-            return 
         
         for obj in detected_objects.objects:
             detected_obj_msg = DetectedObject()
@@ -193,38 +175,24 @@ class Perception(Node):
             # Sensor Type - is_from_rsu
             detected_obj_msg.is_from_rsu = is_from_rsu
             
-            # pose (position and orientation)
+            # Object pose (position and orientation)
             if is_from_rsu:
                 pose = obj.kinematics.initial_pose_with_covariance.pose
                 detected_obj_msg.orientation = Quaternion(x=pose.orientation.x, y=pose.orientation.y, z=pose.orientation.z, w=pose.orientation.w)
-
-                print("object position: ", pose.position.x, pose.position.y, pose.position.z)
+                print("object abs position: ", pose.position.x, pose.position.y, pose.position.z)
                 object_relative_pose = self.get_rsu_object_relative_position(vehicle_pose, pose.position)
-                print("vector: ", object_relative_pose.x, object_relative_pose.y, object_relative_pose.z)
-                
-                rotated_pose = self.apply_orientation(self.vehicle_pose.pose.orientation, object_relative_pose)
-                inverse_rotated_pose = self.apply_inverse_quaternion(self.vehicle_pose.pose.orientation, object_relative_pose)
-                # detected_obj_msg.position = Point(x=rotated_pose[0], y=rotated_pose[1], z=rotated_pose[2])
-                # print("object relative pose: ",object_relative_pose.x, object_relative_pose.y)
-     
-                direction = self.object_direction(rotated_pose[0], rotated_pose[1])
+                inverse_rotated_pose = self.apply_inverse_quaternion_rotation(self.vehicle_pose.pose.orientation, object_relative_pose)
                 direction_for_inverse = self.object_direction(inverse_rotated_pose[0], inverse_rotated_pose[1])
-                
                 print("Position after inverse rotation:", inverse_rotated_pose)
                 print("direction after inverse rotation:", direction_for_inverse)
-                print("Position after rotation:", rotated_pose)
-                print("direction after rotation:", direction)
+                detected_obj_msg.position = Point()
             else:
                 pose = obj.kinematics.pose_with_covariance.pose
                 detected_obj_msg.orientation = Quaternion(x=pose.orientation.x, y=pose.orientation.y, z=pose.orientation.z, w=pose.orientation.w)
                 print("object relative pose: ", pose.position.x, pose.position.y, pose.position.z)
-                object_absulute_pose = self.get_object_absolute_position(vehicle_pose, pose.position)
-                print("object absulute pose: ",object_absulute_pose.x, object_absulute_pose.y)
                 detected_obj_msg.position = Point(x=pose.position.x, y=pose.position.y, z=pose.position.z)
                 detected_obj_msg.relative_direction.data = self.object_direction(pose.position.x, pose.position.y)
             
-
-
             # Objects shape (dimensions)
             shape = obj.shape.dimensions
             detected_obj_msg.shape = Vector3(x=shape.x, y=shape.y, z=shape.z)
@@ -233,7 +201,7 @@ class Perception(Node):
             print("object lable: ",detected_obj_msg.label)
             print("object shape: ",shape.x, shape.y, shape.z)
             print("-----------------------")
-
+            
             # Bounding Box
             detected_obj_msg.bounding_box = self.calculate_bounding_box(shape, detected_obj_msg.position)
 
@@ -265,6 +233,10 @@ class Perception(Node):
         return v2i_traffic_signals_id, v2i_traffic_signals_colors
 
     def perception(self):
+        if self.vehicle_pose.pose.orientation.x == 0.0 and self.vehicle_pose.pose.orientation.y == 0.0 and self.vehicle_pose.pose.orientation.z == 0.0 and self.vehicle_pose.pose.orientation.w == 0.0:
+            return 
+        if self.vehicle_pose.pose.position.x == 0.0 and self.vehicle_pose.pose.position.y == 0.0 and self.vehicle_pose.pose.position.z == 0.0:
+            return
         # Handle traffic signals
         v2i_traffic_signals_id, v2i_traffic_signals_colors = self.get_trafficSignals()
 
@@ -279,8 +251,6 @@ class Perception(Node):
         # detected_objects_list = self.handle_detected_objects()
         detected_objects_list = self.handle_detected_objects(self.RSU_detectedObjects, True)
         # detected_objects_list = self.handle_detected_objects(self.detectedObjects, False)
-
-        return
 
         # Create and publish detected objects message
         detected_objects_msg = DetectedObjectsArray()
