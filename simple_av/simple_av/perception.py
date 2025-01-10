@@ -243,8 +243,8 @@ class Perception(Node):
 
         # Handle detected objects
         # detected_objects_list = self.handle_detected_objects()
-        detected_objects_list = self.handle_detected_objects(self.RSU_detectedObjects, True)
-        # detected_objects_list = self.handle_detected_objects(self.detectedObjects, False)
+        # detected_objects_list = self.handle_detected_objects(self.RSU_detectedObjects, True)
+        detected_objects_list = self.handle_detected_objects(self.detectedObjects, False)
 
         # Create and publish detected objects message
         detected_objects_msg = DetectedObjectsArray()
