@@ -16,7 +16,5 @@ control:
     - pure pursuit for steering
     - nonlinear deceleration curve for braking
 
-Added feature:
-    - RSU: rsu detections are proccessed and used in perception
-    
-    Now Mounted-sensors on the bus and rsu detections are merged together to form the perception.
+feature to add:
+    using waypoints for obstacle avoidance. check if an object is on the near waypoints. if there is use waypoints as stop point.
