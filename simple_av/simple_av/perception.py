@@ -241,6 +241,7 @@ class Perception(Node):
         self.publisher_traffic_signals.publish(traffic_signals_msg)
 
         # Handle detected objects
+        self.get_logger().warning("*********************")
         detected_objects_list = self.handle_detected_objects(self.RSU_detectedObjects, True) # RSU data
         detected_objects_list.extend(self.handle_detected_objects(self.detectedObjects, False)) # Mounted-sensor data
 
