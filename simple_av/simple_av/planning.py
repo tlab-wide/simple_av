@@ -468,7 +468,7 @@ class Planning(Node):
             distances_to_vehicle.append(self.calculate_distance(waypoint, vehicle_pose))
         closest_waypoint_to_vehicle = search_area[distances_to_vehicle.index(min(distances_to_vehicle))]
         current_closest_point_to_vehicle = self.path.index(closest_waypoint_to_vehicle)
-        print("debug: ", current_closest_point_to_vehicle)
+        print("DEBUG: closest waypoint to vehicle index", current_closest_point_to_vehicle)
         return current_closest_point_to_vehicle
 
     def local_planning(self, search_area, search_area_as_lanes):
@@ -540,24 +540,24 @@ class Planning(Node):
         objects_ahead = []
         for obj in self.detectedObjects.objects:
             object_direction = obj.relative_direction.data
-            if object_direction == 'above' or 'NW' or 'NE':
+            if object_direction == 'above' or object_direction == 'NW' or object_direction == 'NE':
                 objects_ahead.append(obj)
-        print("Detected Objects in front: ", len(objects_ahead))
+        print("DEBUG - number of Detected Objects in front: ", len(objects_ahead))
         return objects_ahead
         
-    def get_objects_in_range(objects_ahead, filter_dist):
+    def get_objects_in_range(self, objects_ahead, filter_dist):
         if not objects_ahead:
-            print("No Objects ahead")
+            print("DEBUG - No Objects ahead")
             return None            
         objects_in_range = []
         for obj in objects_ahead:
             if obj.distance <= filter_dist: objects_in_range.append(obj)
 
-        print("Detected Objects in detection radious: ", len(objects_in_range))
+        print("DEBUG - number of Detected Objects in detection radious: ", len(objects_in_range))
         return objects_in_range
     
     def get_object_absolute_position(self, vehicle_pose, object):
-        print("vehicle absolute pos: ", vehicle_pose['x'], vehicle_pose['y'], vehicle_pose['z'])
+        # print("vehicle absolute pos: ", vehicle_pose['x'], vehicle_pose['y'], vehicle_pose['z'])
         obj_x = vehicle_pose['x'] + object.x
         obj_y = vehicle_pose['y'] + object.y
         obj_z = vehicle_pose['z'] + object.z
@@ -568,9 +568,14 @@ class Planning(Node):
         objects_on_path = []
         in_range_objects_absulute_positions = [self.get_object_absolute_position(vehicle_pose, obj.position) for obj in objects_in_range]
         for i in range(len(objects_in_range)):
+            self.get_logger().warning('object -----------')
+            print("00 - i: ", i)
             for waypoint in self.path[current_closest_point_to_vehicle_index:current_closest_point_to_vehicle_index + int(self.reaction_distance / self.densify_interval) + 1]:
+                print("00 - waypoint: ", waypoint)
                 object_pose = {'x': in_range_objects_absulute_positions[i].x, 'y': in_range_objects_absulute_positions[i].y, 'z': in_range_objects_absulute_positions[i].z}
                 dist = self.calculate_distance(object_pose, waypoint)
+                print("00 - object pose: ", object_pose)
+                print("00 - distance: ", dist)
                 if dist <= self.densify_interval/2 * 1.5:
                     objects_on_path.append({"object": objects_in_range[i], "waypoint": waypoint})
                     break
