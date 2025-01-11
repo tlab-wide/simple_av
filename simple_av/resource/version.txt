@@ -1,4 +1,4 @@
-Version 1.2.1
+Version 1.2.0
 
 vehicle moves in the defined path using the V3_map.json
 localization: return current lanelet use global and local search on the json map with pose/gnss
