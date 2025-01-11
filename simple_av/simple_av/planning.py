@@ -102,14 +102,15 @@ class Planning(Node):
 
         self.isPathPlanned = False  # Flag to check if the path has been planned
         self.path_as_lanes = None  # List of lanes from start lane to destination
-        self.path = None  # List of points in order of path_as_lanes
+        self.path = None  # List of waypoints in order of path_as_lanes
         self.route = None # List of lanes from start lane to destination
         self.current_lane_index = 0
         
         self.base_speed = 10.0 # meters/second
         self.speed_limit = 10.0 # meters/second
-        self.lookahead_distance = self.base_speed * 2 # meters
-        self.stop_distance = self.base_speed * 3.0 # meters
+        self.lookahead_distance = self.base_speed * 2.0 # meters
+        self.reaction_distance = self.base_speed * 3.0 # meters
+        self.detection_radius = self.base_speed * 4.0 # meters
         self.status = String() # Cruise, Decelerate, PrepareToStop, Turn
         self.vehicle_length = self.vehicle_config['dimensions']['length'] #meters
         self.vehicle_width = self.vehicle_config['dimensions']['width'] #meters
@@ -328,7 +329,7 @@ class Planning(Node):
 
             if current_lanelet == dest_lanelet:
                 self.path_as_lanes = path
-                self.generate_path_points()
+                self.generate_path_points() # creates a list of waypoints in the path
 
             for next_lanelet in self.graph[current_lanelet]['nextLanes']:
                 if next_lanelet not in visited:
@@ -378,7 +379,7 @@ class Planning(Node):
             if dist <= self.lookahead_distance and dist >= self.lookahead_distance - self.densify_interval:
                 return i, self.path[i]
         
-        self.get_logger().error("--")
+        self.get_logger().error("Look ahead point not found!")
         # return first_ahead_point, self.path[first_ahead_point]
         # TODO: modify this part
         if len(self.path) - first_ahead_point - 1 <= 10:
@@ -443,7 +444,7 @@ class Planning(Node):
             lane_index = self.route.index(self.location.closest_lane_names.data)
         except:
             # vehicle is out of path
-            # self.get_logger().warning("Vehicle is out of the Path")
+            self.get_logger().warning("Vehicle is out of the Path")
             # TODO: Do something when the vehicle is out of the path 
             lane_index = self.current_lane_index
         if lane_index in range(self.current_lane_index, self.current_lane_index + self.search_depth):
@@ -462,12 +463,12 @@ class Planning(Node):
 
     def find_closest_waypoint_to_vehicle(self, vehicle_pose, search_area):
         # Finding the index of the closest point in search area
-
         distances_to_vehicle = []
         for waypoint in search_area:
             distances_to_vehicle.append(self.calculate_distance(waypoint, vehicle_pose))
         closest_waypoint_to_vehicle = search_area[distances_to_vehicle.index(min(distances_to_vehicle))]
         current_closest_point_to_vehicle = self.path.index(closest_waypoint_to_vehicle)
+        print("debug: ", current_closest_point_to_vehicle)
         return current_closest_point_to_vehicle
 
 
@@ -476,11 +477,13 @@ class Planning(Node):
         Perform local path planning to determine the next point for the vehicle.
         """
         if self.pose.pose.position.x == 0.0 and self.pose.pose.position.y == 0.0 and self.pose.pose.position.z == 0.0:
-            # self.get_logger().warning("Vehicle Pose is not accessible")
+            self.get_logger().warning("Vehicle Pose is not accessible")
             return None, None, None
         vehicle_pose = {'x': self.pose.pose.position.x, 'y': self.pose.pose.position.y, 'z': self.pose.pose.position.z}
         
         current_closest_point_to_vehicle_index = self.find_closest_waypoint_to_vehicle(vehicle_pose, search_area)
+        # current_closest_point_to_vehicle = {'x': self.location.closest_point.x, 'y': self.location.closest_point.y, 'z': self.location.closest_point.z}
+        # current_closest_point_to_vehicle_index = self.path.index(current_closest_point_to_vehicle)
         look_ahead_point_index, look_ahead_point = self.find_lookahead_point(vehicle_pose, current_closest_point_to_vehicle_index, search_area)
             
         return look_ahead_point_index, look_ahead_point, current_closest_point_to_vehicle_index
@@ -530,7 +533,7 @@ class Planning(Node):
             p2 = None
         return isTrafficLightDetected, task, _color, p1, p2
 
-    def object_detection(self):
+    def get_detected_objects_in_front(self):
         if not self.detectedObjects:
             self.get_logger().warning("No Perception / no object detected!")
             return None
@@ -538,33 +541,21 @@ class Planning(Node):
         objects_ahead = []
         for obj in self.detectedObjects.objects:
             object_direction = obj.relative_direction.data
-            if object_direction == 'above':
+            if object_direction == 'above' or 'NW' or 'NE':
                 objects_ahead.append(obj)
+        print("Detected Objects in front: ", len(objects_ahead))
+        return objects_ahead
         
+    def get_objects_in_range(objects_ahead, filter_dist):
         if not objects_ahead:
             print("No Objects ahead")
             return None            
-        sides = ['left', 'right', 'back', 'front']
-        print("number of objects ahead: ", len(objects_ahead))
+        objects_in_range = []
         for obj in objects_ahead:
-            print("---------------------")
-            print("Sensor type: ", obj.is_from_rsu)
-            # print("vehicle type:", obj.label)
-            print("Relative Direction from vehicle POV: ", obj.relative_direction.data)
-            # print("Object relative Position from Vehicle: ", obj.position.x, obj.position.y)
-            print("Distance the object: ", obj.distance)
-            print("closest side of the object: ", sides[obj.nearest_object_side])
-            # print("bounding_box left: ", obj.bounding_box[0])
-            # print("bounding_box right: ", obj.bounding_box[1])
-            # print("bounding_box back: ", obj.bounding_box[2])
-            # print("bounding_box front: ", obj.bounding_box[3])
-            # print("object shape size: ", obj.shape)
-            print("---------------------")    
-        distance_to_objects_ahead = [obj.distance for obj in objects_ahead]
-        closest_object = objects_ahead[distance_to_objects_ahead.index(min(distance_to_objects_ahead))]     
-        distance_to_closest_object = closest_object.distance
-        print('Distance to the closest object: ', distance_to_closest_object)
-        return closest_object
+            if obj.distance <= filter_dist: objects_in_range.append(obj)
+
+        print("Detected Objects in detection radious: ", len(objects_in_range))
+        return objects_in_range
     
     def get_object_absolute_position(self, vehicle_pose, object):
         print("vehicle absolute pos: ", vehicle_pose['x'], vehicle_pose['y'], vehicle_pose['z'])
@@ -579,7 +570,7 @@ class Planning(Node):
             return False, None, 'Cruise'
         
         distance_to_closest_object = closest_object_ahead.distance
-        if distance_to_closest_object > self.stop_distance:
+        if distance_to_closest_object > self.reaction_distance:
             self.get_logger().info("No immediate danger")
             return False, None, 'Cruise'
         self.get_logger().warning("Imediate threat. Objects ahead in danger zone")
@@ -626,7 +617,16 @@ class Planning(Node):
             distance_to_traffic_light_stop_point = self.calculate_distance(vehicle_pose, {'x': stop_point_for_traffic_light.x, 'y': stop_point_for_traffic_light.y, 'z': stop_point_for_traffic_light.z})
             print("traffic light detected, distance to stop, ", trafficLightColor, distance_to_traffic_light_stop_point)
         
-        closest_object_ahead = self.object_detection()
+        object_ahead = self.get_detected_objects_in_front()
+        objects_in_range = self.get_objects_in_range(object_ahead, self.detection_radius)
+        for obj in objects_in_range:
+            print("Sensor type: ", obj.is_from_rsu)
+            print("vehicle type:", obj.label)
+            print("Relative Direction from vehicle POV: ", obj.relative_direction.data)
+            print("Object relative Position from Vehicle: ", obj.position.x, obj.position.y)
+            print("Distance the object: ", obj.distance)
+            print("---------------------")    
+        
         isObjectAhead, stop_point_for_collison_avoidance, task = self.collision_avoidance(closest_object_ahead, vehicle_pose)
 
         # if isTrafficLightDetected and not isObjectAhead:
@@ -634,7 +634,7 @@ class Planning(Node):
         #     if trafficLightColor == 'red':
         #         if distance_to_traffic_light_stop_point <= self.densify_interval * 2.5:
         #             self.status.data = 'Park'
-        #         elif distance_to_traffic_light_stop_point <= self.stop_distance:
+        #         elif distance_to_traffic_light_stop_point <= self.reaction_distance:
         #             self.status.data ='Decelerate'
         #         else:
         #             self.status.data = 'Cruise'
@@ -659,7 +659,7 @@ class Planning(Node):
         if isObjectAhead:
             self.status.data = task
             return stop_point_for_collison_avoidance
-        elif distance_to_destination <= self.stop_distance and look_ahead_point_index > len(self.path) - (self.stop_distance / self.densify_interval + 1):
+        elif distance_to_destination <= self.reaction_distance and look_ahead_point_index > len(self.path) - (self.reaction_distance / self.densify_interval + 1):
             self.status.data ='Decelerate'
         elif isTurnDetected:
             self.status.data = 'Turn'
