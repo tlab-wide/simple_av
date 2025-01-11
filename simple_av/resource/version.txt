@@ -1,4 +1,4 @@
-Version 1.1.1
+Version 1.2.1
 
 vehicle moves in the defined path using the V3_map.json
 localization: return current lanelet use global and local search on the json map with pose/gnss
@@ -6,7 +6,7 @@ perception:
     - Reads traffic light messages and object detection messages from AWSIM. 
     - convert object detection messages to: bounding_box, distance from nearest side of the objects bounding_box
     - publishes the traffic light and DetecetdObjects messages.
-    - Do not use Quaternion values of vehicle or objects Orientation for detection 
+    - RSU + mounted-sensors
 planning: 
     - plan the route and the movement of the vehilce (Crusing, Turning, line change)
     - Dont use traffic light messages
@@ -16,10 +16,7 @@ control:
     - pure pursuit for steering
     - nonlinear deceleration curve for braking
 
-bug:
-    - vehicle never stop completly or park behind a static object. at first the vehicle slows down almost to the 
-    complete stop then surpasses the stop point and slowly increase its speed. 
-
-bug fixed: 
-    - Vehicle full stops behind the objevt, Stop is more realestic now. applied a limitation of -3 m/s^2 on the braking 
-    for being more real.
+Added feature:
+    - RSU: rsu detections are proccessed and used in perception
+    
+    Now Mounted-sensors on the bus and rsu detections are merged together to form the perception.

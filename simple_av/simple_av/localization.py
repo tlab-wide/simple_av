@@ -105,7 +105,7 @@ class Localization(Node):
                     self.display_lane(lanelet)
             else:
                 self.display_lane(lanelet)
-  
+
     # Prints the given Lanelet from the Json map file
     def display_lane(self, lanelet):
         if lanelet is None:
@@ -327,6 +327,8 @@ class Localization(Node):
             self.get_logger().info(f"global positioning, {self.isGlobalPositioningDone}")
             self.closest_point, self.closest_lane_name, self.min_distance = self.global_positioning()
         else:
+            self.get_logger().warning("*****")
+            print(self.pose_msg.pose.orientation.x, self.pose_msg.pose.orientation.y, self.pose_msg.pose.orientation.z, self.pose_msg.pose.orientation.w)
             # self.get_logger().info("Local positioning")
             self.closest_point, self.closest_lane_name, self.min_distance = self.local_positioning(self.closest_point, self.closest_lane_name, self.min_distance)
             self.publish_vehicle_location(self.closest_point, self.closest_lane_name, self.min_distance)

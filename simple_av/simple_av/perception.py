@@ -4,13 +4,17 @@ from geometry_msgs.msg import Point, Quaternion, Vector3
 from simple_av_msgs.msg import LocalizationMsg, TrafficSignalsArray, DetectedObject, DetectedObjectsArray
 from v2x_msgs.msg import CooperativeSignalsMessage
 from autoware_auto_perception_msgs.msg import DetectedObjects
+from autoware_auto_perception_msgs.msg import PredictedObjects
 from geometry_msgs.msg import PoseStamped
 from math import atan2, asin
 import math
 import yaml
 import os
 from ament_index_python.packages import get_package_share_directory
-
+from scipy.spatial.transform import Rotation as R
+import numpy as np
+# import transformations as tf
+from transformations import euler_from_quaternion
 
 class Perception(Node):
     def __init__(self, vehicle_type):
@@ -23,20 +27,19 @@ class Perception(Node):
         
         # Create subscriber for /OBU/Sensing topic. This topic publishes the information of detected objects from the POV of the vehicle.
         self.subscriptionPose = self.create_subscription(DetectedObjects, '/OBU/Sensing', self.detectedObjects_callback, 10)
-        self.subscriptionPose = self.create_subscription(
-            PoseStamped,
-            '/awsim/ground_truth/vehicle/pose',
-            self.groundTruth_callback,
-            10
-        )
+        # Create subscriber for /OBU/Sensing topic. This topic publishes the information of detected objects from the POV of the vehicle.
+        self.subscriptionPose = self.create_subscription(PredictedObjects, '/v2x/cooperative_pure1', self.RSU_detectedObjects_callback, 10)
+        
+        self.subscriptionPose = self.create_subscription(PoseStamped, '/sensing/gnss/pose', self.pose_callback, 10)
         self.trafficSignal = CooperativeSignalsMessage()  # Initialize traffic signal
         self.detectedObjects = DetectedObjects()  # Initialize detected objects message
+        self.RSU_detectedObjects = PredictedObjects()
 
         # Initialize the publishers
         self.publisher_traffic_signals = self.create_publisher(TrafficSignalsArray, 'simple_av/perception/traffic_signals', 10)
         self.publisher_detected_objects = self.create_publisher(DetectedObjectsArray, 'simple_av/perception/detected_objects', 10)
 
-        self.ground_truth_msg = PoseStamped()
+        self.vehicle_pose = PoseStamped()
 
         self.vehicle_length = self.vehicle_config['dimensions']['length'] #meters
         self.vehicle_width = self.vehicle_config['dimensions']['width'] #meters
@@ -48,12 +51,14 @@ class Perception(Node):
     def detectedObjects_callback(self, msg):
         """Callback function to update the pose data."""
         self.detectedObjects = msg
+    
+    def RSU_detectedObjects_callback(self, msg):
+        """Callback function to update the pose data."""
+        self.RSU_detectedObjects = msg
 
-    def groundTruth_callback(self, msg):
-        self.ground_truth_msg = msg
+    def pose_callback(self, msg):
+        self.vehicle_pose = msg
 
-    def get_groundTruth_msg(self):
-        return self.ground_truth_msg
     
     def load_vehicle_config(self, vehicle_type="lexus"):
         # Path to the YAML file
@@ -80,7 +85,7 @@ class Perception(Node):
             else:
                 # object is behind the vehicle
                 return 'behind'
-        elif y > 2.0:
+        elif y > 2.25:
             # Left side of the vehicle
             if x >=0:
                 # object is above the vehicle
@@ -129,32 +134,66 @@ class Perception(Node):
             Point(x=pose.x + half_length, y=pose.y, z=pose.z)
         ]
         return bounding_box
+    
+    def get_rsu_object_relative_position(self, vehicle_pose, object):
+        # Hands of God - the following is not a sloppy bug. its decided after some painful debuging.
+        obj_x = object.x - vehicle_pose['x']
+        obj_y = object.y - vehicle_pose['y']
+        obj_z = object.z - vehicle_pose['z']
+        object_relative_pose = Point(x=obj_x, y=obj_y, z=obj_z)
+        return object_relative_pose
+    
+    def get_object_absolute_position(self, vehicle_pose, object):
+        obj_x = vehicle_pose['x'] + object.x
+        obj_y = vehicle_pose['y'] + object.y
+        obj_z = vehicle_pose['z'] + object.z
+        object_absolute_pose = Point(x=obj_x, y=obj_y, z=obj_z)
+        return object_absolute_pose
 
-    def handle_detected_objects(self):
+    def apply_inverse_quaternion_rotation(self, quaternion, vector):
+        rotation = R.from_quat(np.array([quaternion.x, quaternion.y, quaternion.z, quaternion.w]))
+        inverse_rotation = rotation.inv()
+        transformed_vector = inverse_rotation.apply(np.array([vector.x, vector.y, vector.z]))
+        return Point(x=transformed_vector[0], y=transformed_vector[1], z=transformed_vector[2])
+
+    def quaternion_to_euler_numpy(self, orientation):
+        t3 = 2.0 * (orientation.w * orientation.z + orientation.x * orientation.y)
+        t4 = 1.0 - 2.0 * (orientation.y**2 + orientation.z**2)
+        yaw = np.arctan2(t3, t4)
+        return yaw
+
+    def handle_detected_objects(self, detected_objects, is_from_rsu):
         detected_objects_list = []
-
-        for obj in self.detectedObjects.objects:
+        vehicle_pose = {'x': self.vehicle_pose.pose.position.x, 'y': self.vehicle_pose.pose.position.y, 'z': self.vehicle_pose.pose.position.z}
+        
+        for obj in detected_objects.objects:
             detected_obj_msg = DetectedObject()
-
+            
             # label
             if obj.classification:
                 detected_obj_msg.label = obj.classification[0].label  # Assuming the first classification is the main one
-
+            
             # Sensor Type - is_from_rsu
-            detected_obj_msg.is_from_rsu = False
-
-            # pose (position and orientation)
-            pose = obj.kinematics.pose_with_covariance.pose
-            detected_obj_msg.position = Point(x=pose.position.x, y=pose.position.y, z=pose.position.z)
+            detected_obj_msg.is_from_rsu = is_from_rsu
+            
+            # Object pose (position and orientation)
+            if is_from_rsu:
+                pose = obj.kinematics.initial_pose_with_covariance.pose
+                vector = self.get_rsu_object_relative_position(vehicle_pose, pose.position)
+                object_relative_pose = self.apply_inverse_quaternion_rotation(self.vehicle_pose.pose.orientation, vector)
+                detected_obj_msg.position = Point(x=object_relative_pose.x, y=object_relative_pose.y, z=object_relative_pose.z)
+            else:
+                pose = obj.kinematics.pose_with_covariance.pose
+                # print("object relative pose: ", pose.position.x, pose.position.y, pose.position.z)
+                detected_obj_msg.position = Point(x=pose.position.x, y=pose.position.y, z=pose.position.z)
+            
             detected_obj_msg.orientation = Quaternion(x=pose.orientation.x, y=pose.orientation.y, z=pose.orientation.z, w=pose.orientation.w)
-
-            # relative direction TODO: for RSU the absulute position must be reformated to relative pose to calculate direction
-            detected_obj_msg.relative_direction.data = self.object_direction(pose.position.x, pose.position.y)
-
+            detected_obj_msg.relative_direction.data = self.object_direction(detected_obj_msg.position.x, detected_obj_msg.position.y)
+            
             # Objects shape (dimensions)
             shape = obj.shape.dimensions
             detected_obj_msg.shape = Vector3(x=shape.x, y=shape.y, z=shape.z)
-
+            
             # Bounding Box
             detected_obj_msg.bounding_box = self.calculate_bounding_box(shape, detected_obj_msg.position)
 
@@ -165,15 +204,6 @@ class Perception(Node):
             detected_obj_msg.distance = min(distances)
             side = distances.index(min(distances))
             detected_obj_msg.nearest_object_side = side
-
-
-            # relative_x_distance = pose.position.x - shape.x / 2 - self.vehicle_length/2
-            # relative_y_distance = pose.position.y - shape.y / 2 - self.vehicle_width/2
-            # detected_obj_msg.relative_distance = Point(x=relative_x_distance, y=relative_y_distance, z=pose.position.z)
-
-            # # Distance
-            # detected_obj_msg.distance = math.sqrt(relative_x_distance**2 + relative_y_distance**2)
-            
 
             detected_objects_list.append(detected_obj_msg)
 
@@ -195,7 +225,12 @@ class Perception(Node):
         return v2i_traffic_signals_id, v2i_traffic_signals_colors
 
     def perception(self):
-
+        if self.vehicle_pose.pose.orientation.x == 0.0 and self.vehicle_pose.pose.orientation.y == 0.0 and \
+            self.vehicle_pose.pose.orientation.z == 0.0 and self.vehicle_pose.pose.orientation.w == 0.0 and \
+            self.vehicle_pose.pose.position.x == 0.0 and self.vehicle_pose.pose.position.y == 0.0 and self.vehicle_pose.pose.position.z == 0.0:
+            self.get_logger().warning("Vehicle data is not available: No position nor orientation data")
+            return
+        
         # Handle traffic signals
         v2i_traffic_signals_id, v2i_traffic_signals_colors = self.get_trafficSignals()
 
@@ -204,19 +239,17 @@ class Perception(Node):
         traffic_signals_msg.v2i_traffic_signals_id = v2i_traffic_signals_id
         traffic_signals_msg.v2i_traffic_signals_colors = v2i_traffic_signals_colors
         self.publisher_traffic_signals.publish(traffic_signals_msg)
-        # self.get_logger().info('Published traffic signal data')
 
         # Handle detected objects
-        detected_objects_list = self.handle_detected_objects()
+        print("new Perception")
+        detected_objects_list = self.handle_detected_objects(self.RSU_detectedObjects, True) # RSU data
+        detected_objects_list.extend(self.handle_detected_objects(self.detectedObjects, False)) # Mounted-sensor data
 
         # Create and publish detected objects message
         detected_objects_msg = DetectedObjectsArray()
         detected_objects_msg.objects = detected_objects_list
         self.publisher_detected_objects.publish(detected_objects_msg)
-        # self.get_logger().info('Published detected objects data')
-        ground_truth = self.get_groundTruth_msg()
-        q = Quaternion(x=ground_truth.pose.orientation.x, y=ground_truth.pose.orientation.y, z=ground_truth.pose.orientation.z, w=ground_truth.pose.orientation.w)
-        yaw_degree_vehicle = math.degrees(self.quaternion_to_yaw(q))
+
         sides = ['left', 'right', 'back', 'front']
         print("number of objects: ", len(detected_objects_msg.objects))
         for obj in detected_objects_msg.objects:
@@ -226,10 +259,6 @@ class Perception(Node):
                 print("Direction from vehicle POV: ", obj.relative_direction.data)
                 print("Object relative Position from Vehicle: ", obj.position.x, obj.position.y)
                 print("closest side of the object: ", sides[obj.nearest_object_side])
-                print("bounding_box left: ", obj.bounding_box[0])
-                print("bounding_box right: ", obj.bounding_box[1])
-                print("bounding_box back: ", obj.bounding_box[2])
-                print("bounding_box front: ", obj.bounding_box[3])
                 print("DEBUG - min dist: ", obj.distance) 
                 print("object shape size: ", obj.shape)
                 print("---------------------")
