@@ -136,7 +136,6 @@ class Perception(Node):
         return bounding_box
     
     def get_rsu_object_relative_position(self, vehicle_pose, object):
-        # Hands of God - the following is not a sloppy bug. its decided after some painful debuging.
         obj_x = object.x - vehicle_pose['x']
         obj_y = object.y - vehicle_pose['y']
         obj_z = object.z - vehicle_pose['z']
@@ -172,7 +171,7 @@ class Perception(Node):
             # label
             if obj.classification:
                 detected_obj_msg.label = obj.classification[0].label  # Assuming the first classification is the main one
-            
+            print("CHECK - label ", detected_obj_msg.label)
             # Sensor Type - is_from_rsu
             detected_obj_msg.is_from_rsu = is_from_rsu
             
@@ -180,6 +179,7 @@ class Perception(Node):
             if is_from_rsu:
                 pose = obj.kinematics.initial_pose_with_covariance.pose
                 vector = self.get_rsu_object_relative_position(vehicle_pose, pose.position)
+                print("CHECK - ABS position ", pose.position)
                 object_relative_pose = self.apply_inverse_quaternion_rotation(self.vehicle_pose.pose.orientation, vector)
                 detected_obj_msg.position = Point(x=object_relative_pose.x, y=object_relative_pose.y, z=object_relative_pose.z)
             else:
@@ -189,7 +189,8 @@ class Perception(Node):
             
             detected_obj_msg.orientation = Quaternion(x=pose.orientation.x, y=pose.orientation.y, z=pose.orientation.z, w=pose.orientation.w)
             detected_obj_msg.relative_direction.data = self.object_direction(detected_obj_msg.position.x, detected_obj_msg.position.y)
-            
+            print("CHECK - direction ", detected_obj_msg.relative_direction.data)
+            print("---------------------")
             # Objects shape (dimensions)
             shape = obj.shape.dimensions
             detected_obj_msg.shape = Vector3(x=shape.x, y=shape.y, z=shape.z)
@@ -242,8 +243,9 @@ class Perception(Node):
 
         # Handle detected objects
         print("new Perception")
-        detected_objects_list = self.handle_detected_objects(self.RSU_detectedObjects, True) # RSU data
-        detected_objects_list.extend(self.handle_detected_objects(self.detectedObjects, False)) # Mounted-sensor data
+        # detected_objects_list = self.handle_detected_objects(self.detectedObjects, False) # Mounted-sensor data
+        detected_objects_list = self.handle_detected_objects(self.RSU_detectedObjects, True) # Mounted-sensor data
+        # detected_objects_list.extend(self.handle_detected_objects(self.RSU_detectedObjects, True)) # RSU data
 
         # Create and publish detected objects message
         detected_objects_msg = DetectedObjectsArray()
@@ -253,15 +255,16 @@ class Perception(Node):
         sides = ['left', 'right', 'back', 'front']
         print("number of objects: ", len(detected_objects_msg.objects))
         for obj in detected_objects_msg.objects:
-            if obj.label != 7:
-                print("is RSU:", obj.is_from_rsu)
-                print("vehicle type:", obj.label)
-                print("Direction from vehicle POV: ", obj.relative_direction.data)
-                print("Object relative Position from Vehicle: ", obj.position.x, obj.position.y)
-                print("closest side of the object: ", sides[obj.nearest_object_side])
-                print("DEBUG - min dist: ", obj.distance) 
-                print("object shape size: ", obj.shape)
-                print("---------------------")
+            if obj.label != 78:
+                # print("is RSU:", obj.is_from_rsu)
+                # print("vehicle type:", obj.label)
+                # print("Direction from vehicle POV: ", obj.relative_direction.data)
+                # print("Object relative Position from Vehicle: ", obj.position.x, obj.position.y)
+                # print("closest side of the object: ", sides[obj.nearest_object_side])
+                # print("DEBUG - min dist: ", obj.distance) 
+                # print("object shape size: ", obj.shape)
+                # print("---------------------")
+                pass
 
 
 def main(args=None):
