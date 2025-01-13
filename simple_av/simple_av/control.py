@@ -30,7 +30,7 @@ class PIDController:
 
         self.integrated_error = 0.0
 
-        self.slidingWindow = deque(maxlen=10) # for storing only the 10 most recent errors
+        self.slidingWindow = deque(maxlen=20) # for storing only the 10 most recent errors
 
         self.previous_error = 0.0
     

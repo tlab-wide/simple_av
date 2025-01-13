@@ -1,4 +1,4 @@
-Version 1.2.0
+Version 1.3.0
 
 vehicle moves in the defined path using the V3_map.json
 localization: return current lanelet use global and local search on the json map with pose/gnss
@@ -16,7 +16,4 @@ control:
     - pure pursuit for steering
     - nonlinear deceleration curve for braking
 
-Added feature:
-    - RSU: rsu detections are proccessed and used in perception
-    
-    Now Mounted-sensors on the bus and rsu detections are merged together to form the perception.
+new feature: Using waypoints for detecting objects on the path and selecting stop point behind objects
