@@ -13,7 +13,7 @@ from simple_av_msgs.msg import LookAheadMsg
 from v2x_msgs.msg import CooperativeSignalsMessage
 import numpy as np
 from simple_av_msgs.msg import TrafficSignalsArray, DetectedObjectsArray, DetectedObject
-
+from scipy.spatial.transform import Rotation as R
 
 class PathCurveDetector:
     def __init__(self, points, angle_threshold=3):
@@ -558,17 +558,34 @@ class Planning(Node):
         print("DEBUG - number of Detected Objects in detection radious: ", len(objects_in_range))
         return objects_in_range
     
-    def get_object_absolute_position(self, vehicle_pose, object):
-        # print("vehicle absolute pos: ", vehicle_pose['x'], vehicle_pose['y'], vehicle_pose['z'])
-        obj_x = vehicle_pose['x'] + object.x
-        obj_y = vehicle_pose['y'] + object.y
-        obj_z = vehicle_pose['z'] + object.z
+    def apply_quaternion_rotation(self, quaternion, vector):
+        """
+        Applies a quaternion rotation to a given vector.
+        """
+        rotation = R.from_quat(np.array([quaternion.x, quaternion.y, quaternion.z, quaternion.w]))
+        transformed_vector = rotation.apply(np.array([vector.x, vector.y, vector.z]))
+        return Point(x=transformed_vector[0], y=transformed_vector[1], z=transformed_vector[2])
+
+    def get_object_absolute_position(self, vehicle_orientation, vehicle_pose, vector):
+        """
+        Converts an object's relative position back to its absolute position using the vehicle's pose.
+        """
+        # Apply the quaternion rotation (forward rotation)
+        rotated_vector = self.apply_quaternion_rotation(vehicle_orientation, vector)
+
+        # Add the rotated vector to the vehicle's position
+        obj_x = vehicle_pose['x'] + rotated_vector.x
+        obj_y = vehicle_pose['y'] + rotated_vector.y
+        obj_z = vehicle_pose['z'] + rotated_vector.z
+
+        # Create the absolute position
         object_absolute_pose = Point(x=obj_x, y=obj_y, z=obj_z)
         return object_absolute_pose
+
     
     def find_obstacle_on_path(self, objects_in_range, current_closest_point_to_vehicle_index, vehicle_pose):
         objects_on_path = []
-        in_range_objects_absulute_positions = [self.get_object_absolute_position(vehicle_pose, obj.position) for obj in objects_in_range]
+        in_range_objects_absulute_positions = [self.get_object_absolute_position(self.pose.pose.orientation, vehicle_pose, obj.position) for obj in objects_in_range]
         print("DEBUG 1 - ##########")
         print("Objects in range: ", len(objects_in_range), len(in_range_objects_absulute_positions))
         for i in range(len(objects_in_range)):
