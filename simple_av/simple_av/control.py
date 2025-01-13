@@ -208,7 +208,7 @@ class VehicleControl(Node):
         if status == "Decelerate" or status == "Stop_red":
             distance_to_stop = self.calculate_distance(self.lookAhead.stop_point, self.pose.pose.position)
             target_speed = self.calculate_target_speed_for_stop(distance_to_stop, current_speed)
-            if distance_to_stop <= 0.5:
+            if distance_to_stop <= 1.0:
                 self.get_logger().warning("Full stop!")
                 target_speed = 0.0
         

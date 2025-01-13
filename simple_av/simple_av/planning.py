@@ -587,13 +587,13 @@ class Planning(Node):
         objects_on_path = []
         in_range_objects_absulute_positions = [self.get_object_absolute_position(self.pose.pose.orientation, vehicle_pose, obj.position) for obj in objects_in_range]
         print("DEBUG 1 - ##########")
-        print("Objects in range: ", len(objects_in_range), len(in_range_objects_absulute_positions))
+        print("number of Objects in range: ", len(objects_in_range))
         for i in range(len(objects_in_range)):
-            print("counter: ", i, " Sensor type: ", objects_in_range[i].is_from_rsu, " vehicle type:", objects_in_range[i].label)
+            print("Sensor type: ", objects_in_range[i].is_from_rsu, " vehicle type:", objects_in_range[i].label)
             print("Relative Direction from vehicle POV: ", objects_in_range[i].relative_direction.data)
             print("Object relative Position from Vehicle: ", objects_in_range[i].position.x, objects_in_range[i].position.y)
-            print("Object absulute pose: ", in_range_objects_absulute_positions[i])
-            print("Distance the object: ", objects_in_range[i].distance)
+            print("Object absolute pose: ", in_range_objects_absulute_positions[i])
+            print("Distance to the object: ", objects_in_range[i].distance)
             print("---------------------") 
         print("#############")
 
@@ -602,14 +602,9 @@ class Planning(Node):
             print("waypoint: ", waypoint)
         
         for i in range(len(objects_in_range)):
-            # self.get_logger().warning('object -----------')
-            # print("00 - i: ", i)
             for waypoint in self.path[current_closest_point_to_vehicle_index:current_closest_point_to_vehicle_index + int(self.reaction_distance / self.densify_interval) + 1]:
-                # print("00 - waypoint: ", waypoint)
                 object_pose = {'x': in_range_objects_absulute_positions[i].x, 'y': in_range_objects_absulute_positions[i].y, 'z': in_range_objects_absulute_positions[i].z}
                 dist = self.calculate_distance(object_pose, waypoint)
-                # print("00 - object pose: ", object_pose)
-                # print("00 - distance: ", dist)
                 if dist <= self.densify_interval/2 * 1.5:
                     objects_on_path.append({"object": objects_in_range[i], "waypoint": waypoint})
                     break
@@ -651,7 +646,7 @@ class Planning(Node):
         print("DEBUG - closest object waypoint ", closest_object_info['waypoint'])
         self.get_logger().warning("++++++++++++++++")
         
-        stop_point_index = self.path.index(closest_object_info['waypoint']) - 4
+        stop_point_index = self.path.index(closest_object_info['waypoint']) - int(closest_object_info['object'].shape.x / self.densify_interval)
         print("DEBUG - stop point index ", stop_point_index)
         stop_point = self.path[stop_point_index]
         print("DEBUG - vehicle distance to stop point: ", self.calculate_distance(vehicle_pose, stop_point))
