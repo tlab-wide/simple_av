@@ -30,7 +30,7 @@ class PIDController:
 
         self.integrated_error = 0.0
 
-        self.slidingWindow = deque(maxlen=10) # for storing only the 10 most recent errors
+        self.slidingWindow = deque(maxlen=20) # for storing only the 10 most recent errors
 
         self.previous_error = 0.0
     
@@ -208,7 +208,7 @@ class VehicleControl(Node):
         if status == "Decelerate" or status == "Stop_red":
             distance_to_stop = self.calculate_distance(self.lookAhead.stop_point, self.pose.pose.position)
             target_speed = self.calculate_target_speed_for_stop(distance_to_stop, current_speed)
-            if distance_to_stop <= 1.0:
+            if distance_to_stop <= 0.5:
                 self.get_logger().warning("Full stop!")
                 target_speed = 0.0
         
