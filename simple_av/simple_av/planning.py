@@ -131,7 +131,8 @@ class Planning(Node):
         
         # self.dest_lanelet = "lanelet149"
         # self.dest_lanelet = "lanelet513"
-        self.dest_lanelet = "lanelet63"
+        # self.dest_lanelet = "lanelet63"
+        self.dest_lanelet = "lanelet761"
     
     def load_vehicle_config(self, vehicle_type="lexus"):
         # Path to the YAML file
@@ -155,7 +156,7 @@ class Planning(Node):
             dict: The map data loaded from the JSON file.
         """
         package_share_directory = get_package_share_directory('simple_av')
-        json_file_path = os.path.join(package_share_directory, 'resource', 'V3_map.json')
+        json_file_path = os.path.join(package_share_directory, 'resource', 'Kashiwa.json')
         # Load and read the JSON file
         with open(json_file_path, 'r') as json_file:
             map_data = json.load(json_file)
