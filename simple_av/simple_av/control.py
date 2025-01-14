@@ -110,7 +110,7 @@ class VehicleControl(Node):
         self.wheel_base = self.vehicle_config['dimensions']['wheel_base'] #meters
         
         self.previous_steering_angle = 0
-        self.steering_gain = 0.2  # Proportional gain for steering
+        self.steering_gain = 0.3  # Proportional gain for steering
         self.maximum_accel = self.vehicle_config['max_acceleration']
         self.maximum_braking_accel = self.vehicle_config['max_braking_accel']
 
@@ -194,7 +194,7 @@ class VehicleControl(Node):
             if self.pose and self.lookAhead and self.ground_truth:
                 steer = self.pure_pursuit_steering_angle()
                 lateral_command.steering_tire_angle = steer
-                lateral_command.steering_tire_rotation_rate = 0.0
+                lateral_command.steering_tire_rotation_rate = 0.1
             else:
                 lateral_command.steering_tire_angle = 0.0
                 lateral_command.steering_tire_rotation_rate = 0.0

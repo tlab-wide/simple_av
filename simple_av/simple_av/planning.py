@@ -16,7 +16,7 @@ from simple_av_msgs.msg import TrafficSignalsArray, DetectedObjectsArray, Detect
 from scipy.spatial.transform import Rotation as R
 
 class PathCurveDetector:
-    def __init__(self, points, angle_threshold=3):
+    def __init__(self, points, angle_threshold=15):
         self.points = points
         self.angle_threshold = math.radians(angle_threshold)  # Convert threshold to radians
 
@@ -47,7 +47,6 @@ class PathCurveDetector:
     def find_curves_in_path(self):
         curves = []
         if len(self.points) < 3:
-            print("DEBUGGGGGG")
             return curves
 
         for i in range(1, len(self.points) - 1):
@@ -107,7 +106,7 @@ class Planning(Node):
         self.route = None # List of lanes from start lane to destination
         self.current_lane_index = 0
         
-        self.base_speed = 10.0 # meters/second
+        self.base_speed = 8.0 # meters/second
         self.max_speed = self.vehicle_config['max_speed'] # meters/second
         self.lookahead_distance = self.base_speed * 2.0 # meters
         self.reaction_distance = self.base_speed * 3.0 # meters
@@ -158,8 +157,8 @@ class Planning(Node):
             dict: The map data loaded from the JSON file.
         """
         package_share_directory = get_package_share_directory('simple_av')
-        # json_file_path = os.path.join(package_share_directory, 'resource', 'Kashiwa.json')
-        json_file_path = os.path.join(package_share_directory, 'resource', 'Shinjuku.json')
+        json_file_path = os.path.join(package_share_directory, 'resource', 'Kashiwa.json')
+        # json_file_path = os.path.join(package_share_directory, 'resource', 'Shinjuku.json')
         # Load and read the JSON file
         with open(json_file_path, 'r') as json_file:
             map_data = json.load(json_file)
@@ -383,7 +382,7 @@ class Planning(Node):
         # find the lookahead point in front of the vehicle.  lookahead distance - interval < look ahead point distance <= lookahead distance
         for i in range(first_ahead_point_index, search_area_indexes_on_path[1]):
             dist = self.calculate_distance(vehicle_pose, self.path[i])
-            if dist <= self.lookahead_distance and dist >= self.lookahead_distance - self.densify_interval:
+            if dist <= self.lookahead_distance + 4.0 and dist >= self.lookahead_distance:
                 return i, self.path[i]
         
         self.get_logger().error("Look ahead point not found!")
@@ -410,7 +409,7 @@ class Planning(Node):
                 if self.path[look_ahead_point_index - 2] == v or self.path[look_ahead_point_index - 1] == v or self.path[look_ahead_point_index] == v or self.path[look_ahead_point_index+1] == v or self.path[look_ahead_point_index+2] == v:
                     # self.get_logger().info("curve started")
                     self.curve_angle = k
-                    self.curve_finish_point = self.path[look_ahead_point_index + int(self.lookahead_distance//self.densify_interval)]
+                    self.curve_finish_point = self.path[look_ahead_point_index + int(self.lookahead_distance//self.densify_interval) + 4]
                     self.isCurveStarted = True
                     self.isCurveFinished = False
                     # self.isCurveDetected = True
@@ -435,7 +434,8 @@ class Planning(Node):
         isTurnDetected, curve_angle = self.curve_detector(self.curves, look_ahead_point, look_ahead_point_index)
         speed = self.base_speed
         if isTurnDetected:
-            speed = float(math.ceil(self.base_speed / 2))
+            # speed = float(math.ceil(self.base_speed / 2)) - 1
+            speed = 2.0
     
         return isTurnDetected, speed
     
@@ -485,6 +485,8 @@ class Planning(Node):
         current_closest_point_to_vehicle_index = self.find_closest_waypoint_to_vehicle(vehicle_pose, search_area)
         look_ahead_point_index, look_ahead_point = self.find_lookahead_point(vehicle_pose, current_closest_point_to_vehicle_index, search_area)
         isTurnDetected, speed = self.curve_handler(look_ahead_point, look_ahead_point_index)
+        self.lookahead_distance = speed * 2.0
+        print("DEBUG - look ahead distance: ", self.lookahead_distance)
         return look_ahead_point_index, look_ahead_point, current_closest_point_to_vehicle_index, isTurnDetected, speed
     
     
@@ -674,9 +676,9 @@ class Planning(Node):
             print("traffic light detected, distance to stop, ", trafficLightColor, distance_to_traffic_light_stop_point)
         '''
         
-        object_ahead = self.get_detected_objects_in_front()
-        objects_in_range = self.get_objects_in_range(object_ahead, self.detection_radius)
-        isObjectAhead, stop_point_for_collison_avoidance, task = self.collision_avoidance(objects_in_range, current_closest_point_to_vehicle_index, vehicle_pose)
+        # object_ahead = self.get_detected_objects_in_front()
+        # objects_in_range = self.get_objects_in_range(object_ahead, self.detection_radius)
+        # isObjectAhead, stop_point_for_collison_avoidance, task = self.collision_avoidance(objects_in_range, current_closest_point_to_vehicle_index, vehicle_pose)
         isObjectAhead = False
         '''
         if isTrafficLightDetected and not isObjectAhead:
