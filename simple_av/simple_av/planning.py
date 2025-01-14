@@ -47,6 +47,7 @@ class PathCurveDetector:
     def find_curves_in_path(self):
         curves = []
         if len(self.points) < 3:
+            print("DEBUGGGGGG")
             return curves
 
         for i in range(1, len(self.points) - 1):
@@ -126,7 +127,7 @@ class Planning(Node):
         self.densify_interval = 2.0 # meters
         
         self.initial_lane = None
-        self.search_depth = 4
+        self.search_depth = 5
 
         self.curve_finish_point = None
         
@@ -432,22 +433,19 @@ class Planning(Node):
 
     def curve_handler(self, look_ahead_point, look_ahead_point_index):
         isTurnDetected, curve_angle = self.curve_detector(self.curves, look_ahead_point, look_ahead_point_index)
-        
+        speed = self.base_speed
         if isTurnDetected:
             speed = float(math.ceil(self.base_speed / 2))
-        else:
-            speed = self.base_speed
-        
+    
         return isTurnDetected, speed
     
+    # TODO: create search area based on waypoints not lanes
     def create_search_area(self):
-        
         try:
             lane_index = self.route.index(self.location.closest_lane_names.data)
         except:
             # vehicle is out of path
             self.get_logger().warning("Vehicle is out of the Path")
-            # TODO: Do something when the vehicle is out of the path 
             lane_index = self.current_lane_index
         if lane_index in range(self.current_lane_index, self.current_lane_index + self.search_depth):
             self.current_lane_index = lane_index
@@ -481,7 +479,7 @@ class Planning(Node):
         """
         if self.pose.pose.position.x == 0.0 and self.pose.pose.position.y == 0.0 and self.pose.pose.position.z == 0.0:
             self.get_logger().warning("Vehicle Pose is not accessible")
-            return None, None, None, None
+            return None, None, None, None, None
         vehicle_pose = {'x': self.pose.pose.position.x, 'y': self.pose.pose.position.y, 'z': self.pose.pose.position.z}
         
         current_closest_point_to_vehicle_index = self.find_closest_waypoint_to_vehicle(vehicle_pose, search_area)
@@ -729,8 +727,6 @@ class Planning(Node):
             # self.get_logger().info("path planning")
             start_lanelet = self.location.closest_lane_names.data
             self.bfs(start_lanelet, self.dest_lanelet) # Creates the path
-            path_curve_detector = PathCurveDetector(self.path, angle_threshold=3) # initializing object from class
-            self.curves = path_curve_detector.find_curves_in_path() # locating curves on the route/path
             if self.path and self.path_as_lanes and self.curves:
                 self.isPathPlanned = True
                 print("path of lanes: ", self.path_as_lanes)
@@ -738,6 +734,8 @@ class Planning(Node):
                 self.route = self.path_as_lanes[:]
                 self.current_lane_index = 0
                 # print("path of lanes: ", self.path)
+            path_curve_detector = PathCurveDetector(self.path, angle_threshold=3) # initializing object from class
+            self.curves = path_curve_detector.find_curves_in_path() # locating curves on the route/path
 
     def publish_planning_msgs(self, look_ahead_point, stop_point, speed):
         lookahead_point = LookAheadMsg()
