@@ -486,8 +486,9 @@ class Planning(Node):
         # current_closest_point_to_vehicle = {'x': self.location.closest_point.x, 'y': self.location.closest_point.y, 'z': self.location.closest_point.z}
         # current_closest_point_to_vehicle_index = self.path.index(current_closest_point_to_vehicle)
         look_ahead_point_index, look_ahead_point = self.find_lookahead_point(vehicle_pose, current_closest_point_to_vehicle_index, search_area)
-            
-        return look_ahead_point_index, look_ahead_point, current_closest_point_to_vehicle_index
+        isTurnDetected = self.curve_handler(look_ahead_point, look_ahead_point_index)
+
+        return look_ahead_point_index, look_ahead_point, current_closest_point_to_vehicle_index, isTurnDetected
     
     
     def manage_traffic_lights(self):
@@ -657,11 +658,10 @@ class Planning(Node):
         #     task = 'Park'
         return True, stop_point, task
     
-    def behavioural_planning(self, look_ahead_point, look_ahead_point_index, current_closest_point_to_vehicle_index):
+    def behavioural_planning(self, look_ahead_point, look_ahead_point_index, current_closest_point_to_vehicle_index, isTurnDetected):
         # print("behavioural planning ... ")
         vehicle_pose = {'x': self.pose.pose.position.x, 'y': self.pose.pose.position.y, 'z': self.pose.pose.position.z}
-        isTurnDetected = self.curve_handler(look_ahead_point, look_ahead_point_index)
-
+        
         destination = Point(x=self.path[-1]['x'], y=self.path[-1]['y'], z=self.path[-1]['z'])
         distance_to_destination = self.calculate_distance(vehicle_pose, {'x': destination.x, 'y': destination.y, 'z': destination.z})
         
@@ -740,6 +740,14 @@ class Planning(Node):
                 self.current_lane_index = 0
                 # print("path of lanes: ", self.path)
 
+    def publish_planning_msgs(self, look_ahead_point, stop_point):
+        lookahead_point = LookAheadMsg()
+        lookahead_point.look_ahead_point = Point(x=look_ahead_point['x'], y=look_ahead_point['y'], z=look_ahead_point['z'])
+        lookahead_point.stop_point = stop_point
+        lookahead_point.status = self.status
+        lookahead_point.speed_limit = self.speed_limit
+        # print(self.status.data, self.location.closest_lane_names.data, self.route[self.current_lane_index], current_closest_point_to_vehicle_index, look_ahead_point_index, self.speed_limit)
+        self.planning_publisher.publish(lookahead_point)
   
     def planning(self):
         """
@@ -759,21 +767,12 @@ class Planning(Node):
                 return
         
             search_area, search_area_as_lanes = self.create_search_area()
-            
-            look_ahead_point_index, look_ahead_point, current_closest_point_to_vehicle_index = self.local_planning(search_area, search_area_as_lanes)
+            look_ahead_point_index, look_ahead_point, current_closest_point_to_vehicle_index, isTurnDetected = self.local_planning(search_area, search_area_as_lanes)
             if not look_ahead_point and not look_ahead_point_index:
                 return
-
-            stop_point = self.behavioural_planning(look_ahead_point, look_ahead_point_index, current_closest_point_to_vehicle_index)
-            # publishing
-            lookahead_point = LookAheadMsg()
-            lookahead_point.look_ahead_point = Point(x=look_ahead_point['x'], y=look_ahead_point['y'], z=look_ahead_point['z'])
-            lookahead_point.stop_point = stop_point
-            lookahead_point.status = self.status
-            lookahead_point.speed_limit = self.speed_limit
-        
-            # print(self.status.data, self.location.closest_lane_names.data, self.route[self.current_lane_index], current_closest_point_to_vehicle_index, look_ahead_point_index, self.speed_limit)
-            self.planning_publisher.publish(lookahead_point)
+            stop_point = self.behavioural_planning(look_ahead_point, look_ahead_point_index, current_closest_point_to_vehicle_index, isTurnDetected)
+            
+            self.publish_planning_msgs(look_ahead_point, stop_point) # publishing
     
 
 def main(args=None):
