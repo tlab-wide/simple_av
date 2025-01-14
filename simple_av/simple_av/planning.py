@@ -114,6 +114,7 @@ class Planning(Node):
         self.status = String() # Cruise, Decelerate, PrepareToStop, Turn
         self.vehicle_length = self.vehicle_config['dimensions']['length'] #meters
         self.vehicle_width = self.vehicle_config['dimensions']['width'] #meters
+        self.curves = None
 
         # self.saftey_distance = 2.0 + self.vehicle_length/2 #meters
         self.saftey_distance = 2.0 #meters
@@ -131,8 +132,8 @@ class Planning(Node):
         
         # self.dest_lanelet = "lanelet149"
         # self.dest_lanelet = "lanelet513"
-        # self.dest_lanelet = "lanelet63"
-        self.dest_lanelet = "lanelet761"
+        self.dest_lanelet = "lanelet63" # Shinjuku start 96
+        # self.dest_lanelet = "lanelet761" # Kashiwa
     
     def load_vehicle_config(self, vehicle_type="lexus"):
         # Path to the YAML file
@@ -156,7 +157,8 @@ class Planning(Node):
             dict: The map data loaded from the JSON file.
         """
         package_share_directory = get_package_share_directory('simple_av')
-        json_file_path = os.path.join(package_share_directory, 'resource', 'Kashiwa.json')
+        # json_file_path = os.path.join(package_share_directory, 'resource', 'Kashiwa.json')
+        json_file_path = os.path.join(package_share_directory, 'resource', 'Shinjuku.json')
         # Load and read the JSON file
         with open(json_file_path, 'r') as json_file:
             map_data = json.load(json_file)
@@ -427,10 +429,7 @@ class Planning(Node):
 
 
     def curve_handler(self, look_ahead_point, look_ahead_point_index):
-        path_curve_detector = PathCurveDetector(self.path, angle_threshold=3) # initializing object from class
-        curves = path_curve_detector.find_curves_in_path() # locating curves on the route/path
-        
-        isTurnDetected, curve_angle = self.curve_detector(curves, look_ahead_point, look_ahead_point_index)
+        isTurnDetected, curve_angle = self.curve_detector(self.curves, look_ahead_point, look_ahead_point_index)
         
         if isTurnDetected:
             self.speed_limit = self.adjust_speed_to_curve(curve_angle)
@@ -681,7 +680,7 @@ class Planning(Node):
         object_ahead = self.get_detected_objects_in_front()
         objects_in_range = self.get_objects_in_range(object_ahead, self.detection_radius)
         isObjectAhead, stop_point_for_collison_avoidance, task = self.collision_avoidance(objects_in_range, current_closest_point_to_vehicle_index, vehicle_pose)
-
+        isObjectAhead = False
         '''
         if isTrafficLightDetected and not isObjectAhead:
             print("traffic light no object")
@@ -731,7 +730,9 @@ class Planning(Node):
             # self.get_logger().info("path planning")
             start_lanelet = self.location.closest_lane_names.data
             self.bfs(start_lanelet, self.dest_lanelet) # Creates the path
-            if self.path and self.path_as_lanes:
+            path_curve_detector = PathCurveDetector(self.path, angle_threshold=3) # initializing object from class
+            self.curves = path_curve_detector.find_curves_in_path() # locating curves on the route/path
+            if self.path and self.path_as_lanes and self.curves:
                 self.isPathPlanned = True
                 print("path of lanes: ", self.path_as_lanes)
                 self.initial_lane = self.location.closest_lane_names.data
@@ -777,7 +778,7 @@ class Planning(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-    node = Planning('bus')
+    node = Planning('lexus')
     try:
         while rclpy.ok():
             rclpy.spin_once(node, timeout_sec=None)# Set timeout to 0 to avoid delay
