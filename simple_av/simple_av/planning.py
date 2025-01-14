@@ -473,13 +473,13 @@ class Planning(Node):
         print("DEBUG: closest waypoint", self.path[current_closest_point_to_vehicle])
         return current_closest_point_to_vehicle
 
-    def local_planning(self, search_area, search_area_as_lanes):
+    def local_planning(self, search_area):
         """
         Perform local path planning to determine the next point for the vehicle.
         """
         if self.pose.pose.position.x == 0.0 and self.pose.pose.position.y == 0.0 and self.pose.pose.position.z == 0.0:
             self.get_logger().warning("Vehicle Pose is not accessible")
-            return None, None, None
+            return None, None, None, None
         vehicle_pose = {'x': self.pose.pose.position.x, 'y': self.pose.pose.position.y, 'z': self.pose.pose.position.z}
         
         current_closest_point_to_vehicle_index = self.find_closest_waypoint_to_vehicle(vehicle_pose, search_area)
@@ -487,7 +487,6 @@ class Planning(Node):
         # current_closest_point_to_vehicle_index = self.path.index(current_closest_point_to_vehicle)
         look_ahead_point_index, look_ahead_point = self.find_lookahead_point(vehicle_pose, current_closest_point_to_vehicle_index, search_area)
         isTurnDetected = self.curve_handler(look_ahead_point, look_ahead_point_index)
-
         return look_ahead_point_index, look_ahead_point, current_closest_point_to_vehicle_index, isTurnDetected
     
     
@@ -767,7 +766,7 @@ class Planning(Node):
                 return
         
             search_area, search_area_as_lanes = self.create_search_area()
-            look_ahead_point_index, look_ahead_point, current_closest_point_to_vehicle_index, isTurnDetected = self.local_planning(search_area, search_area_as_lanes)
+            look_ahead_point_index, look_ahead_point, current_closest_point_to_vehicle_index, isTurnDetected = self.local_planning(search_area)
             if not look_ahead_point and not look_ahead_point_index:
                 return
             stop_point = self.behavioural_planning(look_ahead_point, look_ahead_point_index, current_closest_point_to_vehicle_index, isTurnDetected)
