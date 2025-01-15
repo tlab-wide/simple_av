@@ -268,7 +268,7 @@ class Perception(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-    node = Perception('lexus')
+    node = Perception('bus')
     try:
         while rclpy.ok():
             rclpy.spin_once(node, timeout_sec=0)  # Set timeout to 0 to avoid delay

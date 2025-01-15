@@ -134,6 +134,7 @@ class Planning(Node):
         # self.dest_lanelet = "lanelet513"
         self.dest_lanelet = "lanelet63" # Shinjuku start 96
         # self.dest_lanelet = "lanelet761" # Kashiwa
+        # self.dest_lanelet = "lanelet1162" # Kashiwa
     
     def load_vehicle_config(self, vehicle_type="lexus"):
         # Path to the YAML file
@@ -406,10 +407,11 @@ class Planning(Node):
         if not self.isCurveStarted and not self.isCurveFinished:
             for curve in curves:
                 k, v = next(iter(curve.items()))
-                if self.path[look_ahead_point_index - 2] == v or self.path[look_ahead_point_index - 1] == v or self.path[look_ahead_point_index] == v or self.path[look_ahead_point_index+1] == v or self.path[look_ahead_point_index+2] == v:
+                # if self.path[look_ahead_point_index - 2] == v or self.path[look_ahead_point_index - 1] == v or self.path[look_ahead_point_index] == v or self.path[look_ahead_point_index+1] == v or self.path[look_ahead_point_index+2] == v:
+                if self.path[look_ahead_point_index - 1] == v or self.path[look_ahead_point_index] == v or self.path[look_ahead_point_index+1] == v:
                     # self.get_logger().info("curve started")
                     self.curve_angle = k
-                    self.curve_finish_point = self.path[look_ahead_point_index + int(self.lookahead_distance//self.densify_interval) + 4]
+                    self.curve_finish_point = self.path[look_ahead_point_index + int(self.lookahead_distance//self.densify_interval) + 6]
                     self.isCurveStarted = True
                     self.isCurveFinished = False
                     # self.isCurveDetected = True
@@ -485,7 +487,8 @@ class Planning(Node):
         current_closest_point_to_vehicle_index = self.find_closest_waypoint_to_vehicle(vehicle_pose, search_area)
         look_ahead_point_index, look_ahead_point = self.find_lookahead_point(vehicle_pose, current_closest_point_to_vehicle_index, search_area)
         isTurnDetected, speed = self.curve_handler(look_ahead_point, look_ahead_point_index)
-        self.lookahead_distance = speed * 2.0
+        self.lookahead_distance = speed * 2.0 + 2.0
+
         print("DEBUG - look ahead distance: ", self.lookahead_distance)
         return look_ahead_point_index, look_ahead_point, current_closest_point_to_vehicle_index, isTurnDetected, speed
     
@@ -775,7 +778,7 @@ class Planning(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-    node = Planning('lexus')
+    node = Planning('bus')
     try:
         while rclpy.ok():
             rclpy.spin_once(node, timeout_sec=None)# Set timeout to 0 to avoid delay
