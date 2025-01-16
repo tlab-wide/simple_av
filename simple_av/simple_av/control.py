@@ -112,6 +112,7 @@ class VehicleControl(Node):
         self.previous_steering_angle = 0
         self.steering_gain = 0.5  # Proportional gain for steering
         self.maximum_accel = self.vehicle_config['max_acceleration']
+        self.maximum_Stereing = None
         self.maximum_braking_accel = self.vehicle_config['max_braking_accel']
 
     def load_vehicle_config(self, vehicle_type="lexus"):
@@ -256,7 +257,7 @@ class VehicleControl(Node):
     def pure_pursuit_steering_angle(self):
         # print("coordinates: ",  self.lookAhead.look_ahead_point.x, self.lookAhead.look_ahead_point.y, self.lookAhead.look_ahead_point.z)
     
-        lookahead_x =self.lookAhead.look_ahead_point.x - self.pose.pose.position.x
+        lookahead_x = self.lookAhead.look_ahead_point.x - self.pose.pose.position.x
         lookahead_y = self.lookAhead.look_ahead_point.y - self.pose.pose.position.y
 
         yaw = self.get_yaw_from_pose(self.ground_truth)
