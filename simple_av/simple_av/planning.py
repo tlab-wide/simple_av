@@ -728,9 +728,13 @@ class Planning(Node):
         Perform global path planning to create a path from the current location to the destination.
         """
         if self.location:
-            # self.get_logger().info("path planning")
+            self.get_logger().info("path planning")
             start_lanelet = self.location.closest_lane_names.data
             self.bfs(start_lanelet, self.dest_lanelet) # Creates the path
+            print(self.path_as_lanes)
+            if self.path and self.path_as_lanes:
+                path_curve_detector = PathCurveDetector(self.path, angle_threshold=3) # initializing object from class
+                self.curves = path_curve_detector.find_curves_in_path() # locating curves on the route/path
             if self.path and self.path_as_lanes and self.curves:
                 self.isPathPlanned = True
                 print("path of lanes: ", self.path_as_lanes)
@@ -738,8 +742,7 @@ class Planning(Node):
                 self.route = self.path_as_lanes[:]
                 self.current_lane_index = 0
                 # print("path of lanes: ", self.path)
-            path_curve_detector = PathCurveDetector(self.path, angle_threshold=3) # initializing object from class
-            self.curves = path_curve_detector.find_curves_in_path() # locating curves on the route/path
+            
 
     def publish_planning_msgs(self, look_ahead_point, stop_point, speed):
         lookahead_point = LookAheadMsg()

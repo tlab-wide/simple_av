@@ -229,11 +229,11 @@ class Perception(Node):
         return v2i_traffic_signals_id, v2i_traffic_signals_colors
 
     def perception(self):
-        # if self.vehicle_pose.pose.orientation.x == 0.0 and self.vehicle_pose.pose.orientation.y == 0.0 and \
-        #     self.vehicle_pose.pose.orientation.z == 0.0 and self.vehicle_pose.pose.orientation.w == 0.0 and \
-        #     self.vehicle_pose.pose.position.x == 0.0 and self.vehicle_pose.pose.position.y == 0.0 and self.vehicle_pose.pose.position.z == 0.0:
-        #     self.get_logger().warning("Vehicle data is not available: No position nor orientation data")
-        #     return
+        if self.vehicle_pose.pose.orientation.x == 0.0 and self.vehicle_pose.pose.orientation.y == 0.0 and \
+            self.vehicle_pose.pose.orientation.z == 0.0 and self.vehicle_pose.pose.orientation.w == 0.0 and \
+            self.vehicle_pose.pose.position.x == 0.0 and self.vehicle_pose.pose.position.y == 0.0 and self.vehicle_pose.pose.position.z == 0.0:
+            self.get_logger().warning("Vehicle data is not available: No position nor orientation data")
+            return
         
         # Handle traffic signals
         v2i_traffic_signals_id, v2i_traffic_signals_colors = self.get_trafficSignals()
