@@ -130,10 +130,9 @@ class Planning(Node):
 
         self.curve_finish_point = None
         
-        # self.dest_lanelet = "lanelet149"
-        # self.dest_lanelet = "lanelet513"
-        self.dest_lanelet = "lanelet63" # Shinjuku start 96
-        # self.dest_lanelet = "lanelet761" # Kashiwa
+        # self.dest_lanelet = "lanelet63" # Shinjuku start 96
+        
+        self.dest_lanelet = "lanelet761" # Kashiwa
         # self.dest_lanelet = "lanelet1162" # Kashiwa
     
     def load_vehicle_config(self, vehicle_type="lexus"):

@@ -1,4 +1,4 @@
-Version 1.3.0
+Version 1.3.1
 
 vehicle moves in the defined path using the V3_map.json
 localization: return current lanelet use global and local search on the json map with pose/gnss
@@ -11,9 +11,15 @@ planning:
     - plan the route and the movement of the vehilce (Crusing, Turning, line change)
     - Dont use traffic light messages
     - Does Collision avoidance (not using Orientation values in this version). does not collide to objects from nither sides of the objects
+    - Lookahead distance changes by speed
 control: 
     - PID for speed
     - pure pursuit for steering
     - nonlinear deceleration curve for braking
 
-new feature: Using waypoints for detecting objects on the path and selecting stop point behind objects
+Fixed bug: Now the lookahead distance changes according to the speed of the vehicle.
+the base speed of the vehicle is 8 m/s. But, when the vehcile starts to turn in a intersection or line change the speed reduces to
+2 m/s. the lookahead distance is speed * 2 + 2 so when the speed is 8m/s the lookahead is 18 meters and when the vehicle is turning
+and its speed is 2m/s the look ahead distance is 6 meter.
+This change in lookahead distance makes the vehicle to move better and more close to the curve in a turn and also more stable when 
+there is no sharp curve.
