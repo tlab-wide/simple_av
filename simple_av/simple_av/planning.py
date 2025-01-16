@@ -16,7 +16,7 @@ from simple_av_msgs.msg import TrafficSignalsArray, DetectedObjectsArray, Detect
 from scipy.spatial.transform import Rotation as R
 
 class PathCurveDetector:
-    def __init__(self, points, angle_threshold=3):
+    def __init__(self, points, angle_threshold=15):
         self.points = points
         self.angle_threshold = math.radians(angle_threshold)  # Convert threshold to radians
 
@@ -106,14 +106,15 @@ class Planning(Node):
         self.route = None # List of lanes from start lane to destination
         self.current_lane_index = 0
         
-        self.base_speed = 10.0 # meters/second
-        self.speed_limit = 10.0 # meters/second
+        self.base_speed = 8.0 # meters/second
+        self.max_speed = self.vehicle_config['max_speed'] # meters/second
         self.lookahead_distance = self.base_speed * 2.0 # meters
         self.reaction_distance = self.base_speed * 3.0 # meters
         self.detection_radius = self.base_speed * 4.0 # meters
         self.status = String() # Cruise, Decelerate, PrepareToStop, Turn
         self.vehicle_length = self.vehicle_config['dimensions']['length'] #meters
         self.vehicle_width = self.vehicle_config['dimensions']['width'] #meters
+        self.curves = None
 
         # self.saftey_distance = 2.0 + self.vehicle_length/2 #meters
         self.saftey_distance = 2.0 #meters
@@ -125,14 +126,14 @@ class Planning(Node):
         self.densify_interval = 2.0 # meters
         
         self.initial_lane = None
-        self.search_depth = 4
+        self.search_depth = 5
 
         self.curve_finish_point = None
         
-        # self.dest_lanelet = "lanelet149"
-        # self.dest_lanelet = "lanelet513"
-        # self.dest_lanelet = "lanelet63"
-        self.dest_lanelet = "lanelet761"
+        # self.dest_lanelet = "lanelet63" # Shinjuku start 96
+        
+        self.dest_lanelet = "lanelet761" # Kashiwa
+        # self.dest_lanelet = "lanelet1162" # Kashiwa
     
     def load_vehicle_config(self, vehicle_type="lexus"):
         # Path to the YAML file
@@ -157,6 +158,7 @@ class Planning(Node):
         """
         package_share_directory = get_package_share_directory('simple_av')
         json_file_path = os.path.join(package_share_directory, 'resource', 'Kashiwa.json')
+        # json_file_path = os.path.join(package_share_directory, 'resource', 'Shinjuku.json')
         # Load and read the JSON file
         with open(json_file_path, 'r') as json_file:
             map_data = json.load(json_file)
@@ -341,6 +343,20 @@ class Planning(Node):
                             visited.add(next_adj)
                             queue.append((next_adj, path + [next_adj]))
         
+    def get_first_ahead_point(self, vehicle_pose, current_closest_point_index):
+        
+        # Calculate direction vectors
+        direction_vector = self.calculate_vector(self.path[current_closest_point_index], self.path[current_closest_point_index + 1])
+        direction_vector_of_robot = self.calculate_vector(self.path[current_closest_point_index], vehicle_pose)   
+        first_ahead_point_index = 0
+
+        # Find the first point ahead of the vehicle
+        if self.calculate_dot_product(direction_vector, direction_vector_of_robot) >= 0: # Vehicle is ahead of the point
+            first_ahead_point_index = current_closest_point_index + 1
+        else: # Vehicle is Behind of the point
+            first_ahead_point_index = current_closest_point_index
+        return first_ahead_point_index
+        
 
     def find_lookahead_point(self, vehicle_pose, current_closest_point_index, search_area): 
         """
@@ -356,36 +372,24 @@ class Planning(Node):
         if current_closest_point_index == len(self.path) - 1:
             # print("debug shiit: ", len(self.path))
             return current_closest_point_index, self.path[current_closest_point_index]
-            
-        # Calculate direction vectors
-        direction_vector = self.calculate_vector(self.path[current_closest_point_index], self.path[current_closest_point_index + 1])
-        direction_vector_of_robot = self.calculate_vector(self.path[current_closest_point_index], vehicle_pose)   
-        first_ahead_point = 0
-
-        # Find the first point ahead of the vehicle
-        if self.calculate_dot_product(direction_vector, direction_vector_of_robot) >= 0: # Vehicle is ahead of the point
-            first_ahead_point = current_closest_point_index + 1
-        else: # Vehicle is Behind of the point
-            first_ahead_point = current_closest_point_index
+        first_ahead_point_index = self.get_first_ahead_point(vehicle_pose, current_closest_point_index)
         
         # final point in path
-        if first_ahead_point >= len(self.path):
+        if first_ahead_point_index >= len(self.path):
             # self.get_logger().error("first_ahead_point >= len(self.path)")
-            return first_ahead_point, self.path[first_ahead_point]
+            return first_ahead_point_index, self.path[first_ahead_point_index]
         
-        # print(f'first_ahead_point = {first_ahead_point}, end of search area = {search_area_indexes_on_path[1]}')
         # find the lookahead point in front of the vehicle.  lookahead distance - interval < look ahead point distance <= lookahead distance
-        for i in range(first_ahead_point, search_area_indexes_on_path[1]):
+        for i in range(first_ahead_point_index, search_area_indexes_on_path[1]):
             dist = self.calculate_distance(vehicle_pose, self.path[i])
-            if dist <= self.lookahead_distance and dist >= self.lookahead_distance - self.densify_interval:
+            if dist <= self.lookahead_distance + 4.0 and dist >= self.lookahead_distance:
                 return i, self.path[i]
         
         self.get_logger().error("Look ahead point not found!")
-        # return first_ahead_point, self.path[first_ahead_point]
         # TODO: modify this part
-        if len(self.path) - first_ahead_point - 1 <= 10:
+        if len(self.path) - first_ahead_point_index - 1 <= 10:
             return len(self.path) - 1, self.path[-1]
-        return first_ahead_point + 10, self.path[first_ahead_point + 10]
+        return first_ahead_point_index + 10, self.path[first_ahead_point_index + 10]
 
     def adjust_speed_to_curve(self, curve_angle):
         # return self.base_speed
@@ -402,10 +406,11 @@ class Planning(Node):
         if not self.isCurveStarted and not self.isCurveFinished:
             for curve in curves:
                 k, v = next(iter(curve.items()))
-                if self.path[look_ahead_point_index - 2] == v or self.path[look_ahead_point_index - 1] == v or self.path[look_ahead_point_index] == v or self.path[look_ahead_point_index+1] == v or self.path[look_ahead_point_index+2] == v:
+                # if self.path[look_ahead_point_index - 2] == v or self.path[look_ahead_point_index - 1] == v or self.path[look_ahead_point_index] == v or self.path[look_ahead_point_index+1] == v or self.path[look_ahead_point_index+2] == v:
+                if self.path[look_ahead_point_index - 1] == v or self.path[look_ahead_point_index] == v or self.path[look_ahead_point_index+1] == v:
                     # self.get_logger().info("curve started")
                     self.curve_angle = k
-                    self.curve_finish_point = self.path[look_ahead_point_index + int(self.lookahead_distance//self.densify_interval)]
+                    self.curve_finish_point = self.path[look_ahead_point_index + int(self.lookahead_distance//self.densify_interval) + 6]
                     self.isCurveStarted = True
                     self.isCurveFinished = False
                     # self.isCurveDetected = True
@@ -427,26 +432,21 @@ class Planning(Node):
 
 
     def curve_handler(self, look_ahead_point, look_ahead_point_index):
-        path_curve_detector = PathCurveDetector(self.path, angle_threshold=3) # initializing object from class
-        curves = path_curve_detector.find_curves_in_path() # locating curves on the route/path
-        
-        isTurnDetected, curve_angle = self.curve_detector(curves, look_ahead_point, look_ahead_point_index)
-        
+        isTurnDetected, curve_angle = self.curve_detector(self.curves, look_ahead_point, look_ahead_point_index)
+        speed = self.base_speed
         if isTurnDetected:
-            self.speed_limit = self.adjust_speed_to_curve(curve_angle)
-        else:
-            self.speed_limit = self.base_speed
-        
-        return isTurnDetected
+            # speed = float(math.ceil(self.base_speed / 2)) - 1
+            speed = 2.0
     
+        return isTurnDetected, speed
+    
+    # TODO: create search area based on waypoints not lanes
     def create_search_area(self):
-        
         try:
             lane_index = self.route.index(self.location.closest_lane_names.data)
         except:
             # vehicle is out of path
             self.get_logger().warning("Vehicle is out of the Path")
-            # TODO: Do something when the vehicle is out of the path 
             lane_index = self.current_lane_index
         if lane_index in range(self.current_lane_index, self.current_lane_index + self.search_depth):
             self.current_lane_index = lane_index
@@ -474,21 +474,22 @@ class Planning(Node):
         print("DEBUG: closest waypoint", self.path[current_closest_point_to_vehicle])
         return current_closest_point_to_vehicle
 
-    def local_planning(self, search_area, search_area_as_lanes):
+    def local_planning(self, search_area):
         """
         Perform local path planning to determine the next point for the vehicle.
         """
         if self.pose.pose.position.x == 0.0 and self.pose.pose.position.y == 0.0 and self.pose.pose.position.z == 0.0:
             self.get_logger().warning("Vehicle Pose is not accessible")
-            return None, None, None
+            return None, None, None, None, None
         vehicle_pose = {'x': self.pose.pose.position.x, 'y': self.pose.pose.position.y, 'z': self.pose.pose.position.z}
         
         current_closest_point_to_vehicle_index = self.find_closest_waypoint_to_vehicle(vehicle_pose, search_area)
-        # current_closest_point_to_vehicle = {'x': self.location.closest_point.x, 'y': self.location.closest_point.y, 'z': self.location.closest_point.z}
-        # current_closest_point_to_vehicle_index = self.path.index(current_closest_point_to_vehicle)
         look_ahead_point_index, look_ahead_point = self.find_lookahead_point(vehicle_pose, current_closest_point_to_vehicle_index, search_area)
-            
-        return look_ahead_point_index, look_ahead_point, current_closest_point_to_vehicle_index
+        isTurnDetected, speed = self.curve_handler(look_ahead_point, look_ahead_point_index)
+        self.lookahead_distance = speed * 2.0 + 2.0
+
+        print("DEBUG - look ahead distance: ", self.lookahead_distance)
+        return look_ahead_point_index, look_ahead_point, current_closest_point_to_vehicle_index, isTurnDetected, speed
     
     
     def manage_traffic_lights(self):
@@ -658,11 +659,10 @@ class Planning(Node):
         #     task = 'Park'
         return True, stop_point, task
     
-    def behavioural_planning(self, look_ahead_point, look_ahead_point_index, current_closest_point_to_vehicle_index):
+    def behavioural_planning(self, look_ahead_point, look_ahead_point_index, current_closest_point_to_vehicle_index, isTurnDetected):
         # print("behavioural planning ... ")
         vehicle_pose = {'x': self.pose.pose.position.x, 'y': self.pose.pose.position.y, 'z': self.pose.pose.position.z}
-        isTurnDetected = self.curve_handler(look_ahead_point, look_ahead_point_index)
-
+        
         destination = Point(x=self.path[-1]['x'], y=self.path[-1]['y'], z=self.path[-1]['z'])
         distance_to_destination = self.calculate_distance(vehicle_pose, {'x': destination.x, 'y': destination.y, 'z': destination.z})
         
@@ -678,10 +678,10 @@ class Planning(Node):
             print("traffic light detected, distance to stop, ", trafficLightColor, distance_to_traffic_light_stop_point)
         '''
         
-        object_ahead = self.get_detected_objects_in_front()
-        objects_in_range = self.get_objects_in_range(object_ahead, self.detection_radius)
-        isObjectAhead, stop_point_for_collison_avoidance, task = self.collision_avoidance(objects_in_range, current_closest_point_to_vehicle_index, vehicle_pose)
-
+        # object_ahead = self.get_detected_objects_in_front()
+        # objects_in_range = self.get_objects_in_range(object_ahead, self.detection_radius)
+        # isObjectAhead, stop_point_for_collison_avoidance, task = self.collision_avoidance(objects_in_range, current_closest_point_to_vehicle_index, vehicle_pose)
+        isObjectAhead = False
         '''
         if isTrafficLightDetected and not isObjectAhead:
             print("traffic light no object")
@@ -731,14 +731,23 @@ class Planning(Node):
             # self.get_logger().info("path planning")
             start_lanelet = self.location.closest_lane_names.data
             self.bfs(start_lanelet, self.dest_lanelet) # Creates the path
-            if self.path and self.path_as_lanes:
+            if self.path and self.path_as_lanes and self.curves:
                 self.isPathPlanned = True
                 print("path of lanes: ", self.path_as_lanes)
                 self.initial_lane = self.location.closest_lane_names.data
                 self.route = self.path_as_lanes[:]
                 self.current_lane_index = 0
                 # print("path of lanes: ", self.path)
+            path_curve_detector = PathCurveDetector(self.path, angle_threshold=3) # initializing object from class
+            self.curves = path_curve_detector.find_curves_in_path() # locating curves on the route/path
 
+    def publish_planning_msgs(self, look_ahead_point, stop_point, speed):
+        lookahead_point = LookAheadMsg()
+        lookahead_point.look_ahead_point = Point(x=look_ahead_point['x'], y=look_ahead_point['y'], z=look_ahead_point['z'])
+        lookahead_point.stop_point = stop_point
+        lookahead_point.status = self.status
+        lookahead_point.speed_limit = speed
+        self.planning_publisher.publish(lookahead_point)
   
     def planning(self):
         """
@@ -758,21 +767,12 @@ class Planning(Node):
                 return
         
             search_area, search_area_as_lanes = self.create_search_area()
-            
-            look_ahead_point_index, look_ahead_point, current_closest_point_to_vehicle_index = self.local_planning(search_area, search_area_as_lanes)
+            look_ahead_point_index, look_ahead_point, current_closest_point_to_vehicle_index, isTurnDetected, speed = self.local_planning(search_area)
             if not look_ahead_point and not look_ahead_point_index:
                 return
-
-            stop_point = self.behavioural_planning(look_ahead_point, look_ahead_point_index, current_closest_point_to_vehicle_index)
-            # publishing
-            lookahead_point = LookAheadMsg()
-            lookahead_point.look_ahead_point = Point(x=look_ahead_point['x'], y=look_ahead_point['y'], z=look_ahead_point['z'])
-            lookahead_point.stop_point = stop_point
-            lookahead_point.status = self.status
-            lookahead_point.speed_limit = self.speed_limit
-        
-            # print(self.status.data, self.location.closest_lane_names.data, self.route[self.current_lane_index], current_closest_point_to_vehicle_index, look_ahead_point_index, self.speed_limit)
-            self.planning_publisher.publish(lookahead_point)
+            stop_point = self.behavioural_planning(look_ahead_point, look_ahead_point_index, current_closest_point_to_vehicle_index, isTurnDetected)
+            
+            self.publish_planning_msgs(look_ahead_point, stop_point, speed) # publishing
     
 
 def main(args=None):

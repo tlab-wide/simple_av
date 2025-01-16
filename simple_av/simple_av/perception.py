@@ -23,7 +23,8 @@ class Perception(Node):
         self.vehicle_type = vehicle_type
         self.vehicle_config = self.load_vehicle_config(vehicle_type)
         # Create subscriber for /v2x/traffic_signals1 topic
-        self.subscriptionPose = self.create_subscription(CooperativeSignalsMessage, '/v2x/traffic_signals1', self.trafficSignal_callback, 10)
+        # self.subscriptionPose = self.create_subscription(CooperativeSignalsMessage, '/v2x/traffic_signals1', self.trafficSignal_callback, 10)
+        self.subscriptionPose = self.create_subscription(CooperativeSignalsMessage, '/v2x/cooperative2', self.trafficSignal_callback, 10)
         
         # Create subscriber for /OBU/Sensing topic. This topic publishes the information of detected objects from the POV of the vehicle.
         self.subscriptionPose = self.create_subscription(DetectedObjects, '/OBU/Sensing', self.detectedObjects_callback, 10)
@@ -213,6 +214,7 @@ class Perception(Node):
     def get_trafficSignals(self):
         v2i_traffic_signals_id = []
         v2i_traffic_signals_colors = []
+        print(self.trafficSignal)
         if self.trafficSignal:
             signals = self.trafficSignal.traffic_signals.signals
             for signal in signals:
@@ -221,19 +223,22 @@ class Perception(Node):
                 for light in signal.lights:
                     color = light.color
                     break
+                print(map_primitive_id, color)
                 v2i_traffic_signals_id.append(map_primitive_id)
                 v2i_traffic_signals_colors.append(color)
         return v2i_traffic_signals_id, v2i_traffic_signals_colors
 
     def perception(self):
-        if self.vehicle_pose.pose.orientation.x == 0.0 and self.vehicle_pose.pose.orientation.y == 0.0 and \
-            self.vehicle_pose.pose.orientation.z == 0.0 and self.vehicle_pose.pose.orientation.w == 0.0 and \
-            self.vehicle_pose.pose.position.x == 0.0 and self.vehicle_pose.pose.position.y == 0.0 and self.vehicle_pose.pose.position.z == 0.0:
-            self.get_logger().warning("Vehicle data is not available: No position nor orientation data")
-            return
+        # if self.vehicle_pose.pose.orientation.x == 0.0 and self.vehicle_pose.pose.orientation.y == 0.0 and \
+        #     self.vehicle_pose.pose.orientation.z == 0.0 and self.vehicle_pose.pose.orientation.w == 0.0 and \
+        #     self.vehicle_pose.pose.position.x == 0.0 and self.vehicle_pose.pose.position.y == 0.0 and self.vehicle_pose.pose.position.z == 0.0:
+        #     self.get_logger().warning("Vehicle data is not available: No position nor orientation data")
+        #     return
         
         # Handle traffic signals
         v2i_traffic_signals_id, v2i_traffic_signals_colors = self.get_trafficSignals()
+        print(v2i_traffic_signals_id)
+        print(v2i_traffic_signals_colors)
 
         # Create and publish traffic signals message
         traffic_signals_msg = TrafficSignalsArray()
@@ -241,8 +246,8 @@ class Perception(Node):
         traffic_signals_msg.v2i_traffic_signals_colors = v2i_traffic_signals_colors
         self.publisher_traffic_signals.publish(traffic_signals_msg)
 
+        
         # Handle detected objects
-        print("new Perception")
         detected_objects_list = self.handle_detected_objects(self.detectedObjects, False) # Mounted-sensor data
         # detected_objects_list = self.handle_detected_objects(self.RSU_detectedObjects, True) # Mounted-sensor data
         detected_objects_list.extend(self.handle_detected_objects(self.RSU_detectedObjects, True)) # RSU data

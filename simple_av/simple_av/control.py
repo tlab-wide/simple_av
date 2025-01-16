@@ -30,7 +30,7 @@ class PIDController:
 
         self.integrated_error = 0.0
 
-        self.slidingWindow = deque(maxlen=20) # for storing only the 10 most recent errors
+        self.slidingWindow = deque(maxlen=15) # for storing only the 10 most recent errors
 
         self.previous_error = 0.0
     
@@ -110,7 +110,7 @@ class VehicleControl(Node):
         self.wheel_base = self.vehicle_config['dimensions']['wheel_base'] #meters
         
         self.previous_steering_angle = 0
-        self.steering_gain = 0.2  # Proportional gain for steering
+        self.steering_gain = 0.5  # Proportional gain for steering
         self.maximum_accel = self.vehicle_config['max_acceleration']
         self.maximum_braking_accel = self.vehicle_config['max_braking_accel']
 
@@ -194,7 +194,7 @@ class VehicleControl(Node):
             if self.pose and self.lookAhead and self.ground_truth:
                 steer = self.pure_pursuit_steering_angle()
                 lateral_command.steering_tire_angle = steer
-                lateral_command.steering_tire_rotation_rate = 0.0
+                lateral_command.steering_tire_rotation_rate = 0.1
             else:
                 lateral_command.steering_tire_angle = 0.0
                 lateral_command.steering_tire_rotation_rate = 0.0
@@ -208,7 +208,7 @@ class VehicleControl(Node):
         if status == "Decelerate" or status == "Stop_red":
             distance_to_stop = self.calculate_distance(self.lookAhead.stop_point, self.pose.pose.position)
             target_speed = self.calculate_target_speed_for_stop(distance_to_stop, current_speed)
-            if distance_to_stop <= 0.5:
+            if distance_to_stop <= 1.0:
                 self.get_logger().warning("Full stop!")
                 target_speed = 0.0
         
