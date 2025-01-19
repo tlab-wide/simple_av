@@ -134,8 +134,8 @@ class Planning(Node):
         
         # self.dest_lanelet = "lanelet63" # Shinjuku start 96
         
-        # self.dest_lanelet = "lanelet761" # Kashiwa
-        self.dest_lanelet = "lanelet1162" # Kashiwa
+        self.dest_lanelet = "lanelet761" # Kashiwa
+        # self.dest_lanelet = "lanelet1162" # Kashiwa
     
     def load_vehicle_config(self, vehicle_type="lexus"):
         # Path to the YAML file

@@ -193,7 +193,7 @@ class VehicleControl(Node):
             lateral_command.steering_tire_rotation_rate = 0.0
         else:
             if self.pose and self.lookAhead and self.ground_truth:
-                steer = self.pure_pursuit_steering_angle()
+                steer = self.pure_pursuit_rear_axel()
                 lateral_command.steering_tire_angle = steer
                 lateral_command.steering_tire_rotation_rate = 0.1
             else:
@@ -253,6 +253,38 @@ class VehicleControl(Node):
 
     def filter(self, new_value, previous_value, gain):
         return gain * previous_value + (1 - gain) * new_value
+    
+    def pure_pursuit_rear_axel(self):
+        # Calculate the rear axle position from the front axle (GNSS position)
+        yaw = self.get_yaw_from_pose(self.pose.pose.orientation)  # Vehicle heading (yaw angle)
+        rear_axle_x = self.pose.pose.position.x - self.wheel_base * math.cos(yaw)
+        rear_axle_y = self.pose.pose.position.y - self.wheel_base * math.sin(yaw)
+        
+        # Calculate lookahead point relative to rear axle
+        lookahead_x = self.lookAhead.look_ahead_point.x - rear_axle_x
+        lookahead_y = self.lookAhead.look_ahead_point.y - rear_axle_y
+
+        # Adjust lookahead distance for vehicle length
+        effective_lookahead_distance = math.sqrt(lookahead_x ** 2 + lookahead_y ** 2) + (self.vehicle_length / 5.0)
+        lookahead_x = effective_lookahead_distance * (lookahead_x / math.sqrt(lookahead_x ** 2 + lookahead_y ** 2))
+        lookahead_y = effective_lookahead_distance * (lookahead_y / math.sqrt(lookahead_x ** 2 + lookahead_y ** 2))
+
+        # Transform lookahead point to the vehicle's local coordinate system
+        local_x = math.cos(yaw) * lookahead_x + math.sin(yaw) * lookahead_y
+        local_y = -math.sin(yaw) * lookahead_x + math.cos(yaw) * lookahead_y
+
+        # Calculate steering angle with effective wheelbase
+        ld2 = lookahead_x ** 2 + lookahead_y ** 2
+        effective_wheelbase = self.wheel_base + (self.vehicle_length / 2.0)
+        steering_angle = math.atan2(2.0 * local_y * effective_wheelbase, ld2)
+
+        # Debugging info: left or right turn
+        if steering_angle >= 0:
+            self.get_logger().info("Left Turn")
+        else:
+            self.get_logger().info("Right Turn")
+
+        return steering_angle
 
     def pure_pursuit_steering_angle(self):
         # print("coordinates: ",  self.lookAhead.look_ahead_point.x, self.lookAhead.look_ahead_point.y, self.lookAhead.look_ahead_point.z)
@@ -260,7 +292,8 @@ class VehicleControl(Node):
         lookahead_x = self.lookAhead.look_ahead_point.x - self.pose.pose.position.x
         lookahead_y = self.lookAhead.look_ahead_point.y - self.pose.pose.position.y
 
-        yaw = self.get_yaw_from_pose(self.ground_truth)
+        yaw = self.get_yaw_from_pose(self.pose.pose.orientation)
+        print("degree: ", math.degrees(yaw))
 
         local_x = math.cos(yaw) * lookahead_x + math.sin(yaw) * lookahead_y
         local_y = -math.sin(yaw) * lookahead_x + math.cos(yaw) * lookahead_y
@@ -281,8 +314,7 @@ class VehicleControl(Node):
         return steering_angle
     
 
-    def get_yaw_from_pose(self, ground_truth):
-        orientation = ground_truth.pose.orientation
+    def get_yaw_from_pose(self, orientation):
         siny_cosp = 2 * (orientation.w * orientation.z + orientation.x * orientation.y)
         cosy_cosp = 1 - 2 * (orientation.y * orientation.y + orientation.z * orientation.z)
         yaw = math.atan2(siny_cosp, cosy_cosp)
