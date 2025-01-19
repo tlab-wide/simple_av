@@ -290,8 +290,6 @@ class Localization(Node):
         - If already globally positioned, calls local_positioning using previous closest point and lane names.
         - Continues to update self.closest_point, self.closest_lane_name, and self.min_distance accordingly.
         """
-        print("is global positioning Done: ", self.isGlobalPositioningDone)
-        print("is portal reset: ", self.reset)
         if not self.isGlobalPositioningDone:
             self.get_logger().warning("GLOBAL POSITIONING")
             # self.get_logger().info(f"global positioning, {self.isGlobalPositioningDone}")
@@ -299,6 +297,7 @@ class Localization(Node):
         else:
             self.get_logger().warning("LOCAL POSITIONING")
             if self.reset:
+                self.get_logger().warning("RESET")
                 self.isGlobalPositioningDone = False
                 return
             self.closest_point, self.closest_lane_name, self.min_distance = self.local_positioning(self.closest_point, self.closest_lane_name, self.min_distance)

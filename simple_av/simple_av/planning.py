@@ -9,6 +9,7 @@ from std_msgs.msg import String
 import math
 from collections import deque
 from simple_av_msgs.msg import LocalizationMsg
+from simple_av_msgs.msg import Portal
 from simple_av_msgs.msg import LookAheadMsg
 from v2x_msgs.msg import CooperativeSignalsMessage
 import numpy as np
@@ -92,6 +93,10 @@ class Planning(Node):
         # Create subscriber to /localization/location topic
         self.subscriptionLocation = self.create_subscription(LocalizationMsg, 'simple_av/localization/location', self.location_callback, 10)
 
+        # Create subscriber to simple_av/portal topic
+        self.subscriptionPortal = self.create_subscription(Portal, 'simple_av/portal', self.portal_callback, 10)
+        self.reset = False
+
         # Initialize the publisher
         ## TODO: rename the lookahead_point topic to planned_route
         self.planning_publisher = self.create_publisher(LookAheadMsg, 'simple_av/planning/lookahead_point', 10)
@@ -134,8 +139,8 @@ class Planning(Node):
         
         # self.dest_lanelet = "lanelet63" # Shinjuku start 96
         
-        self.dest_lanelet = "lanelet761" # Kashiwa
-        # self.dest_lanelet = "lanelet1162" # Kashiwa
+        # self.dest_lanelet = "lanelet761" # Kashiwa
+        self.dest_lanelet = "lanelet1162" # Kashiwa
     
     def load_vehicle_config(self, vehicle_type="lexus"):
         # Path to the YAML file
@@ -152,6 +157,7 @@ class Planning(Node):
         else:
             raise ValueError(f"Vehicle type '{vehicle_type}' not found in the configuration.")
     
+
     def load_map_data(self):
         """
         Load the map data from a JSON file.
@@ -165,7 +171,10 @@ class Planning(Node):
         with open(json_file_path, 'r') as json_file:
             map_data = json.load(json_file)
             return map_data
-        
+    
+    def portal_callback(self, msg):
+        self.reset = msg.reset
+
     def trafficSignal_callback(self, msg):
         """
         Callback function to update the pose data.
@@ -466,9 +475,6 @@ class Planning(Node):
             distances_to_vehicle.append(self.calculate_distance(waypoint, vehicle_pose))
         closest_waypoint_to_vehicle = search_area[distances_to_vehicle.index(min(distances_to_vehicle))]
         current_closest_point_to_vehicle = self.path.index(closest_waypoint_to_vehicle)
-        print("DEBUG: Vehicle pose", vehicle_pose)
-        print("DEBUG: closest waypoint to vehicle index", current_closest_point_to_vehicle)
-        print("DEBUG: closest waypoint", self.path[current_closest_point_to_vehicle])
         return current_closest_point_to_vehicle
 
     def update_target_speed(self, isTurnDetected):
@@ -497,7 +503,7 @@ class Planning(Node):
         speed = self.update_target_speed(isTurnDetected)
         self.update_lookahead_distances(speed)
 
-        print("DEBUG - look ahead distance: ", self.lookahead_distance)
+        # print("DEBUG - look ahead distance: ", self.lookahead_distance)
         return look_ahead_point_index, look_ahead_point, current_closest_point_to_vehicle_index, isTurnDetected, speed
     
     
@@ -778,6 +784,11 @@ class Planning(Node):
                 self.get_logger().error("Contradiction between Location initial Lane and the first Lane on the path")
                 return
         
+            if self.reset:
+                self.get_logger().warning("RESET")
+                self.isPathPlanned = False
+                return
+            
             search_area, search_area_as_lanes = self.create_search_area()
             look_ahead_point_index, look_ahead_point, current_closest_point_to_vehicle_index, isTurnDetected, speed = self.local_planning(search_area)
             if not look_ahead_point and not look_ahead_point_index:
@@ -785,8 +796,13 @@ class Planning(Node):
                 return
             
             stop_point = self.behavioural_planning(look_ahead_point, look_ahead_point_index, current_closest_point_to_vehicle_index, isTurnDetected)
-            
             self.publish_planning_msgs(look_ahead_point, stop_point, speed) # publishing
+            self.get_logger().info(
+                f'planning\n'
+                f'lookahead distance:  {self.lookahead_distance}\n'
+                f'is turn detected: {isTurnDetected}\n'
+                f'speed: {speed}\n'
+            )
     
 
 def main(args=None):
