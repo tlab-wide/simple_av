@@ -9,7 +9,7 @@ from std_msgs.msg import String
 import math
 from sensor_msgs.msg import Imu
 from simple_av_msgs.msg import LocalizationMsg
-
+from simple_av_msgs.msg import Portal
 
 
 class Point:
@@ -36,27 +36,10 @@ class Localization(Node):
         self.map_data = self.map_data["LaneLetsArray"]
 
         # Create subscriber to gnss/pos topic
-        self.subscriptionPose = self.create_subscription(
-            PoseStamped,
-            '/sensing/gnss/pose',
-            self.pose_callback,
-            10
-        )
-
-        self.subscriptionPose = self.create_subscription(
-            PoseStamped,
-            '/awsim/ground_truth/vehicle/pose',
-            self.groundTruth_callback,
-            10
-        )
-
-        self.subscriptionPose = self.create_subscription(
-            Imu,
-            '/sensing/imu/tamagawa/imu_raw',
-            self.imu_callback,
-            10
-        )
-
+        self.subscriptionPose = self.create_subscription(PoseStamped, '/sensing/gnss/pose', self.pose_callback, 10)
+        # Create subscriber to simple_av/portal topic
+        self.subscriptionPortal = self.create_subscription(Portal, 'simple_av/portal', self.portal_callback, 10)
+        self.reset = False
         # Initialize the publisher
         self.localization_publisher = self.create_publisher(LocalizationMsg, 'simple_av/localization/location', 10)
 
@@ -81,23 +64,14 @@ class Localization(Node):
             map_data = json.load(json_file)
             return map_data
 
-    def groundTruth_callback(self, msg):
-        self.ground_truth_msg = msg
-    
-    def get_groundTruth_msg(self):
-        return self.ground_truth_msg
+    def portal_callback(self, msg):
+        self.reset = msg.reset
 
     def pose_callback(self, msg):
         self.pose_msg = msg
     
     def get_pose_msg(self):
         return self.pose_msg
-    
-    def imu_callback(self, msg):
-        self.imu_msg = msg
-    
-    def get_imu_msg(self):
-        return self.imu_msg
     
     def display_map(self, displayTrafficLight = False):
         for lanelet in self.map_data:
@@ -316,13 +290,17 @@ class Localization(Node):
         - If already globally positioned, calls local_positioning using previous closest point and lane names.
         - Continues to update self.closest_point, self.closest_lane_name, and self.min_distance accordingly.
         """
+        print("is global positioning Done: ", self.isGlobalPositioningDone)
+        print("is portal reset: ", self.reset)
         if not self.isGlobalPositioningDone:
-            self.get_logger().info(f"global positioning, {self.isGlobalPositioningDone}")
+            self.get_logger().warning("GLOBAL POSITIONING")
+            # self.get_logger().info(f"global positioning, {self.isGlobalPositioningDone}")
             self.closest_point, self.closest_lane_name, self.min_distance = self.global_positioning()
         else:
-            self.get_logger().warning("*****")
-            # print(self.pose_msg.pose.orientation.x, self.pose_msg.pose.orientation.y, self.pose_msg.pose.orientation.z, self.pose_msg.pose.orientation.w)
-            # self.get_logger().info("Local positioning")
+            self.get_logger().warning("LOCAL POSITIONING")
+            if self.reset:
+                self.isGlobalPositioningDone = False
+                return
             self.closest_point, self.closest_lane_name, self.min_distance = self.local_positioning(self.closest_point, self.closest_lane_name, self.min_distance)
             self.publish_vehicle_location(self.closest_point, self.closest_lane_name, self.min_distance)
 
