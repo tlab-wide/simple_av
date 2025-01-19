@@ -106,8 +106,9 @@ class Planning(Node):
         self.route = None # List of lanes from start lane to destination
         self.current_lane_index = 0
         
-        self.base_speed = 7.0 # meters/second
-        self.max_speed = self.vehicle_config['max_speed'] # meters/second
+        self.base_speed = self.vehicle_config['base_speed'] # m/s
+        self.max_speed = self.vehicle_config['max_speed'] # m/s
+        self.turning_speed = self.vehicle_config['turning_speed'] # m/s
         self.lookahead_distance = self.base_speed * 2.0 + 3.0 # meters
         self.reaction_distance = self.base_speed * 3.0 + 4.0 # meters
         self.detection_radius = self.base_speed * 4.0 + 4.0 # meters
@@ -433,12 +434,7 @@ class Planning(Node):
 
     def curve_handler(self, look_ahead_point, look_ahead_point_index):
         isTurnDetected, curve_angle = self.curve_detector(self.curves, look_ahead_point, look_ahead_point_index)
-        speed = self.base_speed
-        if isTurnDetected:
-            # speed = float(math.ceil(self.base_speed / 2)) - 1
-            speed = 1.5
-    
-        return isTurnDetected, speed
+        return isTurnDetected
     
     # TODO: create search area based on waypoints not lanes
     def create_search_area(self):
@@ -474,6 +470,15 @@ class Planning(Node):
         print("DEBUG: closest waypoint", self.path[current_closest_point_to_vehicle])
         return current_closest_point_to_vehicle
 
+    def update_target_speed(self, isTurnDetected):
+        speed = self.base_speed
+        if isTurnDetected:
+            speed = self.turning_speed
+        return speed
+    
+    def update_lookahead_distance(self, speed, k, v):
+        return speed * k + v
+
     def local_planning(self, search_area):
         """
         Perform local path planning to determine the next point for the vehicle.
@@ -485,8 +490,9 @@ class Planning(Node):
         
         current_closest_point_to_vehicle_index = self.find_closest_waypoint_to_vehicle(vehicle_pose, search_area)
         look_ahead_point_index, look_ahead_point = self.find_lookahead_point(vehicle_pose, current_closest_point_to_vehicle_index, search_area)
-        isTurnDetected, speed = self.curve_handler(look_ahead_point, look_ahead_point_index)
-        self.lookahead_distance = speed * 2.0 + 3.0
+        isTurnDetected = self.curve_handler(look_ahead_point, look_ahead_point_index)
+        speed = self.update_target_speed(isTurnDetected)
+        self.lookahead_distance = self.update_lookahead_distance(speed, 2.0, 3.0)
 
         print("DEBUG - look ahead distance: ", self.lookahead_distance)
         return look_ahead_point_index, look_ahead_point, current_closest_point_to_vehicle_index, isTurnDetected, speed
