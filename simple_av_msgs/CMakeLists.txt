@@ -20,6 +20,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/TrafficSignalsArray.msg"
   "msg/DetectedObject.msg"
   "msg/DetectedObjectsArray.msg"
+  "msg/Portal.msg"
   DEPENDENCIES geometry_msgs std_msgs
 )
 
