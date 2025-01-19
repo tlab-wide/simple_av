@@ -476,8 +476,10 @@ class Planning(Node):
             speed = self.turning_speed
         return speed
     
-    def update_lookahead_distance(self, speed, k, v):
-        return speed * k + v
+    def update_lookahead_distances(self, speed):
+        self.lookahead_distance = speed * 2.0 + 3.0  # speed 8m/s: 19m / speed 1.5m/s: 6m
+        self.reaction_distance = speed * 3.0 + 3.0  # 27m / 7.5m
+        self.detection_radius = speed * 4.0 + 3.0  # 35m / 9m
 
     def local_planning(self, search_area):
         """
@@ -492,7 +494,7 @@ class Planning(Node):
         look_ahead_point_index, look_ahead_point = self.find_lookahead_point(vehicle_pose, current_closest_point_to_vehicle_index, search_area)
         isTurnDetected = self.curve_handler(look_ahead_point, look_ahead_point_index)
         speed = self.update_target_speed(isTurnDetected)
-        self.lookahead_distance = self.update_lookahead_distance(speed, 2.0, 3.0)
+        self.update_lookahead_distances(speed, 2.0, 3.0)
 
         print("DEBUG - look ahead distance: ", self.lookahead_distance)
         return look_ahead_point_index, look_ahead_point, current_closest_point_to_vehicle_index, isTurnDetected, speed
@@ -779,6 +781,7 @@ class Planning(Node):
             look_ahead_point_index, look_ahead_point, current_closest_point_to_vehicle_index, isTurnDetected, speed = self.local_planning(search_area)
             if not look_ahead_point and not look_ahead_point_index:
                 return
+            
             stop_point = self.behavioural_planning(look_ahead_point, look_ahead_point_index, current_closest_point_to_vehicle_index, isTurnDetected)
             
             self.publish_planning_msgs(look_ahead_point, stop_point, speed) # publishing
