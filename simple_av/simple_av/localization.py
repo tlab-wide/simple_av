@@ -47,7 +47,7 @@ class Localization(Node):
         self.ground_truth_msg = PoseStamped()
         self.imu_msg = Imu()
         self.isGlobalPositioningDone = False
-        self.local_positioning_depth_search = 1
+        self.local_positioning_depth_search = 2
 
         # Initialize instance variables for storing closest point and lanes
         self.closest_point = None
@@ -291,13 +291,17 @@ class Localization(Node):
         - Continues to update self.closest_point, self.closest_lane_name, and self.min_distance accordingly.
         """
         if not self.isGlobalPositioningDone:
-            self.get_logger().warning("GLOBAL POSITIONING")
+            self.get_logger().info("GLOBAL POSITIONING")
             # self.get_logger().info(f"global positioning, {self.isGlobalPositioningDone}")
             self.closest_point, self.closest_lane_name, self.min_distance = self.global_positioning()
         else:
-            self.get_logger().warning("LOCAL POSITIONING")
+            self.get_logger().info("LOCAL POSITIONING")
             if self.reset:
-                self.get_logger().warning("RESET")
+                self.get_logger().info("RESET")
+                self.isGlobalPositioningDone = False
+                return
+            if self.min_distance > 10.0:
+                self.get_logger().warning("Threshold - global positioning")
                 self.isGlobalPositioningDone = False
                 return
             self.closest_point, self.closest_lane_name, self.min_distance = self.local_positioning(self.closest_point, self.closest_lane_name, self.min_distance)
