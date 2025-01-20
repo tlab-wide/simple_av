@@ -199,7 +199,7 @@ class VehicleControl(Node):
             print("drive")
             gear_msg.command = GearCommand.DRIVE
 
-        self.control_publisher.publish(control_msg)
+        # self.control_publisher.publish(control_msg)
         self.turn_indicator_publisher.publish(turn_indicator_msg)
         self.gear_publisher.publish(gear_msg)  
 

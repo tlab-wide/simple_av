@@ -685,7 +685,6 @@ class Planning(Node):
         destination = Point(x=self.path[-1]['x'], y=self.path[-1]['y'], z=self.path[-1]['z'])
         distance_to_destination = self.calculate_distance(vehicle_pose, {'x': destination.x, 'y': destination.y, 'z': destination.z})
         
-        '''
         isTrafficLightDetected, vehilceTaskForTrafficLight, trafficLightColor, p1, p2 = self.manage_traffic_lights()
         if isTrafficLightDetected:
             #calculate stop distacne
@@ -695,47 +694,30 @@ class Planning(Node):
             stop_point_for_traffic_light = Point(x=new_x, y=new_y, z=new_z)
             distance_to_traffic_light_stop_point = self.calculate_distance(vehicle_pose, {'x': stop_point_for_traffic_light.x, 'y': stop_point_for_traffic_light.y, 'z': stop_point_for_traffic_light.z})
             print("traffic light detected, distance to stop, ", trafficLightColor, distance_to_traffic_light_stop_point)
-        '''
         
         # object_ahead = self.get_detected_objects_in_front()
         # objects_in_range = self.get_objects_in_range(object_ahead, self.detection_radius)
         # isObjectAhead, stop_point_for_collison_avoidance, task = self.collision_avoidance(objects_in_range, current_closest_point_to_vehicle_index, vehicle_pose)
         isObjectAhead = False
-        '''
-        if isTrafficLightDetected and not isObjectAhead:
-            print("traffic light no object")
-            if trafficLightColor == 'red':
-                if distance_to_traffic_light_stop_point <= self.densify_interval * 2.5:
-                    self.status.data = 'Park'
-                elif distance_to_traffic_light_stop_point <= self.reaction_distance:
-                    self.status.data ='Decelerate'
-                else:
-                    self.status.data = 'Cruise'
+
+        # if isObjectAhead:
+        #     self.status.data = task
+        #     return stop_point_for_collison_avoidance
+        if isTrafficLightDetected and not isTurnDetected:
+            self.get_logger().warning("traffic ligh, no turn")
+            self.status.data = vehilceTaskForTrafficLight
+            return stop_point_for_traffic_light
+        elif isTrafficLightDetected and isTurnDetected:
+            self.get_logger().warning("traffic ligh, and turn")
+            if trafficLightColor == 'green' or trafficLightColor == 'unkown':
+                self.status.data = 'Turn'
             else:
-                self.status.data = 'Cruise_green'
-            if isTurnDetected:
-                if trafficLightColor == 'green' or trafficLightColor == 'amber' or trafficLightColor == 'unkown':
-                    self.status.data = 'Turn'
-                else:
-                    self.status.data = vehilceTaskForTrafficLight
-        elif isTrafficLightDetected and isObjectAhead:
-            print("traffic light with object")
-            if distance_to_collision_avoidance_stop_point <= distance_to_traffic_light_stop_point:
-                self.status.data = collisonAvoidanceTask
-            elif distance_to_collision_avoidance_stop_point >= distance_to_traffic_light_stop_point and trafficLightColor == 'red':
-                self.status.data = vehilceTaskForTrafficLight
-            else:
-                if isTurnDetected:
-                    self.status.data = 'Turn'
-                else:
-                    self.status.data = 'Cruise'
-        '''
-        if isObjectAhead:
-            self.status.data = task
-            return stop_point_for_collison_avoidance
+                self.status.data = vehilceTaskForTrafficLight 
+                return stop_point_for_traffic_light
         elif distance_to_destination <= self.reaction_distance and look_ahead_point_index > len(self.path) - (self.reaction_distance / self.densify_interval + 1):
             self.status.data ='Decelerate'
-        elif isTurnDetected:
+        elif isTurnDetected and not isTrafficLightDetected:
+            self.get_logger().warning("no traffic ligh, turn")
             self.status.data = 'Turn'
         else:
             self.status.data = 'Cruise'
@@ -814,6 +796,7 @@ class Planning(Node):
                 f'lookahead distance:  {self.lookahead_distance}\n'
                 f'is turn detected: {isTurnDetected}\n'
                 f'speed: {speed}\n'
+                f'status: {self.status.data}\n'
             )
     
 
