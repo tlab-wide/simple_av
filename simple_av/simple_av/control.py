@@ -16,6 +16,7 @@ import numpy as np
 import yaml
 import os
 from ament_index_python.packages import get_package_share_directory
+from simple_av_msgs.msg import Portal
 
 
 class PIDController:
@@ -95,6 +96,11 @@ class VehicleControl(Node):
             10
         )
 
+        # Create subscriber to simple_av/portal topic
+        self.subscriptionPortal = self.create_subscription(Portal, 'simple_av/portal', self.portal_callback, 10)
+        self.reset = False
+        self.isTestFinished = False
+
         self.pose = PoseStamped()
         self.ground_truth = PoseStamped()
         self.velocity_report = VelocityReport()
@@ -115,6 +121,8 @@ class VehicleControl(Node):
         self.maximum_Stereing = None
         self.maximum_braking_accel = self.vehicle_config['max_braking_accel']
 
+        self.node_shut = False
+
     def load_vehicle_config(self, vehicle_type="lexus"):
         # Path to the YAML file
         package_share_directory = get_package_share_directory('simple_av')
@@ -129,6 +137,10 @@ class VehicleControl(Node):
             return config["vehicles"][vehicle_type]
         else:
             raise ValueError(f"Vehicle type '{vehicle_type}' not found in the configuration.")
+
+    def portal_callback(self, msg):
+        self.reset = msg.reset
+        self.isTestFinished = msg.isTestFinished
 
     def pose_callback(self, msg):
         self.pose = msg
@@ -181,6 +193,10 @@ class VehicleControl(Node):
         self.control_publisher.publish(control_msg)
         self.turn_indicator_publisher.publish(turn_indicator_msg)
         self.gear_publisher.publish(gear_msg)  
+
+        if self.isTestFinished:
+            self.node_shut = True
+            return
 
     
     def get_lateral_command(self, status):
@@ -326,7 +342,7 @@ def main(args=None):
     node = VehicleControl('bus')
 
     try:
-        while rclpy.ok():
+        while rclpy.ok() and not node.node_shut:
             rclpy.spin_once(node, timeout_sec=None)# Set timeout to 0 to avoid delay
             node.control()   
     finally:

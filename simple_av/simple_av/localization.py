@@ -40,6 +40,7 @@ class Localization(Node):
         # Create subscriber to simple_av/portal topic
         self.subscriptionPortal = self.create_subscription(Portal, 'simple_av/portal', self.portal_callback, 10)
         self.reset = False
+        self.isTestFinished = False
         # Initialize the publisher
         self.localization_publisher = self.create_publisher(LocalizationMsg, 'simple_av/localization/location', 10)
 
@@ -54,6 +55,8 @@ class Localization(Node):
         self.closest_lane_name = String()
         self.min_distance = float('inf')
 
+        self.node_shut = False
+
     def load_map(self):
         # Get the path to the resource directory
         package_share_directory = get_package_share_directory('simple_av')
@@ -66,6 +69,8 @@ class Localization(Node):
 
     def portal_callback(self, msg):
         self.reset = msg.reset
+        self.isTestFinished = msg.isTestFinished
+
 
     def pose_callback(self, msg):
         self.pose_msg = msg
@@ -290,6 +295,10 @@ class Localization(Node):
         - If already globally positioned, calls local_positioning using previous closest point and lane names.
         - Continues to update self.closest_point, self.closest_lane_name, and self.min_distance accordingly.
         """
+        if self.isTestFinished:
+            self.get_logger().info("Test has finished - Localization stopped")
+            self.node_shut = True
+            return
         if not self.isGlobalPositioningDone:
             self.get_logger().info("GLOBAL POSITIONING")
             # self.get_logger().info(f"global positioning, {self.isGlobalPositioningDone}")
@@ -318,7 +327,7 @@ def main(args=None):
     rclpy.init(args=args)
     node = Localization()
     try:
-        while rclpy.ok():
+        while rclpy.ok() and not node.node_shut:
             rclpy.spin_once(node, timeout_sec=None)# Set timeout to 0 to avoid delay
             node.localization()
     finally:

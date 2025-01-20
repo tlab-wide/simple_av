@@ -1,1 +1,2 @@
 bool reset
+bool isTestFinished

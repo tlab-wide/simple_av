@@ -96,6 +96,7 @@ class Planning(Node):
         # Create subscriber to simple_av/portal topic
         self.subscriptionPortal = self.create_subscription(Portal, 'simple_av/portal', self.portal_callback, 10)
         self.reset = False
+        self.isTestFinished = False
 
         # Initialize the publisher
         ## TODO: rename the lookahead_point topic to planned_route
@@ -141,6 +142,8 @@ class Planning(Node):
         
         self.dest_lanelet = "lanelet761" # Kashiwa
         # self.dest_lanelet = "lanelet1162" # Kashiwa
+
+        self.node_shut = False
     
     def load_vehicle_config(self, vehicle_type="lexus"):
         # Path to the YAML file
@@ -174,6 +177,7 @@ class Planning(Node):
     
     def portal_callback(self, msg):
         self.reset = msg.reset
+        self.isTestFinished = msg.isTestFinished
 
     def trafficSignal_callback(self, msg):
         """
@@ -796,6 +800,12 @@ class Planning(Node):
                 return
             
             stop_point = self.behavioural_planning(look_ahead_point, look_ahead_point_index, current_closest_point_to_vehicle_index, isTurnDetected)
+            
+            if self.isTestFinished:
+                self.status.data = 'Park'
+                speed = 0
+                self.node_shut = True
+            
             self.publish_planning_msgs(look_ahead_point, stop_point, speed) # publishing
             self.get_logger().info(
                 f'planning\n'
@@ -809,7 +819,7 @@ def main(args=None):
     rclpy.init(args=args)
     node = Planning('bus')
     try:
-        while rclpy.ok():
+        while rclpy.ok() and not node.node_shut:
             rclpy.spin_once(node, timeout_sec=None)# Set timeout to 0 to avoid delay
             node.planning()
     finally:

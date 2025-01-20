@@ -1,10 +1,13 @@
 import rclpy
+import os
+import yaml
 from rclpy.node import Node
 from geometry_msgs.msg import PoseStamped
 from geometry_msgs.msg import Point
 import numpy as np
 import math
 from simple_av_msgs.msg import Portal
+from ament_index_python.packages import get_package_share_directory
 
 
 class portal(Node):
@@ -23,13 +26,23 @@ class portal(Node):
         self.initial_position = Point()
         self.isInitialPoseSampled = False
         self.isPortalReached = False
-        self.reset = False
+        self.isTestFinished = False
         self.last_pose = Point()
         self.current_pose = Point()
+        self.repeat_counter = 0
     
     def pose_callback(self, msg):
         self.pose = msg
     
+    def get_repeat_count(self):
+        # Path to the YAML file
+        package_share_directory = get_package_share_directory('simple_av')
+        config_path = os.path.join(package_share_directory, "resource", "test_config.yaml")
+        # Load the configuration file
+        with open(config_path, "r") as file:
+            config = yaml.safe_load(file)
+        return config["repeat_count"]
+        
     def calculate_distance(self, point1, point2):
         return  math.sqrt((point1.x - point2.x)**2 + (point1.y - point2.y)**2)
 
@@ -44,15 +57,14 @@ class portal(Node):
     def portal_detector(self):
         self.current_pose = self.pose.pose.position
         if self.calculate_distance(self.current_pose, self.last_pose) > 75.0 :
-            distance_to_init = self.calculate_distance(self.current_pose, self.initial_position)
-            print("Jump detected")
-            print(self.initial_position)
-            print(self.current_pose)
-            print(distance_to_init)
             if self.calculate_distance(self.current_pose, self.initial_position) < 5.0 and not self.isPortalReached:
                 print("Portal Detected")
                 self.isPortalReached = True
                 self.initial_pose = self.current_pose
+                self.repeat_counter += 1
+                print("counter: ", self.repeat_counter, " target: ", self.get_repeat_count())
+                if self.repeat_counter == self.get_repeat_count():
+                    self.isTestFinished = True
         self.last_pose = self.current_pose
         self.publish_portal()
                 
@@ -66,6 +78,7 @@ class portal(Node):
     def publish_portal(self):
         portal_reset = Portal()
         portal_reset.reset = self.isPortalReached
+        portal_reset.isTestFinished = self.isTestFinished
         self.portal_publisher.publish(portal_reset)
         self.isPortalReached = False
 

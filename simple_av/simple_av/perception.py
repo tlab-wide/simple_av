@@ -15,6 +15,7 @@ from scipy.spatial.transform import Rotation as R
 import numpy as np
 # import transformations as tf
 from transformations import euler_from_quaternion
+from simple_av_msgs.msg import Portal
 
 class Perception(Node):
     def __init__(self, vehicle_type):
@@ -32,6 +33,11 @@ class Perception(Node):
         self.subscriptionPose = self.create_subscription(PredictedObjects, '/v2x/cooperative_pure1', self.RSU_detectedObjects_callback, 10)
         
         self.subscriptionPose = self.create_subscription(PoseStamped, '/sensing/gnss/pose', self.pose_callback, 10)
+
+        # Create subscriber to simple_av/portal topic
+        self.subscriptionPortal = self.create_subscription(Portal, 'simple_av/portal', self.portal_callback, 10)
+        self.reset = False
+        self.isTestFinished = False
         self.trafficSignal = CooperativeSignalsMessage()  # Initialize traffic signal
         self.detectedObjects = DetectedObjects()  # Initialize detected objects message
         self.RSU_detectedObjects = PredictedObjects()
@@ -44,6 +50,12 @@ class Perception(Node):
 
         self.vehicle_length = self.vehicle_config['dimensions']['length'] #meters
         self.vehicle_width = self.vehicle_config['dimensions']['width'] #meters
+
+        self.node_shut = False
+
+    def portal_callback(self, msg):
+        self.reset = msg.reset
+        self.isTestFinished = msg.isTestFinished
 
     def trafficSignal_callback(self, msg):
         """Callback function to update the traffic signal data."""
@@ -229,6 +241,10 @@ class Perception(Node):
         return v2i_traffic_signals_id, v2i_traffic_signals_colors
 
     def perception(self):
+        if self.isTestFinished:
+            self.node_shut = True
+            return
+
         if self.vehicle_pose.pose.orientation.x == 0.0 and self.vehicle_pose.pose.orientation.y == 0.0 and \
             self.vehicle_pose.pose.orientation.z == 0.0 and self.vehicle_pose.pose.orientation.w == 0.0 and \
             self.vehicle_pose.pose.position.x == 0.0 and self.vehicle_pose.pose.position.y == 0.0 and self.vehicle_pose.pose.position.z == 0.0:
@@ -275,7 +291,7 @@ def main(args=None):
     rclpy.init(args=args)
     node = Perception('bus')
     try:
-        while rclpy.ok():
+        while rclpy.ok() and not node.node_shut:
             rclpy.spin_once(node, timeout_sec=0)  # Set timeout to 0 to avoid delay
             node.perception()
     finally:
