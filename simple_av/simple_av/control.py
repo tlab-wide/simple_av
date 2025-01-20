@@ -99,7 +99,7 @@ class VehicleControl(Node):
         # Create subscriber to simple_av/portal topic
         self.subscriptionPortal = self.create_subscription(Portal, 'simple_av/portal', self.portal_callback, 10)
         self.reset = False
-        self.isTestFinished = False
+        self.finished = False
 
         self.pose = PoseStamped()
         self.ground_truth = PoseStamped()
@@ -140,7 +140,7 @@ class VehicleControl(Node):
 
     def portal_callback(self, msg):
         self.reset = msg.reset
-        self.isTestFinished = msg.isTestFinished
+        self.finished = msg.finished
 
     def pose_callback(self, msg):
         self.pose = msg
@@ -162,6 +162,15 @@ class VehicleControl(Node):
 
     def control(self):
         if not self.velocity_report and not self.lookAhead and not self.pose and not self.ground_truth:
+            return
+        
+        if self.finished:
+            self.node_shut = True
+            gear_msg = GearCommand()
+            gear_msg.stamp = self.get_clock().now().to_msg()
+            print("park")
+            gear_msg.command = GearCommand.PARK
+            self.gear_publisher.publish(gear_msg)  
             return
 
         # Steer and Velocity Control
@@ -194,9 +203,6 @@ class VehicleControl(Node):
         self.turn_indicator_publisher.publish(turn_indicator_msg)
         self.gear_publisher.publish(gear_msg)  
 
-        if self.isTestFinished:
-            self.node_shut = True
-            return
 
     
     def get_lateral_command(self, status):

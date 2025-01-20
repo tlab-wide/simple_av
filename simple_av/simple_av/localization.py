@@ -40,7 +40,7 @@ class Localization(Node):
         # Create subscriber to simple_av/portal topic
         self.subscriptionPortal = self.create_subscription(Portal, 'simple_av/portal', self.portal_callback, 10)
         self.reset = False
-        self.isTestFinished = False
+        self.finished = False
         # Initialize the publisher
         self.localization_publisher = self.create_publisher(LocalizationMsg, 'simple_av/localization/location', 10)
 
@@ -69,7 +69,7 @@ class Localization(Node):
 
     def portal_callback(self, msg):
         self.reset = msg.reset
-        self.isTestFinished = msg.isTestFinished
+        self.finished = msg.finished
 
 
     def pose_callback(self, msg):
@@ -295,7 +295,7 @@ class Localization(Node):
         - If already globally positioned, calls local_positioning using previous closest point and lane names.
         - Continues to update self.closest_point, self.closest_lane_name, and self.min_distance accordingly.
         """
-        if self.isTestFinished:
+        if self.finished:
             self.get_logger().info("Test has finished - Localization stopped")
             self.node_shut = True
             return

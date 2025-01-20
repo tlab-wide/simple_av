@@ -26,7 +26,7 @@ class portal(Node):
         self.initial_position = Point()
         self.isInitialPoseSampled = False
         self.isPortalReached = False
-        self.isTestFinished = False
+        self.finished = False
         self.last_pose = Point()
         self.current_pose = Point()
         self.repeat_counter = 0
@@ -48,6 +48,7 @@ class portal(Node):
 
     def initial_pose(self):
         if self.pose and self.pose.pose.position.x != 0 and self.pose.pose.position.y != 0 and self.pose.pose.position.z != 0:
+            print("counter: ", self.repeat_counter, " target: ", self.get_repeat_count())
             # print(pose_msg.pose.position.x, pose_msg.pose.position.y, pose_msg.pose.position.z)
             self.initial_position = self.pose.pose.position
             self.current_pose = self.pose.pose.position
@@ -58,13 +59,14 @@ class portal(Node):
         self.current_pose = self.pose.pose.position
         if self.calculate_distance(self.current_pose, self.last_pose) > 75.0 :
             if self.calculate_distance(self.current_pose, self.initial_position) < 5.0 and not self.isPortalReached:
-                print("Portal Detected")
+                self.get_logger().info("Portal Detected")
                 self.isPortalReached = True
-                self.initial_pose = self.current_pose
+                self.initial_position = self.current_pose
                 self.repeat_counter += 1
                 print("counter: ", self.repeat_counter, " target: ", self.get_repeat_count())
                 if self.repeat_counter == self.get_repeat_count():
-                    self.isTestFinished = True
+                    print("Test finished")
+                    self.finished = True
         self.last_pose = self.current_pose
         self.publish_portal()
                 
@@ -78,7 +80,7 @@ class portal(Node):
     def publish_portal(self):
         portal_reset = Portal()
         portal_reset.reset = self.isPortalReached
-        portal_reset.isTestFinished = self.isTestFinished
+        portal_reset.finished = self.finished
         self.portal_publisher.publish(portal_reset)
         self.isPortalReached = False
 
@@ -87,7 +89,7 @@ def main(args=None):
     rclpy.init(args=args)
     node = portal()
     try:
-        while rclpy.ok():
+        while rclpy.ok() and not node.finished:
             rclpy.spin_once(node, timeout_sec=None)# Set timeout to 0 to avoid delay
             node.portal_reset()
     finally:

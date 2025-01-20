@@ -96,7 +96,7 @@ class Planning(Node):
         # Create subscriber to simple_av/portal topic
         self.subscriptionPortal = self.create_subscription(Portal, 'simple_av/portal', self.portal_callback, 10)
         self.reset = False
-        self.isTestFinished = False
+        self.finished = False
 
         # Initialize the publisher
         ## TODO: rename the lookahead_point topic to planned_route
@@ -140,8 +140,8 @@ class Planning(Node):
         
         # self.dest_lanelet = "lanelet63" # Shinjuku start 96
         
-        self.dest_lanelet = "lanelet761" # Kashiwa
-        # self.dest_lanelet = "lanelet1162" # Kashiwa
+        # self.dest_lanelet = "lanelet761" # Kashiwa
+        self.dest_lanelet = "lanelet1162" # Kashiwa
 
         self.node_shut = False
     
@@ -177,7 +177,7 @@ class Planning(Node):
     
     def portal_callback(self, msg):
         self.reset = msg.reset
-        self.isTestFinished = msg.isTestFinished
+        self.finished = msg.finished
 
     def trafficSignal_callback(self, msg):
         """
@@ -787,6 +787,12 @@ class Planning(Node):
             if self.initial_lane != self.path_as_lanes[0]:
                 self.get_logger().error("Contradiction between Location initial Lane and the first Lane on the path")
                 return
+            
+            if self.finished:
+                self.status.data = 'Park'
+                self.node_shut = True
+                self.publish_planning_msgs(None, None, 0) # publishing
+                return
         
             if self.reset:
                 self.get_logger().warning("RESET")
@@ -801,10 +807,6 @@ class Planning(Node):
             
             stop_point = self.behavioural_planning(look_ahead_point, look_ahead_point_index, current_closest_point_to_vehicle_index, isTurnDetected)
             
-            if self.isTestFinished:
-                self.status.data = 'Park'
-                speed = 0
-                self.node_shut = True
             
             self.publish_planning_msgs(look_ahead_point, stop_point, speed) # publishing
             self.get_logger().info(

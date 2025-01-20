@@ -37,7 +37,7 @@ class Perception(Node):
         # Create subscriber to simple_av/portal topic
         self.subscriptionPortal = self.create_subscription(Portal, 'simple_av/portal', self.portal_callback, 10)
         self.reset = False
-        self.isTestFinished = False
+        self.finished = False
         self.trafficSignal = CooperativeSignalsMessage()  # Initialize traffic signal
         self.detectedObjects = DetectedObjects()  # Initialize detected objects message
         self.RSU_detectedObjects = PredictedObjects()
@@ -55,7 +55,7 @@ class Perception(Node):
 
     def portal_callback(self, msg):
         self.reset = msg.reset
-        self.isTestFinished = msg.isTestFinished
+        self.finished = msg.finished
 
     def trafficSignal_callback(self, msg):
         """Callback function to update the traffic signal data."""
@@ -241,7 +241,7 @@ class Perception(Node):
         return v2i_traffic_signals_id, v2i_traffic_signals_colors
 
     def perception(self):
-        if self.isTestFinished:
+        if self.finished:
             self.node_shut = True
             return
 
