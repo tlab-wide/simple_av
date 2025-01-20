@@ -1,5 +1,5 @@
-# It represents the display direction of the blue arrow lamp, and the bit of the target direction is turned ON.
-# "bit7: left diagonally backward" "bit6: left" "bit5: left diagonally forward" "bit4: go straight" "bit3: right diagonally forward" "bit2: right" "bit1: right diagonally backward" "bit0: U-turn "
-# Regardless of the shape of the intersection, the direction indicated by the blue arrow light fixture shall be taken.
+# 青矢灯器の表示方向を表し、対象方向のビットをＯＮとする。
+# 「bit7：左斜め後ろ」「bit6：左」「bit5：左斜め前」「 bit4 ： 直 進 」 「 bit3 ： 右 斜 め 前 」 「 bit2 ：右」「bit1：右斜め後ろ」「bit0：Ｕターン」
+# なお、交差点の形状によらず、青矢灯器が示す方向とする。
 
 uint8 value 0

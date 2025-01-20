@@ -15,6 +15,11 @@ find_package(rosidl_default_generators REQUIRED)
 find_package(dm_object_info_msgs REQUIRED)
 
 set(msg_files
+  "msg/DetectionMethod.msg"
+  "msg/DetectableClasses.msg"
+  "msg/OffsetPointXy.msg"
+  "msg/OffsetPointXyArray.msg"
+  "msg/Vertices.msg"
   "msg/FreespaceInfo.msg"
   "msg/FreespaceInfoArray.msg"
 )
