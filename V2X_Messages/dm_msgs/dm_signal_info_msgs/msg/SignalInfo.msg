@@ -1,22 +1,22 @@
 # CRP ID
 dm_object_info_msgs/CrpId crp_id
 
-# Beacon ID(list)
+# 信号灯器 ID(list)
 SignalId[] signal_id_list
 
-# Intelligence generation moment
+# 情報生成時刻
 dm_object_info_msgs/TimestampIts time
 
-# Signal status information
+# 信号状態情報
 SignalState state
 
-# Specific control operation flag
+# 特定制御動作中フラグ
 SpecificControlFlags specific_control_flags
 
 EventCount event_count
 
-# Countdown stop flag
+# カウントダウン停止フラグ
 CountDownStopFlag count_down_stop_flag
 
-# List of light color output information
+# 灯色出力情報のリスト
 SignalLightInfo[] signal_light_info_list

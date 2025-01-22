@@ -20,7 +20,7 @@ vehicles:
       height: 3.2   # meters
       wheel_base: 4.5  # meters
     max_speed: 20.0  # m/s
-    base_speed: 8.0 # m/s
+    base_speed: 7.0 # m/s
     turning_speed: 1.5 # m/s
     max_acceleration: 1.0 #m/s^2
     max_braking_accel: -3.0 #m/s^2

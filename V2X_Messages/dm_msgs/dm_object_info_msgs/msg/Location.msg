@@ -1,8 +1,13 @@
 # 経度緯度高さ
-GeodeticSystem geodetic_system
+Srid geodetic_srid
 Latitude latitude
 Longitude longitude
 Altitude altitude
+# 平面直角座標系
+Srid projective_srid
+uint32 prc_x
+uint32 prc_y
+Altitude prc_z
 # CRP+オフセット
 CrpId crp_id
 DistanceValue dx_crp
@@ -26,7 +31,7 @@ DistanceValue dh_lane
 SemiAxisLength semi_axis_length_major
 # 水平方向位置精度楕円短半径
 SemiAxisLength semi_axis_length_minor
-# Horizontal position accuracy Ellipse rotation angle
-WGS84AngleValue orientation
+# 水平方向位置精度楕円回転角
+AzimuthValue orientation
 # 高さ方向位置精度
 AltitudeAccuracy altitude_accuracy

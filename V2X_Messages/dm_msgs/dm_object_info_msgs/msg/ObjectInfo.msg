@@ -4,6 +4,8 @@
 ObjectId id
 # 情報取得時刻
 TimestampIts time
+# リビジョン番号
+Revision revision
 # 物標種別
 ObjectClass[] object_class
 # 存在信頼度
@@ -14,8 +16,8 @@ ExistenceConfidence existency
 Location object_location
 # 物標参照位置
 ReferencePoint ref_point
-# Direction of movement
-WGS84Angle direction
+# 移動方向
+Azimuth direction
 # 速さ
 Speed speed
 # 回転速度
@@ -23,13 +25,13 @@ YawRate yaw_rate
 # 前後加速度
 Acceleration acceleration
 
-# Target status/attributes
-# Direction of target
-WGS84Angle orientation
+# 物標の状態/属性
+# 物標の向き
+Azimuth orientation
 # 物標のサイズ
 ObjectSize size
-# 物標の色
-ObjectColor color
+# 物標の静止状態
+StaticStatus static_status
 # 車両の状態等
 # シフトポジション
 ShiftPosition shift_position
@@ -47,11 +49,21 @@ ThrottlePosition throttle_position
 ExteriorLights exterior_lights
 # 各種のシステムの作動状態
 ControlSystemStates control_system_states
+# 車両サイズ種別
+VehicleSizeType vehicle_size_type
 # 車両用途種別
 VehicleRole vehicle_role
 # 車両用途種別毎の状態
 VehicleExtendedInformation vehicle_extended_info
 # 牽引車両
 ObjectId towing_vehicle
+# トラッキング状態
+TrackingStatus tracking_status
+# 検知回数
+DetectionCount detection_count
+# 連続未検知回数
+LostCount lost_count
+# 生存時間
+ObjectAge object_age
 # 情報源のリスト
 ObjectId[] information_source_list

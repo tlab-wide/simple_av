@@ -1,29 +1,28 @@
-# Free space ID
+# フリースペース ID
 dm_object_info_msgs/ObjectId id
-
-# Information acquisition time
+# 情報取得時刻
 dm_object_info_msgs/TimestampIts time
-
-# Presence reliability
-dm_object_info_msgs/ExistenceConfidence existency
-
-# Detection failure target size
-dm_object_info_msgs/ObjectDimensionValue minimal_detectable_size
-
-# Start position
+# リビジョン番号
+dm_object_info_msgs/Revision revision
+# 検知方法
+DetectionMethod detection_method
+# 検知可能物標種別
+DetectableClasses detectable_classes
+# ポリゴン
+Vertices vertices
+# 始点位置
 dm_object_info_msgs/Location position_begin
-
-# End position
+# 終点位置
 dm_object_info_msgs/Location position_end
-
-# Length
+# 長さ
 dm_object_info_msgs/ObjectDimension length
-
-# Starting target ID
+# 始点物標 ID
 dm_object_info_msgs/ObjectId id_begin
-
-# End target ID
+# 終点物標 ID
 dm_object_info_msgs/ObjectId id_end
-
-# Source information
+# 存在信頼度
+dm_object_info_msgs/ExistenceConfidence existency
+# 検知漏れ物標サイズ
+dm_object_info_msgs/ObjectDimensionValue minimal_detectable_size
+# 情報源のリス
 dm_object_info_msgs/ObjectId[] information_source_list

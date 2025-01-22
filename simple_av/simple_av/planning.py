@@ -137,14 +137,26 @@ class Planning(Node):
         self.search_depth = 5
 
         self.curve_finish_point = None
+
+        self.destination = Point()
+        self.traffic_light_stopPoint_lastState = Point()
+        self.traffic_light_state_lastState = 'Cruise_green'
+        self.traffic_light_color_lastState = 'green'
         
-        # self.dest_lanelet = "lanelet63" # Shinjuku start 96
-        
-        # self.dest_lanelet = "lanelet761" # Kashiwa
-        self.dest_lanelet = "lanelet1162" # Kashiwa
+        self.test_config = self.load_test_config()
+        self.dest_lanelet = self.test_config['destination']
 
         self.node_shut = False
     
+    def load_test_config(self):
+        # Path to the YAML file
+        package_share_directory = get_package_share_directory('simple_av')
+        config_path = os.path.join(package_share_directory, "resource", "test_config.yaml")
+        # Load the configuration file
+        with open(config_path, "r") as file:
+            config = yaml.safe_load(file)
+        return config
+
     def load_vehicle_config(self, vehicle_type="lexus"):
         # Path to the YAML file
         package_share_directory = get_package_share_directory('simple_av')
@@ -520,40 +532,27 @@ class Planning(Node):
         lane_obj = self.find_lane_by_name(current_lane)
         current_lane_traffic_light_id = lane_obj['trafficlightsWayIDs']
         
-        isTrafficLightDetected = False
-        task = None
-        _color = None
-        if current_lane_traffic_light_id and current_lane_traffic_light_id[0] in v2i_traffic_signals_id:
-            color = v2i_traffic_signals_colors[v2i_traffic_signals_id.index(current_lane_traffic_light_id[0])]
-            # self.get_logger().info("traffic light detected")
-            # print(f"traffic light detected, lane = {current_lane}, lightID = {current_lane_traffic_light_id[0]}, color = {color}")
-            p1 = lane_obj['stopLinePoseP1']
-            p2 = lane_obj['stopLinePoseP2']
-            isTrafficLightDetected = True
-            if color == 1:
-                self.get_logger().info("Red")
-                task = 'Stop_red'
-                _color = 'red'
-            elif color == 3:
-                self.get_logger().info("Green")
-                task = 'Cruise_green'
-                _color = 'green'
-            elif color == 2:
-                self.get_logger().info('Amber')
-                task = 'Cruise_amber'
-                _color = 'amber'
+        if current_lane_traffic_light_id: # this lane have a traffic light
+            self.get_logger().info(f"traffic light detected on {lane_obj['name']}")
+            if current_lane_traffic_light_id[0] in v2i_traffic_signals_id: # traffic light id is on the list
+                self.get_logger().info("GOOD SIGNAL")
+                color = v2i_traffic_signals_colors[v2i_traffic_signals_id.index(current_lane_traffic_light_id[0])]
+                stop_point = self.get_traffic_light_StopPoint(lane_obj['stopLinePoseP1'], lane_obj['stopLinePoseP2'])
+                self.traffic_light_stopPoint_lastState = stop_point
+                if color == 1 or color == 2:
+                    self.traffic_light_state_lastState = 'Stop_red'
+                    self.traffic_light_color_lastState = 'red'
+                    return True, 'Stop_red', 'red', stop_point
+                self.traffic_light_state_lastState = 'Cruise_green'
+                self.traffic_light_color_lastState = 'green'
+                return True, 'Cruise_green', 'green', stop_point
             else:
-                # self.get_logger().error("Unkown traffic light color")
-                task = 'Cruise_green'
-                _color = 'unkown'
-        else:
-            self.get_logger().info("no traffic light")
-            isTrafficLightDetected = False
-            task = 'Cruise'
-            _color = 'unkown'
-            p1 = None
-            p2 = None
-        return isTrafficLightDetected, task, _color, p1, p2
+                self.get_logger().warning("BAD SIGNAL")
+                return True, self.traffic_light_state_lastState, self.traffic_light_color_lastState, self.traffic_light_stopPoint_lastState
+
+        self.get_logger().info(f"Traffic light Not detected on {lane_obj['name']}")
+        return False, 'Cruise', 'unkown', None
+        
 
     def get_detected_objects_in_front(self):
         if not self.detectedObjects:
@@ -678,68 +677,50 @@ class Planning(Node):
         #     task = 'Park'
         return True, stop_point, task
     
+    def get_traffic_light_StopPoint(self, p1, p2):
+        return Point(x=(p1[0] + p2[0])/2, y=(p1[1] + p2[1])/2, z=(p1[2] + p2[2])/2)
+        
+        
     def behavioural_planning(self, look_ahead_point, look_ahead_point_index, current_closest_point_to_vehicle_index, isTurnDetected):
         # print("behavioural planning ... ")
         vehicle_pose = {'x': self.pose.pose.position.x, 'y': self.pose.pose.position.y, 'z': self.pose.pose.position.z}
         
-        destination = Point(x=self.path[-1]['x'], y=self.path[-1]['y'], z=self.path[-1]['z'])
-        distance_to_destination = self.calculate_distance(vehicle_pose, {'x': destination.x, 'y': destination.y, 'z': destination.z})
+        distance_to_destination = self.calculate_distance(vehicle_pose, {'x': self.destination.x, 'y': self.destination.y, 'z': self.destination.z})
         
-        '''
-        isTrafficLightDetected, vehilceTaskForTrafficLight, trafficLightColor, p1, p2 = self.manage_traffic_lights()
+        print("---------------------------")
+        isTrafficLightDetected, vehilceTaskForTrafficLight, trafficLightColor, stop_point_for_traffic_light = self.manage_traffic_lights()
+        distance_to_traffic_light_stop_point = None
         if isTrafficLightDetected:
-            #calculate stop distacne
-            new_x = (p1[0] + p2[0])/2
-            new_y = (p1[1] + p2[1])/2
-            new_z = (p1[2] + p2[2])/2
-            stop_point_for_traffic_light = Point(x=new_x, y=new_y, z=new_z)
             distance_to_traffic_light_stop_point = self.calculate_distance(vehicle_pose, {'x': stop_point_for_traffic_light.x, 'y': stop_point_for_traffic_light.y, 'z': stop_point_for_traffic_light.z})
-            print("traffic light detected, distance to stop, ", trafficLightColor, distance_to_traffic_light_stop_point)
-        '''
-        
+
+        print(f'traffic light color: {trafficLightColor} - distance to stopPoint: {distance_to_traffic_light_stop_point}, task: {vehilceTaskForTrafficLight}')
         # object_ahead = self.get_detected_objects_in_front()
         # objects_in_range = self.get_objects_in_range(object_ahead, self.detection_radius)
         # isObjectAhead, stop_point_for_collison_avoidance, task = self.collision_avoidance(objects_in_range, current_closest_point_to_vehicle_index, vehicle_pose)
         isObjectAhead = False
-        '''
-        if isTrafficLightDetected and not isObjectAhead:
-            print("traffic light no object")
-            if trafficLightColor == 'red':
-                if distance_to_traffic_light_stop_point <= self.densify_interval * 2.5:
-                    self.status.data = 'Park'
-                elif distance_to_traffic_light_stop_point <= self.reaction_distance:
-                    self.status.data ='Decelerate'
-                else:
-                    self.status.data = 'Cruise'
+
+        # if isObjectAhead:
+        #     self.status.data = task
+        #     return stop_point_for_collison_avoidance
+        if isTrafficLightDetected and not isTurnDetected:
+            self.get_logger().info("TL Detected, Turn not Detected")
+            self.status.data = vehilceTaskForTrafficLight
+            return stop_point_for_traffic_light
+        elif isTrafficLightDetected and isTurnDetected:
+            self.get_logger().info("TL Detected, Turn Detected")
+            if trafficLightColor == 'green' or trafficLightColor == 'unkown':
+                self.status.data = 'Turn'
             else:
-                self.status.data = 'Cruise_green'
-            if isTurnDetected:
-                if trafficLightColor == 'green' or trafficLightColor == 'amber' or trafficLightColor == 'unkown':
-                    self.status.data = 'Turn'
-                else:
-                    self.status.data = vehilceTaskForTrafficLight
-        elif isTrafficLightDetected and isObjectAhead:
-            print("traffic light with object")
-            if distance_to_collision_avoidance_stop_point <= distance_to_traffic_light_stop_point:
-                self.status.data = collisonAvoidanceTask
-            elif distance_to_collision_avoidance_stop_point >= distance_to_traffic_light_stop_point and trafficLightColor == 'red':
-                self.status.data = vehilceTaskForTrafficLight
-            else:
-                if isTurnDetected:
-                    self.status.data = 'Turn'
-                else:
-                    self.status.data = 'Cruise'
-        '''
-        if isObjectAhead:
-            self.status.data = task
-            return stop_point_for_collison_avoidance
+                self.status.data = vehilceTaskForTrafficLight 
+                return stop_point_for_traffic_light
         elif distance_to_destination <= self.reaction_distance and look_ahead_point_index > len(self.path) - (self.reaction_distance / self.densify_interval + 1):
             self.status.data ='Decelerate'
-        elif isTurnDetected:
+        elif isTurnDetected and not isTrafficLightDetected:
+            self.get_logger().warning("TL not Detected, Turn Detected")
             self.status.data = 'Turn'
         else:
             self.status.data = 'Cruise'
-        return destination
+        return self.destination
            
 
     def mission_planning(self):
@@ -752,6 +733,7 @@ class Planning(Node):
             self.bfs(start_lanelet, self.dest_lanelet) # Creates the path
             print(self.path_as_lanes)
             if self.path and self.path_as_lanes:
+                self.destination = Point(x=self.path[-1]['x'], y=self.path[-1]['y'], z=self.path[-1]['z'])
                 path_curve_detector = PathCurveDetector(self.path, angle_threshold=3) # initializing object from class
                 self.curves = path_curve_detector.find_curves_in_path() # locating curves on the route/path
             if self.path and self.path_as_lanes and self.curves:
@@ -814,6 +796,7 @@ class Planning(Node):
                 f'lookahead distance:  {self.lookahead_distance}\n'
                 f'is turn detected: {isTurnDetected}\n'
                 f'speed: {speed}\n'
+                f'status: {self.status.data}\n'
             )
     
 

@@ -231,7 +231,10 @@ class VehicleControl(Node):
         if status == "Decelerate" or status == "Stop_red":
             distance_to_stop = self.calculate_distance(self.lookAhead.stop_point, self.pose.pose.position)
             target_speed = self.calculate_target_speed_for_stop(distance_to_stop, current_speed)
-            if distance_to_stop <= 1.0:
+            if status == "Stop_red" and distance_to_stop <= 5.0:
+                self.get_logger().warning("Full stop!")
+                target_speed = 0.0
+            if status == "Decelerate" and distance_to_stop <= 1.0:
                 self.get_logger().warning("Full stop!")
                 target_speed = 0.0
         
@@ -268,7 +271,7 @@ class VehicleControl(Node):
         # Using a nonlinear deceleration curve for smoother braking
         
         # Adjusted deceleration factor
-        target_speed = current_speed * (distance_to_stop / (self.lookAhead.speed_limit * 3.0))**1.2
+        target_speed = current_speed * (distance_to_stop / (self.lookAhead.speed_limit * 3.0))**1.6
         
         # Clamp for realistic behavior
         return min(self.lookAhead.speed_limit, max(0.75, target_speed))

@@ -23,21 +23,18 @@ class Perception(Node):
 
         self.vehicle_type = vehicle_type
         self.vehicle_config = self.load_vehicle_config(vehicle_type)
-        # Create subscriber for /v2x/traffic_signals1 topic
-        # self.subscriptionPose = self.create_subscription(CooperativeSignalsMessage, '/v2x/traffic_signals1', self.trafficSignal_callback, 10)
-        self.subscriptionPose = self.create_subscription(CooperativeSignalsMessage, '/v2x/cooperative2', self.trafficSignal_callback, 10)
-        
+        # Create subscriber for /v2x/traffic_signals topic
+        self.subscriptionTrafficLight = self.create_subscription(CooperativeSignalsMessage, '/v2x/traffic_signals', self.trafficSignal_callback, 10)
         # Create subscriber for /OBU/Sensing topic. This topic publishes the information of detected objects from the POV of the vehicle.
-        self.subscriptionPose = self.create_subscription(DetectedObjects, '/OBU/Sensing', self.detectedObjects_callback, 10)
-        # Create subscriber for /OBU/Sensing topic. This topic publishes the information of detected objects from the POV of the vehicle.
-        self.subscriptionPose = self.create_subscription(PredictedObjects, '/v2x/cooperative_pure1', self.RSU_detectedObjects_callback, 10)
-        
+        self.subscriptionSensor = self.create_subscription(DetectedObjects, '/OBU/Sensing', self.detectedObjects_callback, 10)
+        # Create subscriber for /v2x/cooperative2 topic. This topic publishes the information of detected objects from RSU.
+        self.subscriptionRSU = self.create_subscription(PredictedObjects, '/v2x/cooperative2', self.RSU_detectedObjects_callback, 10)
         self.subscriptionPose = self.create_subscription(PoseStamped, '/sensing/gnss/pose', self.pose_callback, 10)
-
         # Create subscriber to simple_av/portal topic
         self.subscriptionPortal = self.create_subscription(Portal, 'simple_av/portal', self.portal_callback, 10)
         self.reset = False
         self.finished = False
+        
         self.trafficSignal = CooperativeSignalsMessage()  # Initialize traffic signal
         self.detectedObjects = DetectedObjects()  # Initialize detected objects message
         self.RSU_detectedObjects = PredictedObjects()
@@ -223,21 +220,32 @@ class Perception(Node):
 
         return detected_objects_list
 
-    def get_trafficSignals(self):
+
+    def process_traffic_signals(self):
+        """
+        Processes traffic signals to extract signal IDs and colors for station_id = 2.
+
+        Creates two lists:
+        - v2i_traffic_signals_id: Contains traffic signal IDs for station_id = 2.
+        - v2i_traffic_signals_colors: Contains corresponding colors of traffic signals.
+        """
+        # Check if the traffic signal data exists
+        if not hasattr(self, 'trafficSignal') or not self.trafficSignal:
+            print("No traffic signal data available.")
+            return [], []
+
+        # Initialize arrays for IDs and colors
         v2i_traffic_signals_id = []
         v2i_traffic_signals_colors = []
-        print(self.trafficSignal)
-        if self.trafficSignal:
-            signals = self.trafficSignal.traffic_signals.signals
-            for signal in signals:
-                map_primitive_id = signal.map_primitive_id
-                # Each signal has a list of lights
-                for light in signal.lights:
-                    color = light.color
-                    break
-                print(map_primitive_id, color)
-                v2i_traffic_signals_id.append(map_primitive_id)
-                v2i_traffic_signals_colors.append(color)
+
+        # Ensure the station_id matches 2
+        # if self.trafficSignal.station_id == 2:
+            # Loop through traffic signals
+        for traffic_signal in self.trafficSignal.traffic_signals.signals:
+            for element in traffic_signal.elements:
+                # Append traffic signal ID and color
+                v2i_traffic_signals_id.append(traffic_signal.traffic_signal_id)
+                v2i_traffic_signals_colors.append(element.color)
         return v2i_traffic_signals_id, v2i_traffic_signals_colors
 
     def perception(self):
@@ -252,20 +260,20 @@ class Perception(Node):
             return
         
         # Handle traffic signals
-        v2i_traffic_signals_id, v2i_traffic_signals_colors = self.get_trafficSignals()
-        print(v2i_traffic_signals_id)
-        print(v2i_traffic_signals_colors)
+        v2i_traffic_signals_id, v2i_traffic_signals_colors = self.process_traffic_signals()
 
         # Create and publish traffic signals message
         traffic_signals_msg = TrafficSignalsArray()
         traffic_signals_msg.v2i_traffic_signals_id = v2i_traffic_signals_id
         traffic_signals_msg.v2i_traffic_signals_colors = v2i_traffic_signals_colors
         self.publisher_traffic_signals.publish(traffic_signals_msg)
+        if not v2i_traffic_signals_id and not v2i_traffic_signals_colors:
+            self.get_logger().error("---no traffic input-----")
+        print(traffic_signals_msg.v2i_traffic_signals_id)
+        print(traffic_signals_msg.v2i_traffic_signals_colors)
 
-        
         # Handle detected objects
         detected_objects_list = self.handle_detected_objects(self.detectedObjects, False) # Mounted-sensor data
-        # detected_objects_list = self.handle_detected_objects(self.RSU_detectedObjects, True) # Mounted-sensor data
         detected_objects_list.extend(self.handle_detected_objects(self.RSU_detectedObjects, True)) # RSU data
 
         # Create and publish detected objects message
@@ -273,7 +281,7 @@ class Perception(Node):
         detected_objects_msg.objects = detected_objects_list
         self.publisher_detected_objects.publish(detected_objects_msg)
 
-        sides = ['left', 'right', 'back', 'front']
+        '''
         print("number of objects: ", len(detected_objects_msg.objects))
         for obj in detected_objects_msg.objects:
             if obj.label != 8:
@@ -281,10 +289,10 @@ class Perception(Node):
                 print("vehicle type:", obj.label)
                 print("Direction from vehicle POV: ", obj.relative_direction.data)
                 print("Object relative Position from Vehicle: ", obj.position.x, obj.position.y)
-                print("closest side of the object: ", sides[obj.nearest_object_side])
                 print("DEBUG - min dist: ", obj.distance) 
                 print("object shape size: ", obj.shape)
                 print("---------------------")
+        '''
 
 
 def main(args=None):

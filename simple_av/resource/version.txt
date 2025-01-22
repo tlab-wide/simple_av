@@ -1,4 +1,4 @@
-Version 1.5.2
+Version 1.5.3
 
 vehicle moves in the defined path using the V3_map.json
 localization: return current lanelet use global and local search on the json map with pose/gnss
@@ -17,5 +17,4 @@ control:
     - pure pursuit for steering
     - nonlinear deceleration curve for braking
 
-new feature: Portal module have a counter now. This counter is specified in the test_config.yaml file. For example, if the value is 3 it means that
-the vehicle can loop the scenario 3 times and then all the modules shut themselves.
+Bug fix: Traffic lights work on Kashiwa/intersection number 2.
