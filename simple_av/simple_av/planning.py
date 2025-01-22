@@ -143,13 +143,20 @@ class Planning(Node):
         self.traffic_light_state_lastState = 'Cruise_green'
         self.traffic_light_color_lastState = 'green'
         
-        # self.dest_lanelet = "lanelet63" # Shinjuku start 96
-        
-        # self.dest_lanelet = "lanelet761" # Kashiwa
-        self.dest_lanelet = "lanelet1162" # Kashiwa
+        self.test_config = self.load_test_config()
+        self.dest_lanelet = self.test_config['destination']
 
         self.node_shut = False
     
+    def load_test_config(self):
+        # Path to the YAML file
+        package_share_directory = get_package_share_directory('simple_av')
+        config_path = os.path.join(package_share_directory, "resource", "test_config.yaml")
+        # Load the configuration file
+        with open(config_path, "r") as file:
+            config = yaml.safe_load(file)
+        return config
+
     def load_vehicle_config(self, vehicle_type="lexus"):
         # Path to the YAML file
         package_share_directory = get_package_share_directory('simple_av')
@@ -685,7 +692,7 @@ class Planning(Node):
         distance_to_traffic_light_stop_point = None
         if isTrafficLightDetected:
             distance_to_traffic_light_stop_point = self.calculate_distance(vehicle_pose, {'x': stop_point_for_traffic_light.x, 'y': stop_point_for_traffic_light.y, 'z': stop_point_for_traffic_light.z})
-            
+
         print(f'traffic light color: {trafficLightColor} - distance to stopPoint: {distance_to_traffic_light_stop_point}, task: {vehilceTaskForTrafficLight}')
         # object_ahead = self.get_detected_objects_in_front()
         # objects_in_range = self.get_objects_in_range(object_ahead, self.detection_radius)

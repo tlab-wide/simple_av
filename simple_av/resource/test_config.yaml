@@ -1,3 +1,4 @@
+destination: 'lanelet761' # Scenarion 1 -- for scenarion 2 enter lanelet1162'
 repeat_count: 5
 TrafficLight_detction: 1
 collision_avoidance: 0
