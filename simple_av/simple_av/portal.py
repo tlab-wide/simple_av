@@ -30,6 +30,8 @@ class portal(Node):
         self.last_pose = Point()
         self.current_pose = Point()
         self.repeat_counter = 0
+        self.proximityToInitThreshold = 5 #meters
+        self.jumpThreshold = 50 # meters
     
     def pose_callback(self, msg):
         self.pose = msg
@@ -57,8 +59,8 @@ class portal(Node):
 
     def portal_detector(self):
         self.current_pose = self.pose.pose.position
-        if self.calculate_distance(self.current_pose, self.last_pose) > 75.0 :
-            if self.calculate_distance(self.current_pose, self.initial_position) < 5.0 and not self.isPortalReached:
+        if self.calculate_distance(self.current_pose, self.last_pose) > self.jumpThreshold :
+            if self.calculate_distance(self.current_pose, self.initial_position) < self.proximityToInitThreshold and not self.isPortalReached:
                 self.get_logger().info("Portal Detected")
                 self.isPortalReached = True
                 self.initial_position = self.current_pose

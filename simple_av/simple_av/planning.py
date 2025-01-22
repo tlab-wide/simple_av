@@ -685,6 +685,7 @@ class Planning(Node):
         distance_to_traffic_light_stop_point = None
         if isTrafficLightDetected:
             distance_to_traffic_light_stop_point = self.calculate_distance(vehicle_pose, {'x': stop_point_for_traffic_light.x, 'y': stop_point_for_traffic_light.y, 'z': stop_point_for_traffic_light.z})
+            
         print(f'traffic light color: {trafficLightColor} - distance to stopPoint: {distance_to_traffic_light_stop_point}, task: {vehilceTaskForTrafficLight}')
         # object_ahead = self.get_detected_objects_in_front()
         # objects_in_range = self.get_objects_in_range(object_ahead, self.detection_radius)
