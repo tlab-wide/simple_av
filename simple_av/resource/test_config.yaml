@@ -1,1 +1,4 @@
 repeat_count: 5
+TrafficLight_detction: 1
+collision_avoidance: 0
+object_prediction: 0

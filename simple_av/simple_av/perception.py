@@ -239,13 +239,13 @@ class Perception(Node):
         v2i_traffic_signals_colors = []
 
         # Ensure the station_id matches 2
-        if self.trafficSignal.station_id == 2:
+        # if self.trafficSignal.station_id == 2:
             # Loop through traffic signals
-            for traffic_signal in self.trafficSignal.traffic_signals.signals:
-                for element in traffic_signal.elements:
-                    # Append traffic signal ID and color
-                    v2i_traffic_signals_id.append(traffic_signal.traffic_signal_id)
-                    v2i_traffic_signals_colors.append(element.color)
+        for traffic_signal in self.trafficSignal.traffic_signals.signals:
+            for element in traffic_signal.elements:
+                # Append traffic signal ID and color
+                v2i_traffic_signals_id.append(traffic_signal.traffic_signal_id)
+                v2i_traffic_signals_colors.append(element.color)
         return v2i_traffic_signals_id, v2i_traffic_signals_colors
 
     def perception(self):
@@ -267,6 +267,10 @@ class Perception(Node):
         traffic_signals_msg.v2i_traffic_signals_id = v2i_traffic_signals_id
         traffic_signals_msg.v2i_traffic_signals_colors = v2i_traffic_signals_colors
         self.publisher_traffic_signals.publish(traffic_signals_msg)
+        if not v2i_traffic_signals_id and not v2i_traffic_signals_colors:
+            self.get_logger().error("---no traffic input-----")
+        print(traffic_signals_msg.v2i_traffic_signals_id)
+        print(traffic_signals_msg.v2i_traffic_signals_colors)
 
         # Handle detected objects
         detected_objects_list = self.handle_detected_objects(self.detectedObjects, False) # Mounted-sensor data
@@ -277,7 +281,7 @@ class Perception(Node):
         detected_objects_msg.objects = detected_objects_list
         self.publisher_detected_objects.publish(detected_objects_msg)
 
-        sides = ['left', 'right', 'back', 'front']
+        '''
         print("number of objects: ", len(detected_objects_msg.objects))
         for obj in detected_objects_msg.objects:
             if obj.label != 8:
@@ -285,10 +289,10 @@ class Perception(Node):
                 print("vehicle type:", obj.label)
                 print("Direction from vehicle POV: ", obj.relative_direction.data)
                 print("Object relative Position from Vehicle: ", obj.position.x, obj.position.y)
-                print("closest side of the object: ", sides[obj.nearest_object_side])
                 print("DEBUG - min dist: ", obj.distance) 
                 print("object shape size: ", obj.shape)
                 print("---------------------")
+        '''
 
 
 def main(args=None):
