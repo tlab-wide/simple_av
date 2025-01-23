@@ -110,13 +110,15 @@ class VehicleControl(Node):
         self.gear_publisher = self.create_publisher(GearCommand, '/control/command/gear_cmd', qos_profile)
         self.turn_indicator_publisher = self.create_publisher(TurnIndicatorsCommand, '/control/command/turn_indicators_cmd', qos_profile)
 
-        self.pid_controller = PIDController(p_gain=1.2, i_gain=20.0, d_gain=0.5)
+        self.pid_controller = PIDController(p_gain=1.5, i_gain=20.0, d_gain=0.5)
         self.vehicle_length = self.vehicle_config['dimensions']['length'] #meters
         self.vehicle_width = self.vehicle_config['dimensions']['width'] #meters
         self.wheel_base = self.vehicle_config['dimensions']['wheel_base'] #meters
+        self.front_overhang = self.vehicle_config['dimensions']['front_overhang'] #meters
+        self.back_overhang = self.vehicle_config['dimensions']['back_overhang'] #meters
         
         self.previous_steering_angle = 0
-        self.steering_gain = 0.5  # Proportional gain for steering
+        self.steering_gain = 0.3  # Proportional gain for steering
         self.maximum_accel = self.vehicle_config['max_acceleration']
         self.maximum_Stereing = None
         self.maximum_braking_accel = self.vehicle_config['max_braking_accel']
@@ -290,7 +292,7 @@ class VehicleControl(Node):
         lookahead_y = self.lookAhead.look_ahead_point.y - rear_axle_y
 
         # Adjust lookahead distance for vehicle length
-        effective_lookahead_distance = math.sqrt(lookahead_x ** 2 + lookahead_y ** 2) + (self.vehicle_length / 5.0)
+        effective_lookahead_distance = math.sqrt(lookahead_x ** 2 + lookahead_y ** 2) + self.front_overhang
         lookahead_x = effective_lookahead_distance * (lookahead_x / math.sqrt(lookahead_x ** 2 + lookahead_y ** 2))
         lookahead_y = effective_lookahead_distance * (lookahead_y / math.sqrt(lookahead_x ** 2 + lookahead_y ** 2))
 
@@ -300,7 +302,7 @@ class VehicleControl(Node):
 
         # Calculate steering angle with effective wheelbase
         ld2 = lookahead_x ** 2 + lookahead_y ** 2
-        effective_wheelbase = self.wheel_base + (self.vehicle_length / 2.0)
+        effective_wheelbase = self.wheel_base + self.front_overhang + self.back_overhang + 5.0
         steering_angle = math.atan2(2.0 * local_y * effective_wheelbase, ld2)
 
         # Debugging info: left or right turn
