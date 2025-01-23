@@ -500,7 +500,7 @@ class Planning(Node):
         return speed
     
     def update_lookahead_distances(self, speed):
-        self.lookahead_distance = speed * 2.0 + 3.0  # speed 8m/s: 19m / speed 1.5m/s: 6m
+        self.lookahead_distance = speed * 2.0 + 2.5  # speed 8m/s: 19m / speed 1.5m/s: 6m
         self.reaction_distance = speed * 3.0 + 3.0  # 27m / 7.5m
         self.detection_radius = speed * 4.0 + 3.0  # 35m / 9m
 
