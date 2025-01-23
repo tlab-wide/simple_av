@@ -267,10 +267,6 @@ class Perception(Node):
         traffic_signals_msg.v2i_traffic_signals_id = v2i_traffic_signals_id
         traffic_signals_msg.v2i_traffic_signals_colors = v2i_traffic_signals_colors
         self.publisher_traffic_signals.publish(traffic_signals_msg)
-        if not v2i_traffic_signals_id and not v2i_traffic_signals_colors:
-            self.get_logger().error("---no traffic input-----")
-        print(traffic_signals_msg.v2i_traffic_signals_id)
-        print(traffic_signals_msg.v2i_traffic_signals_colors)
 
         # Handle detected objects
         detected_objects_list = self.handle_detected_objects(self.detectedObjects, False) # Mounted-sensor data
@@ -281,7 +277,6 @@ class Perception(Node):
         detected_objects_msg.objects = detected_objects_list
         self.publisher_detected_objects.publish(detected_objects_msg)
 
-        '''
         print("number of objects: ", len(detected_objects_msg.objects))
         for obj in detected_objects_msg.objects:
             if obj.label != 8:
@@ -292,8 +287,6 @@ class Perception(Node):
                 print("DEBUG - min dist: ", obj.distance) 
                 print("object shape size: ", obj.shape)
                 print("---------------------")
-        '''
-
 
 def main(args=None):
     rclpy.init(args=args)

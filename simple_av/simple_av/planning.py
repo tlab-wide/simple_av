@@ -694,14 +694,23 @@ class Planning(Node):
             distance_to_traffic_light_stop_point = self.calculate_distance(vehicle_pose, {'x': stop_point_for_traffic_light.x, 'y': stop_point_for_traffic_light.y, 'z': stop_point_for_traffic_light.z})
 
         print(f'traffic light color: {trafficLightColor} - distance to stopPoint: {distance_to_traffic_light_stop_point}, task: {vehilceTaskForTrafficLight}')
-        # object_ahead = self.get_detected_objects_in_front()
-        # objects_in_range = self.get_objects_in_range(object_ahead, self.detection_radius)
-        # isObjectAhead, stop_point_for_collison_avoidance, task = self.collision_avoidance(objects_in_range, current_closest_point_to_vehicle_index, vehicle_pose)
-        isObjectAhead = False
-
-        # if isObjectAhead:
-        #     self.status.data = task
-        #     return stop_point_for_collison_avoidance
+        object_ahead = self.get_detected_objects_in_front()
+        objects_in_range = self.get_objects_in_range(object_ahead, self.detection_radius)
+        isObjectAhead, stop_point_for_collison_avoidance, task = self.collision_avoidance(objects_in_range, current_closest_point_to_vehicle_index, vehicle_pose)
+        # isObjectAhead = Fale
+        
+        if isObjectAhead and not isTrafficLightDetected:
+            self.status.data = task
+            return stop_point_for_collison_avoidance
+        if isObjectAhead and isTrafficLightDetected:
+            distance_to_object = self.calculate_distance(vehicle_pose, {'x': stop_point_for_collison_avoidance.x, 'y': stop_point_for_collison_avoidance.y, 'z': stop_point_for_collison_avoidance.z})
+            distance_to_traffic = self.calculate_distance(vehicle_pose, {'x': stop_point_for_traffic_light.x, 'y': stop_point_for_traffic_light.y, 'z': stop_point_for_traffic_light.z})
+            if distance_to_object <= distance_to_traffic:
+                self.status.data = task
+                return stop_point_for_collison_avoidance
+            else:
+                self.status.data = vehilceTaskForTrafficLight
+                return stop_point_for_traffic_light
         if isTrafficLightDetected and not isTurnDetected:
             self.get_logger().info("TL Detected, Turn not Detected")
             self.status.data = vehilceTaskForTrafficLight
@@ -798,7 +807,6 @@ class Planning(Node):
                 f'speed: {speed}\n'
                 f'status: {self.status.data}\n'
             )
-    
 
 def main(args=None):
     rclpy.init(args=args)
