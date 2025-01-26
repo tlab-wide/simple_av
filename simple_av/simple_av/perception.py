@@ -171,6 +171,51 @@ class Perception(Node):
         yaw = np.arctan2(t3, t4)
         return yaw
 
+    def quaternion_multiply(self, object_local_quat, vehicle_global_quat):
+        """
+        Multiplies two quaternions q1 and q2.
+
+        Args:
+            q1 (list or np.array): First quaternion [x1, y1, z1, w1].
+            q2 (list or np.array): Second quaternion [x2, y2, z2, w2].
+
+        Returns:
+            np.array: Resulting quaternion [x, y, z, w].
+        """
+        x1, y1, z1, w1 = object_local_quat.x, object_local_quat.y, object_local_quat.z, object_local_quat.w
+        x2, y2, z2, w2 = vehicle_global_quat.x, vehicle_global_quat.y, vehicle_global_quat.z, vehicle_global_quat.w
+
+        # Compute the product
+        x = w1 * x2 + x1 * w2 + y1 * z2 - z1 * y2
+        y = w1 * y2 + y1 * w2 + z1 * x2 - x1 * z2
+        z = w1 * z2 + z1 * w2 + x1 * y2 - y1 * x2
+        w = w1 * w2 - x1 * x2 - y1 * y2 - z1 * z2
+
+        return Quaternion(x=x, y=y, z=z, w=w)  # x, y, z, w
+
+
+    def convert_to_global_orientation(self, object_local_quat, vehicle_global_quat):
+        """
+        Converts local orientation (relative to vehicle) to global orientation.
+        
+        Args:
+            object_local_quat (list or np.array): Quaternion [x, y, z, w] for object relative to vehicle.
+            vehicle_global_quat (list or np.array): Quaternion [x, y, z, w] for vehicle in global coordinates.
+        
+        Returns:
+            np.array: Quaternion [x, y, z, w] for the object in global coordinates.
+        """
+        # Convert to scipy Rotation objects
+        object_local_rot = R.from_quat([object_local_quat.x, object_local_quat.y, object_local_quat.z, object_local_quat.w])  # [x, y, z, w]
+        vehicle_global_rot = R.from_quat([vehicle_global_quat.x, vehicle_global_quat.y, vehicle_global_quat.z, vehicle_global_quat.w])
+
+        # Compute the global orientation of the object
+        object_global_rot = vehicle_global_rot * object_local_rot
+
+        # Return the resulting quaternion
+        global_orientation = object_global_rot.as_quat()
+        return Quaternion(x=global_orientation[0], y=global_orientation[1], z=global_orientation[2], w=global_orientation[3])  # x, y, z, w
+
     def handle_detected_objects(self, detected_objects, is_from_rsu):
         detected_objects_list = []
         vehicle_pose = {'x': self.vehicle_pose.pose.position.x, 'y': self.vehicle_pose.pose.position.y, 'z': self.vehicle_pose.pose.position.z}
@@ -180,27 +225,21 @@ class Perception(Node):
             # label
             if obj.classification:
                 detected_obj_msg.label = obj.classification[0].label  # Assuming the first classification is the main one
-            # print("CHECK - label ", detected_obj_msg.label)
-            # Sensor Type - is_from_rsu
             detected_obj_msg.is_from_rsu = is_from_rsu
             
             # Object pose (position and orientation)
             if is_from_rsu:
                 pose = obj.kinematics.initial_pose_with_covariance.pose
                 vector = self.get_rsu_object_relative_position(vehicle_pose, pose.position)
-                # print("CHECK - ABS position ", pose.position)
                 object_relative_pose = self.apply_inverse_quaternion_rotation(self.vehicle_pose.pose.orientation, vector)
+                detected_obj_msg.orientation = Quaternion(x=pose.orientation.x, y=pose.orientation.y, z=pose.orientation.z, w=pose.orientation.w)
                 detected_obj_msg.position = Point(x=object_relative_pose.x, y=object_relative_pose.y, z=object_relative_pose.z)
             else:
                 pose = obj.kinematics.pose_with_covariance.pose
-                # print("object relative pose: ", pose.position.x, pose.position.y, pose.position.z)
+                detected_obj_msg.orientation = self.convert_to_global_orientation(pose.orientation, self.vehicle_pose.pose.orientation)
                 detected_obj_msg.position = Point(x=pose.position.x, y=pose.position.y, z=pose.position.z)
             
-            detected_obj_msg.orientation = Quaternion(x=pose.orientation.x, y=pose.orientation.y, z=pose.orientation.z, w=pose.orientation.w)
             detected_obj_msg.relative_direction.data = self.object_direction(detected_obj_msg.position.x, detected_obj_msg.position.y)
-            # print("CHECK - direction ", detected_obj_msg.relative_direction.data)
-            # print("---------------------")
-            # Objects shape (dimensions)
             shape = obj.shape.dimensions
             detected_obj_msg.shape = Vector3(x=shape.x, y=shape.y, z=shape.z)
             
@@ -247,6 +286,8 @@ class Perception(Node):
                 v2i_traffic_signals_colors.append(element.color)
         return v2i_traffic_signals_id, v2i_traffic_signals_colors
 
+        return np.array([x, y, z, w])
+
     def perception(self):
         if self.finished:
             self.node_shut = True
@@ -277,6 +318,7 @@ class Perception(Node):
         self.publisher_detected_objects.publish(detected_objects_msg)
 
         print("number of objects: ", len(detected_objects_msg.objects))
+        print("vehicle orientation: ", self.vehicle_pose.pose.orientation)
         for obj in detected_objects_msg.objects:
             if obj.label != 8:
                 print("is RSU:", obj.is_from_rsu)
