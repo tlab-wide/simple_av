@@ -674,6 +674,41 @@ class Planning(Node):
         task = 'Decelerate'
         return True, stop_point, task
     
+    def find_intersection(line1_point, line1_vector, line2_point1, line2_point2):
+        # Extract components
+        x1, y1 = line1_point
+        a1, b1 = line1_vector
+        x2, y2 = line2_point1
+        x3, y3 = line2_point2
+
+        # Direction vector of Line 2
+        a2 = x3 - x2
+        b2 = y3 - y2
+
+        # Check if lines are parallel
+        if a1 * b2 == a2 * b1:
+            return None  # Lines are parallel
+
+        # Equation of Line 1: b1(x - x1) - a1(y - y1) = 0
+        A1 = b1
+        B1 = -a1
+        C1 = a1 * y1 - b1 * x1
+
+        # Equation of Line 2: b2(x - x2) - a2(y - y2) = 0
+        A2 = b2
+        B2 = -a2
+        C2 = a2 * y2 - b2 * x2
+
+        # Solve the system of equations
+        denominator = A1 * B2 - A2 * B1
+        if denominator == 0:
+            return None  # Lines are parallel
+
+        x = (B2 * C1 - B1 * C2) / denominator
+        y = (A1 * C2 - A2 * C1) / denominator
+
+        return (x, y)
+
     def get_traffic_light_StopPoint(self, p1, p2):
         return Point(x=(p1[0] + p2[0])/2, y=(p1[1] + p2[1])/2, z=(p1[2] + p2[2])/2)
         
@@ -684,26 +719,14 @@ class Planning(Node):
         rotation = R.from_quat(np.array([quaternion.x, quaternion.y, quaternion.z, quaternion.w]))  # Quaternion format: [x, y, z, w]
         # Apply the rotation to the local forward vector
         global_forward = rotation.apply(local_forward)
-        return global_forward 
+        return global_forward [:2]
         
     def collison_prediction(self, objects_in_range, current_closest_point_to_vehicle_index, vehicle_pose):
         in_range_objects_absulute_positions = [self.get_object_absolute_position(self.pose.pose.orientation, vehicle_pose, obj.position) for obj in objects_in_range]
         self.get_logger().warning("DEBUG 2 - ##########")
         print("number of Objects in range: ", len(objects_in_range))
-        for i in range(len(objects_in_range)):
-            print("Sensor type: ", objects_in_range[i].is_from_rsu, " vehicle type:", objects_in_range[i].label)
-            print("Relative Direction from vehicle POV: ", objects_in_range[i].relative_direction.data)
-            print("Object relative Position from Vehicle: ", objects_in_range[i].position.x, objects_in_range[i].position.y)
-            print("Object global orientation: ", objects_in_range[i].orientation.x, objects_in_range[i].orientation.y, objects_in_range[i].orientation.z, objects_in_range[i].orientation.w)
-            print("Object forward vector: ", self.get_forward_vector(objects_in_range[i].orientation))
-            print("Object absolute pose: ", in_range_objects_absulute_positions[i])
-            print("Distance to the object: ", objects_in_range[i].distance)
-            print("---------------------") 
-        print("#############")
-        print(f"DEBUG 2 - Next {len(self.path[current_closest_point_to_vehicle_index:current_closest_point_to_vehicle_index + int(self.reaction_distance / self.densify_interval) + 1])} waypoints")
         path_to_predict = self.path[current_closest_point_to_vehicle_index:current_closest_point_to_vehicle_index + int(self.reaction_distance / self.densify_interval) + 1]
-        
-
+        print("waypoints: ", path_to_predict)
 
     def behavioural_planning(self, look_ahead_point, look_ahead_point_index, current_closest_point_to_vehicle_index, isTurnDetected):
         # Current vehicle position
