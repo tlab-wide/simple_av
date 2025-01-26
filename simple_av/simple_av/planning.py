@@ -606,18 +606,18 @@ class Planning(Node):
     def find_obstacle_on_path(self, objects_in_range, current_closest_point_to_vehicle_index, vehicle_pose):
         objects_on_path = []
         in_range_objects_absulute_positions = [self.get_object_absolute_position(self.pose.pose.orientation, vehicle_pose, obj.position) for obj in objects_in_range]
-        print("DEBUG 1 - ##########")
-        print("number of Objects in range: ", len(objects_in_range))
-        for i in range(len(objects_in_range)):
-            print("Sensor type: ", objects_in_range[i].is_from_rsu, " vehicle type:", objects_in_range[i].label)
-            print("Relative Direction from vehicle POV: ", objects_in_range[i].relative_direction.data)
-            print("Object relative Position from Vehicle: ", objects_in_range[i].position.x, objects_in_range[i].position.y)
-            print("Object absolute pose: ", in_range_objects_absulute_positions[i])
-            print("Distance to the object: ", objects_in_range[i].distance)
-            print("---------------------") 
-        print("#############")
+        # print("DEBUG 1 - ##########")
+        # print("number of Objects in range: ", len(objects_in_range))
+        # for i in range(len(objects_in_range)):
+        #     print("Sensor type: ", objects_in_range[i].is_from_rsu, " vehicle type:", objects_in_range[i].label)
+        #     print("Relative Direction from vehicle POV: ", objects_in_range[i].relative_direction.data)
+        #     print("Object relative Position from Vehicle: ", objects_in_range[i].position.x, objects_in_range[i].position.y)
+        #     print("Object absolute pose: ", in_range_objects_absulute_positions[i])
+        #     print("Distance to the object: ", objects_in_range[i].distance)
+        #     print("---------------------") 
+        # print("#############")
 
-        print(f"DEBUG 1 - Next {len(self.path[current_closest_point_to_vehicle_index:current_closest_point_to_vehicle_index + int(self.reaction_distance / self.densify_interval) + 1])} waypoints")
+        # print(f"DEBUG 1 - Next {len(self.path[current_closest_point_to_vehicle_index:current_closest_point_to_vehicle_index + int(self.reaction_distance / self.densify_interval) + 1])} waypoints")
         for i in range(len(objects_in_range)):
             for waypoint in self.path[current_closest_point_to_vehicle_index:current_closest_point_to_vehicle_index + int(self.reaction_distance / self.densify_interval) + 1]:
                 object_pose = {'x': in_range_objects_absulute_positions[i].x, 'y': in_range_objects_absulute_positions[i].y, 'z': in_range_objects_absulute_positions[i].z}
@@ -645,9 +645,7 @@ class Planning(Node):
         
         return closest_object_info
 
-    def collision_avoidance(self, current_closest_point_to_vehicle_index, vehicle_pose):
-        objects_ahead = self.get_detected_objects_in_front()
-        objects_in_range = self.get_objects_in_range(objects_ahead, self.detection_radius)
+    def collision_avoidance(self, objects_in_range, current_closest_point_to_vehicle_index, vehicle_pose):
         if not objects_in_range:
             self.get_logger().info("No Immediate danger")
             return False, None, 'Cruise'
@@ -659,18 +657,18 @@ class Planning(Node):
             return False, None, 'Cruise'
         self.get_logger().warning("Imediate threat. Objects ahead in danger zone")
 
-        self.get_logger().warning("++++++++++++++++")
-        print("DEBUG - founded closest object ")
-        print("Relative Direction from vehicle POV: ", closest_object_info['object'].relative_direction.data)
-        print("Object relative Position from Vehicle: ",closest_object_info['object'].position.x, closest_object_info['object'].position.y)
-        print("DEBUG - closest Object waypoint ", self.path.index(closest_object_info['waypoint']))
-        print("DEBUG - closest Vehicle waypoint ", current_closest_point_to_vehicle_index)
-        self.get_logger().warning("++++++++++++++++")
+        # self.get_logger().warning("++++++++++++++++")
+        # print("DEBUG - founded closest object ")
+        # print("Relative Direction from vehicle POV: ", closest_object_info['object'].relative_direction.data)
+        # print("Object relative Position from Vehicle: ",closest_object_info['object'].position.x, closest_object_info['object'].position.y)
+        # print("DEBUG - closest Object waypoint ", self.path.index(closest_object_info['waypoint']))
+        # print("DEBUG - closest Vehicle waypoint ", current_closest_point_to_vehicle_index)
+        # self.get_logger().warning("++++++++++++++++")
         
         stop_point_index = self.path.index(closest_object_info['waypoint']) - int(closest_object_info['object'].shape.x / self.densify_interval) - 1
-        print("DEBUG - stop point index ", stop_point_index)
+        # print("DEBUG - stop point index ", stop_point_index)
         stop_point = self.path[stop_point_index]
-        print("DEBUG - vehicle distance to stop point: ", self.calculate_distance(vehicle_pose, stop_point))
+        # print("DEBUG - vehicle distance to stop point: ", self.calculate_distance(vehicle_pose, stop_point))
         stop_point = Point(x=stop_point['x'], y=stop_point['y'], z=stop_point['z'])
 
         task = 'Decelerate'
@@ -679,7 +677,34 @@ class Planning(Node):
     def get_traffic_light_StopPoint(self, p1, p2):
         return Point(x=(p1[0] + p2[0])/2, y=(p1[1] + p2[1])/2, z=(p1[2] + p2[2])/2)
         
+    def get_forward_vector(self, quaternion):
+        # Define the local forward vector (Unity's forward is [0, 0, 1])
+        local_forward = np.array([1, 0, 0])
+        # Convert the quaternion to a rotation object
+        rotation = R.from_quat(np.array([quaternion.x, quaternion.y, quaternion.z, quaternion.w]))  # Quaternion format: [x, y, z, w]
+        # Apply the rotation to the local forward vector
+        global_forward = rotation.apply(local_forward)
+        return global_forward 
         
+    def collison_prediction(self, objects_in_range, current_closest_point_to_vehicle_index, vehicle_pose):
+        in_range_objects_absulute_positions = [self.get_object_absolute_position(self.pose.pose.orientation, vehicle_pose, obj.position) for obj in objects_in_range]
+        self.get_logger().warning("DEBUG 2 - ##########")
+        print("number of Objects in range: ", len(objects_in_range))
+        for i in range(len(objects_in_range)):
+            print("Sensor type: ", objects_in_range[i].is_from_rsu, " vehicle type:", objects_in_range[i].label)
+            print("Relative Direction from vehicle POV: ", objects_in_range[i].relative_direction.data)
+            print("Object relative Position from Vehicle: ", objects_in_range[i].position.x, objects_in_range[i].position.y)
+            print("Object global orientation: ", objects_in_range[i].orientation.x, objects_in_range[i].orientation.y, objects_in_range[i].orientation.z, objects_in_range[i].orientation.w)
+            print("Object forward vector: ", self.get_forward_vector(objects_in_range[i].orientation))
+            print("Object absolute pose: ", in_range_objects_absulute_positions[i])
+            print("Distance to the object: ", objects_in_range[i].distance)
+            print("---------------------") 
+        print("#############")
+        print(f"DEBUG 2 - Next {len(self.path[current_closest_point_to_vehicle_index:current_closest_point_to_vehicle_index + int(self.reaction_distance / self.densify_interval) + 1])} waypoints")
+        path_to_predict = self.path[current_closest_point_to_vehicle_index:current_closest_point_to_vehicle_index + int(self.reaction_distance / self.densify_interval) + 1]
+        
+
+
     def behavioural_planning(self, look_ahead_point, look_ahead_point_index, current_closest_point_to_vehicle_index, isTurnDetected):
         # Current vehicle position
         vehicle_pose = {
@@ -696,8 +721,13 @@ class Planning(Node):
         
         # Manage traffic lights and collision avoidance
         isTrafficLightDetected, vehicleTaskForTrafficLight, trafficLightColor, stop_point_for_traffic_light = self.manage_traffic_lights()
+        objects_ahead = self.get_detected_objects_in_front()
+        objects_in_range = self.get_objects_in_range(objects_ahead, self.detection_radius)
         isObjectAhead, stop_point_for_collision_avoidance, collision_task = self.collision_avoidance(
-            current_closest_point_to_vehicle_index, vehicle_pose
+            objects_in_range, current_closest_point_to_vehicle_index, vehicle_pose
+        )
+        self.collison_prediction(
+            objects_in_range, current_closest_point_to_vehicle_index, vehicle_pose
         )
         
         # Helper function to calculate distances
