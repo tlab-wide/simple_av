@@ -117,8 +117,8 @@ class Planning(Node):
         self.max_speed = self.vehicle_config['max_speed'] # m/s
         self.turning_speed = self.vehicle_config['turning_speed'] # m/s
         self.lookahead_distance = self.base_speed * 2.0 + 3.0 # meters
-        self.reaction_distance = self.base_speed * 3.0 + 4.0 # meters
-        self.detection_radius = self.base_speed * 4.0 + 4.0 # meters
+        self.reaction_distance = self.base_speed * 5.0 + 5.25 # meters
+        self.detection_radius = self.base_speed * 6.0 + 8.0 # meters
         self.status = String() # Cruise, Decelerate, PrepareToStop, Turn
         self.vehicle_length = self.vehicle_config['dimensions']['length'] #meters
         self.vehicle_width = self.vehicle_config['dimensions']['width'] #meters
@@ -500,9 +500,9 @@ class Planning(Node):
         return speed
     
     def update_lookahead_distances(self, speed):
-        self.lookahead_distance = speed * 2.0 + 2.5  # speed 8m/s: 19m / speed 1.5m/s: 6m
-        self.reaction_distance = speed * 3.0 + 3.0  # 27m / 7.5m
-        self.detection_radius = speed * 4.0 + 3.0  # 35m / 9m
+        self.lookahead_distance = speed * 2.0 + 2.5  # speed 7m/s: 16.5m / speed 1.75m/s: 6m
+        self.reaction_distance = speed * 5.0 + 5.25  # 40m / 14m
+        self.detection_radius = speed * 6.0 + 8.0  # 50m / 18.5m
 
     def local_planning(self, search_area):
         """
@@ -569,7 +569,7 @@ class Planning(Node):
         
     def get_objects_in_range(self, objects_ahead, filter_dist):
         if not objects_ahead:
-            print("DEBUG - No Objects ahead")
+            print("DEBUG - No Object ahead")
             return None            
         objects_in_range = []
         for obj in objects_ahead:
@@ -618,14 +618,11 @@ class Planning(Node):
         print("#############")
 
         print(f"DEBUG 1 - Next {len(self.path[current_closest_point_to_vehicle_index:current_closest_point_to_vehicle_index + int(self.reaction_distance / self.densify_interval) + 1])} waypoints")
-        for waypoint in self.path[current_closest_point_to_vehicle_index:current_closest_point_to_vehicle_index + int(self.reaction_distance / self.densify_interval) + 1]:
-            print("waypoint: ", waypoint)
-        
         for i in range(len(objects_in_range)):
             for waypoint in self.path[current_closest_point_to_vehicle_index:current_closest_point_to_vehicle_index + int(self.reaction_distance / self.densify_interval) + 1]:
                 object_pose = {'x': in_range_objects_absulute_positions[i].x, 'y': in_range_objects_absulute_positions[i].y, 'z': in_range_objects_absulute_positions[i].z}
                 dist = self.calculate_distance(object_pose, waypoint)
-                if dist <= self.densify_interval:
+                if dist <= self.densify_interval*2:
                     objects_on_path.append({"object": objects_in_range[i], "waypoint": waypoint})
                     break
         
@@ -648,8 +645,11 @@ class Planning(Node):
         
         return closest_object_info
 
-    def collision_avoidance(self, objects_in_range, current_closest_point_to_vehicle_index, vehicle_pose):
+    def collision_avoidance(self, current_closest_point_to_vehicle_index, vehicle_pose):
+        objects_ahead = self.get_detected_objects_in_front()
+        objects_in_range = self.get_objects_in_range(objects_ahead, self.detection_radius)
         if not objects_in_range:
+            self.get_logger().info("No Immediate danger")
             return False, None, 'Cruise'
         
         closest_object_info = self.find_obstacle_on_path(objects_in_range, current_closest_point_to_vehicle_index, vehicle_pose)
@@ -663,18 +663,17 @@ class Planning(Node):
         print("DEBUG - founded closest object ")
         print("Relative Direction from vehicle POV: ", closest_object_info['object'].relative_direction.data)
         print("Object relative Position from Vehicle: ",closest_object_info['object'].position.x, closest_object_info['object'].position.y)
-        print("DEBUG - closest object waypoint ", closest_object_info['waypoint'])
+        print("DEBUG - closest Object waypoint ", self.path.index(closest_object_info['waypoint']))
+        print("DEBUG - closest Vehicle waypoint ", current_closest_point_to_vehicle_index)
         self.get_logger().warning("++++++++++++++++")
         
-        stop_point_index = self.path.index(closest_object_info['waypoint']) - int(closest_object_info['object'].shape.x / self.densify_interval)
+        stop_point_index = self.path.index(closest_object_info['waypoint']) - int(closest_object_info['object'].shape.x / self.densify_interval) - 1
         print("DEBUG - stop point index ", stop_point_index)
         stop_point = self.path[stop_point_index]
         print("DEBUG - vehicle distance to stop point: ", self.calculate_distance(vehicle_pose, stop_point))
         stop_point = Point(x=stop_point['x'], y=stop_point['y'], z=stop_point['z'])
 
         task = 'Decelerate'
-        # if distance_to_stop_point <= 2.0:
-        #     task = 'Park'
         return True, stop_point, task
     
     def get_traffic_light_StopPoint(self, p1, p2):
@@ -682,44 +681,82 @@ class Planning(Node):
         
         
     def behavioural_planning(self, look_ahead_point, look_ahead_point_index, current_closest_point_to_vehicle_index, isTurnDetected):
-        # print("behavioural planning ... ")
-        vehicle_pose = {'x': self.pose.pose.position.x, 'y': self.pose.pose.position.y, 'z': self.pose.pose.position.z}
+        # Current vehicle position
+        vehicle_pose = {
+            'x': self.pose.pose.position.x,
+            'y': self.pose.pose.position.y,
+            'z': self.pose.pose.position.z
+        }
         
-        distance_to_destination = self.calculate_distance(vehicle_pose, {'x': self.destination.x, 'y': self.destination.y, 'z': self.destination.z})
+        # Distance to the destination
+        distance_to_destination = self.calculate_distance(
+            vehicle_pose, 
+            {'x': self.destination.x, 'y': self.destination.y, 'z': self.destination.z}
+        )
         
-        print("---------------------------")
-        isTrafficLightDetected, vehilceTaskForTrafficLight, trafficLightColor, stop_point_for_traffic_light = self.manage_traffic_lights()
-        distance_to_traffic_light_stop_point = None
+        # Manage traffic lights and collision avoidance
+        isTrafficLightDetected, vehicleTaskForTrafficLight, trafficLightColor, stop_point_for_traffic_light = self.manage_traffic_lights()
+        isObjectAhead, stop_point_for_collision_avoidance, collision_task = self.collision_avoidance(
+            current_closest_point_to_vehicle_index, vehicle_pose
+        )
+        
+        # Helper function to calculate distances
+        def calculate_distance_to(point):
+            return self.calculate_distance(
+                vehicle_pose, 
+                {'x': point.x, 'y': point.y, 'z': point.z}
+            )
+        
+        # Check for object and traffic light scenarios
+        if isObjectAhead:
+            if isTrafficLightDetected:
+                # Compare distances to object and traffic light
+                distance_to_object = calculate_distance_to(stop_point_for_collision_avoidance)
+                distance_to_traffic_light = calculate_distance_to(stop_point_for_traffic_light)
+                
+                if distance_to_object <= distance_to_traffic_light:
+                    self.get_logger().info("Object detected and closer than traffic light.")
+                    self.status.data = collision_task
+                    return stop_point_for_collision_avoidance
+                
+                self.get_logger().info("Traffic light detected and closer than object.")
+                self.status.data = vehicleTaskForTrafficLight
+                return stop_point_for_traffic_light
+            else:
+                self.get_logger().info("Object detected, no traffic light detected.")
+                self.status.data = collision_task
+                return stop_point_for_collision_avoidance
+        
+        # Handle traffic light scenarios
         if isTrafficLightDetected:
-            distance_to_traffic_light_stop_point = self.calculate_distance(vehicle_pose, {'x': stop_point_for_traffic_light.x, 'y': stop_point_for_traffic_light.y, 'z': stop_point_for_traffic_light.z})
-
-        print(f'traffic light color: {trafficLightColor} - distance to stopPoint: {distance_to_traffic_light_stop_point}, task: {vehilceTaskForTrafficLight}')
-        # object_ahead = self.get_detected_objects_in_front()
-        # objects_in_range = self.get_objects_in_range(object_ahead, self.detection_radius)
-        # isObjectAhead, stop_point_for_collison_avoidance, task = self.collision_avoidance(objects_in_range, current_closest_point_to_vehicle_index, vehicle_pose)
-        isObjectAhead = False
-
-        # if isObjectAhead:
-        #     self.status.data = task
-        #     return stop_point_for_collison_avoidance
-        if isTrafficLightDetected and not isTurnDetected:
-            self.get_logger().info("TL Detected, Turn not Detected")
-            self.status.data = vehilceTaskForTrafficLight
-            return stop_point_for_traffic_light
-        elif isTrafficLightDetected and isTurnDetected:
-            self.get_logger().info("TL Detected, Turn Detected")
-            if trafficLightColor == 'green' or trafficLightColor == 'unkown':
+            if not isTurnDetected:
+                self.get_logger().info("Traffic light detected, no turn detected.")
+                self.status.data = vehicleTaskForTrafficLight
+                return stop_point_for_traffic_light
+            
+            self.get_logger().info("Traffic light and turn detected.")
+            if trafficLightColor in ['green', 'unknown']:
                 self.status.data = 'Turn'
             else:
-                self.status.data = vehilceTaskForTrafficLight 
+                self.status.data = vehicleTaskForTrafficLight
                 return stop_point_for_traffic_light
-        elif distance_to_destination <= self.reaction_distance and look_ahead_point_index > len(self.path) - (self.reaction_distance / self.densify_interval + 1):
-            self.status.data ='Decelerate'
-        elif isTurnDetected and not isTrafficLightDetected:
-            self.get_logger().warning("TL not Detected, Turn Detected")
+        
+        # Check for destination and path conditions
+        if (distance_to_destination <= self.reaction_distance and 
+            look_ahead_point_index > len(self.path) - (self.reaction_distance / self.densify_interval + 1)):
+            self.get_logger().info("Approaching destination, decelerating.")
+            self.status.data = 'Decelerate'
+            return self.destination
+        
+        # Handle turn without traffic light
+        if isTurnDetected:
+            self.get_logger().warning("Turn detected, no traffic light.")
             self.status.data = 'Turn'
-        else:
-            self.status.data = 'Cruise'
+            return self.destination
+        
+        # Default behavior: cruising
+        self.get_logger().info("No obstacles or traffic lights detected. Cruising.")
+        self.status.data = 'Cruise'
         return self.destination
            
 
@@ -798,7 +835,6 @@ class Planning(Node):
                 f'speed: {speed}\n'
                 f'status: {self.status.data}\n'
             )
-    
 
 def main(args=None):
     rclpy.init(args=args)

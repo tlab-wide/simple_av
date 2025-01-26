@@ -1,4 +1,4 @@
-Version 1.5.4
+Version 1.5.5
 
 vehicle moves in the defined path using the V3_map.json
 localization: return current lanelet use global and local search on the json map with pose/gnss
@@ -17,4 +17,4 @@ control:
     - pure pursuit for steering
     - nonlinear deceleration curve for braking
 
-Bug fix: control parameters tuned for new scene
+Bug fix: Object detection and collison avoidance added
