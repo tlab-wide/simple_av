@@ -28,7 +28,7 @@ class Perception(Node):
         # Create subscriber for /OBU/Sensing topic. This topic publishes the information of detected objects from the POV of the vehicle.
         self.subscriptionSensor = self.create_subscription(DetectedObjects, '/OBU/Sensing', self.detectedObjects_callback, 10)
         # Create subscriber for /v2x/cooperative2 topic. This topic publishes the information of detected objects from RSU.
-        self.subscriptionRSU = self.create_subscription(PredictedObjects, '/v2x/cooperative2', self.RSU_detectedObjects_callback, 10)
+        self.subscriptionRSU = self.create_subscription(PredictedObjects, '/v2x/predicted_object2', self.RSU_detectedObjects_callback, 10)
         self.subscriptionPose = self.create_subscription(PoseStamped, '/sensing/gnss/pose', self.pose_callback, 10)
         # Create subscriber to simple_av/portal topic
         self.subscriptionPortal = self.create_subscription(Portal, 'simple_av/portal', self.portal_callback, 10)
@@ -174,7 +174,6 @@ class Perception(Node):
     def handle_detected_objects(self, detected_objects, is_from_rsu):
         detected_objects_list = []
         vehicle_pose = {'x': self.vehicle_pose.pose.position.x, 'y': self.vehicle_pose.pose.position.y, 'z': self.vehicle_pose.pose.position.z}
-        
         for obj in detected_objects.objects:
             detected_obj_msg = DetectedObject()
             
@@ -284,6 +283,7 @@ class Perception(Node):
                 print("vehicle type:", obj.label)
                 print("Direction from vehicle POV: ", obj.relative_direction.data)
                 print("Object relative Position from Vehicle: ", obj.position.x, obj.position.y)
+                print("Object Orientation: ", obj.orientation.x, obj.orientation.y, obj.orientation.z, obj.orientation.w)
                 print("DEBUG - min dist: ", obj.distance) 
                 print("object shape size: ", obj.shape)
                 print("---------------------")
