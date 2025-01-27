@@ -560,8 +560,9 @@ class Planning(Node):
         objects_ahead = []
         for obj in self.detectedObjects.objects:
             object_direction = obj.relative_direction.data
-            if object_direction == 'above' or object_direction == 'NW' or object_direction == 'NE':
-                objects_ahead.append(obj)
+            if obj.label != 7:
+                if object_direction == 'above' or object_direction == 'NW' or object_direction == 'NE':
+                    objects_ahead.append(obj)
         print("Number of Detected Objects in front: ", len(objects_ahead))
         return objects_ahead
         
@@ -691,19 +692,26 @@ class Planning(Node):
             y = m1 * (x - x1) + y1
         return (x, y)
 
-    def is_point_on_segment(self, intersection, waypoint1, waypoint2):
+    def dot_product(self, v1, v2):
+        return v1[0] * v2[0] + v1[1] * v2[1]
+
+    def is_point_on_segment(self, object_pose, intersection, waypoint1, waypoint2, forward_vector):
         # Unpack the intersection point and the waypoints
         x, y = intersection
         x1, y1 = waypoint1['x'], waypoint1['y']
         x2, y2 = waypoint2['x'], waypoint2['y']
+        x3, y3 = object_pose.x, object_pose.y
+
+        object_to_intersect_vector = [x-x3, y-y3]
         # Check if the intersection point is within the bounds of the segment
         if min(x1, x2) <= x <= max(x1, x2) and min(y1, y2) <= y <= max(y1, y2):
-            return True  # Intersection point is on the segment
+            if self.dot_product(object_to_intersect_vector, forward_vector) >= 0:
+                return True  # Intersection point is on the segment
         return False  # Intersection point is outside the segment
         
     def get_forward_vector(self, quaternion):
         # Define the local forward vector (Unity's forward is [0, 0, 1])
-        local_forward = np.array([1, 0, 0])
+        local_forward = np.array([-1, 0, 0])
         # Convert the quaternion to a rotation object
         rotation = R.from_quat(np.array([quaternion.x, quaternion.y, quaternion.z, quaternion.w]))  # Quaternion format: [x, y, z, w]
         # Apply the rotation to the local forward vector
@@ -718,13 +726,21 @@ class Planning(Node):
         # print("waypoints: ", len(path_to_predict))
         predicted_collison_points = []
         for i in range(len(objects_in_range)):
+            print(f"object {i}, label: {objects_in_range[i].label}")
+            print(f"direction {objects_in_range[i].relative_direction.data}, distance {objects_in_range[i].distance}")
+            print(f"position {objects_absulute_positions[i]}")
             for j in range(len(path_to_predict) - 1):
                 forward_vector = self.get_forward_vector(objects_in_range[i].orientation)
+                print("forward: ", forward_vector)
                 collison_point = self.find_intersection(objects_absulute_positions[i], forward_vector, path_to_predict[j], path_to_predict[j+1])
                 if collison_point:
-                    if self.is_point_on_segment(collison_point, path_to_predict[j], path_to_predict[j+1]):
+                    if self.is_point_on_segment(objects_absulute_positions[i], collison_point, path_to_predict[j], path_to_predict[j+1], forward_vector):
                         if self.calculate_distance({'x': collison_point[0],'y': collison_point[1]}, {'x': objects_absulute_positions[i].x,'y': objects_absulute_positions[i].y}) <= 10.0:
-                            collison_point = Point(x=collison_point[0], y=collison_point[1], z=path_to_predict[j]['z'])
+                            print(f"waypoint {j}, {j+1}, {path_to_predict[j]['x'], path_to_predict[j]['y']}, {path_to_predict[j+1]['x'], path_to_predict[j+1]['y']}")
+                            print("collison point: ", collison_point[0], collison_point[1])
+                            print("object distance to collison point: ", self.calculate_distance({'x': collison_point[0],'y': collison_point[1]}, {'x': objects_absulute_positions[i].x,'y': objects_absulute_positions[i].y}))
+                            # collison_point = Point(x=collison_point[0], y=collison_point[1], z=path_to_predict[j]['z'])
+                            collison_point = Point(x=path_to_predict[j]['x'], y=path_to_predict[j]['y'], z=path_to_predict[j]['z'])
                             predicted_collison_points.append(collison_point)
                             break
         if predicted_collison_points:
