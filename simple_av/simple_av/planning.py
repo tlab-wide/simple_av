@@ -397,13 +397,11 @@ class Planning(Node):
         """
         search_area_indexes_on_path = (self.path.index(search_area[0]), self.path.index(search_area[-1]))
         if current_closest_point_index == len(self.path) - 1:
-            # print("debug shiit: ", len(self.path))
             return current_closest_point_index, self.path[current_closest_point_index]
         first_ahead_point_index = self.get_first_ahead_point(vehicle_pose, current_closest_point_index)
         
         # final point in path
         if first_ahead_point_index >= len(self.path):
-            # self.get_logger().error("first_ahead_point >= len(self.path)")
             return first_ahead_point_index, self.path[first_ahead_point_index]
         
         # find the lookahead point in front of the vehicle.  lookahead distance - interval < look ahead point distance <= lookahead distance
@@ -605,7 +603,7 @@ class Planning(Node):
     
     def find_obstacle_on_path(self, objects_in_range, current_closest_point_to_vehicle_index, vehicle_pose):
         objects_on_path = []
-        in_range_objects_absulute_positions = [self.get_object_absolute_position(self.pose.pose.orientation, vehicle_pose, obj.position) for obj in objects_in_range]
+        objects_absulute_positions = [self.get_object_absolute_position(self.pose.pose.orientation, vehicle_pose, obj.position) for obj in objects_in_range]
         # print("DEBUG 1 - ##########")
         # print("number of Objects in range: ", len(objects_in_range))
         # for i in range(len(objects_in_range)):
@@ -620,7 +618,7 @@ class Planning(Node):
         # print(f"DEBUG 1 - Next {len(self.path[current_closest_point_to_vehicle_index:current_closest_point_to_vehicle_index + int(self.reaction_distance / self.densify_interval) + 1])} waypoints")
         for i in range(len(objects_in_range)):
             for waypoint in self.path[current_closest_point_to_vehicle_index:current_closest_point_to_vehicle_index + int(self.reaction_distance / self.densify_interval) + 1]:
-                object_pose = {'x': in_range_objects_absulute_positions[i].x, 'y': in_range_objects_absulute_positions[i].y, 'z': in_range_objects_absulute_positions[i].z}
+                object_pose = {'x': objects_absulute_positions[i].x, 'y': objects_absulute_positions[i].y, 'z': objects_absulute_positions[i].z}
                 dist = self.calculate_distance(object_pose, waypoint)
                 if dist <= self.densify_interval*2:
                     objects_on_path.append({"object": objects_in_range[i], "waypoint": waypoint})
@@ -646,9 +644,6 @@ class Planning(Node):
         return closest_object_info
 
     def collision_avoidance(self, objects_in_range, current_closest_point_to_vehicle_index, vehicle_pose):
-        if not objects_in_range:
-            self.get_logger().info("No Immediate danger")
-            return False, None, 'Cruise'
         
         closest_object_info = self.find_obstacle_on_path(objects_in_range, current_closest_point_to_vehicle_index, vehicle_pose)
         # return False, None, 'Cruise'
@@ -674,43 +669,56 @@ class Planning(Node):
         task = 'Decelerate'
         return True, stop_point, task
     
-    def find_intersection(line1_point, line1_vector, line2_point1, line2_point2):
+    def get_traffic_light_StopPoint(self, p1, p2):
+        return Point(x=(p1[0] + p2[0])/2, y=(p1[1] + p2[1])/2, z=(p1[2] + p2[2])/2)
+    
+    
+    def find_intersection(self, object_pose, object_forward_vector, waypoint1, waypoint2):
         # Extract components
-        x1, y1 = line1_point
-        a1, b1 = line1_vector
-        x2, y2 = line2_point1
-        x3, y3 = line2_point2
+        x1, y1 = object_pose.x, object_pose.y
+        a1, b1 = object_forward_vector
+        x2, y2 = waypoint1['x'], waypoint1['y']
+        x3, y3 = waypoint2['x'], waypoint2['y']
 
-        # Direction vector of Line 2
+        # Direction vector of Line 2 (waypoints)
         a2 = x3 - x2
         b2 = y3 - y2
 
-        # Check if lines are parallel
-        if a1 * b2 == a2 * b1:
-            return None  # Lines are parallel
+        # Equation of Line 1 (object path): y - y1 = m1 * (x - x1)
+        # m1 = b1 / a1 (from vector)
+        m1 = b1 / a1 if a1 != 0 else float('inf')  # Handle vertical line case
 
-        # Equation of Line 1: b1(x - x1) - a1(y - y1) = 0
-        A1 = b1
-        B1 = -a1
-        C1 = a1 * y1 - b1 * x1
+        # Equation of Line 2: y - y2 = m2 * (x - x2)
+        m2 = b2 / a2 if a2 != 0 else float('inf')  # Handle vertical line case
 
-        # Equation of Line 2: b2(x - x2) - a2(y - y2) = 0
-        A2 = b2
-        B2 = -a2
-        C2 = a2 * y2 - b2 * x2
-
-        # Solve the system of equations
-        denominator = A1 * B2 - A2 * B1
-        if denominator == 0:
-            return None  # Lines are parallel
-
-        x = (B2 * C1 - B1 * C2) / denominator
-        y = (A1 * C2 - A2 * C1) / denominator
-
+        # Handle the vertical lines (infinite slope)
+        if m1 == m2:
+            self.get_logger().warning("Parallel lines")
+            return None  # Parallel vertical lines
+        elif m1 == float('inf'):  # Line 1 is vertical
+            x = x1
+            y = m2 * (x - x2) + y2
+        elif m2 == float('inf'):  # Line 2 is vertical
+            x = x2
+            y = m1 * (x - x1) + y1
+        else:  # Neither line is vertical
+            # Solve the system of equations:
+            # y = m1 * (x - x1) + y1
+            # y = m2 * (x - x2) + y2
+            # Set the two equations equal to each other
+            x = (y2 - y1 + m1 * x1 - m2 * x2) / (m1 - m2)
+            y = m1 * (x - x1) + y1
         return (x, y)
 
-    def get_traffic_light_StopPoint(self, p1, p2):
-        return Point(x=(p1[0] + p2[0])/2, y=(p1[1] + p2[1])/2, z=(p1[2] + p2[2])/2)
+    def is_point_on_segment(self, intersection, waypoint1, waypoint2):
+        # Unpack the intersection point and the waypoints
+        x, y = intersection
+        x1, y1 = waypoint1['x'], waypoint1['y']
+        x2, y2 = waypoint2['x'], waypoint2['y']
+        # Check if the intersection point is within the bounds of the segment
+        if min(x1, x2) <= x <= max(x1, x2) and min(y1, y2) <= y <= max(y1, y2):
+            return True  # Intersection point is on the segment
+        return False  # Intersection point is outside the segment
         
     def get_forward_vector(self, quaternion):
         # Define the local forward vector (Unity's forward is [0, 0, 1])
@@ -722,11 +730,29 @@ class Planning(Node):
         return global_forward [:2]
         
     def collison_prediction(self, objects_in_range, current_closest_point_to_vehicle_index, vehicle_pose):
-        in_range_objects_absulute_positions = [self.get_object_absolute_position(self.pose.pose.orientation, vehicle_pose, obj.position) for obj in objects_in_range]
+        objects_absulute_positions = [self.get_object_absolute_position(self.pose.pose.orientation, vehicle_pose, obj.position) for obj in objects_in_range]
         self.get_logger().warning("DEBUG 2 - ##########")
         print("number of Objects in range: ", len(objects_in_range))
         path_to_predict = self.path[current_closest_point_to_vehicle_index:current_closest_point_to_vehicle_index + int(self.reaction_distance / self.densify_interval) + 1]
-        print("waypoints: ", path_to_predict)
+        print("waypoints: ", len(path_to_predict))
+        for i in range(len(objects_in_range)):
+            for j in range(len(path_to_predict) - 1):
+                forward_vector = self.get_forward_vector(objects_in_range[i].orientation)
+                collison_point = self.find_intersection(objects_absulute_positions[i], forward_vector, path_to_predict[j], path_to_predict[j+1])
+                print("---------------------") 
+                print(f"object number {i} with forward vector {forward_vector}")
+                print(f"RSU: {objects_in_range[i].is_from_rsu}, object type: {objects_in_range[i].label}, Relative Direction from vehicle POV: {objects_in_range[i].relative_direction.data}")
+                print("Object relative Position from Vehicle: ", objects_in_range[i].position.x, objects_in_range[i].position.y)
+                print("Object absolute pose: ", objects_absulute_positions[i].x, objects_absulute_positions[i].y)
+                print("Distance to the object: ", objects_in_range[i].distance)
+                print(f"waypoint number {j}, {j+1}: {path_to_predict[j]['x'], path_to_predict[j]['y']}, {path_to_predict[j+1]['x'], path_to_predict[j+1]['y']}")
+                if collison_point:
+                    print(f"intersects in {collison_point}")
+                    print(f"is on segment {self.is_point_on_segment(collison_point, path_to_predict[j], path_to_predict[j+1])}")
+                else:
+                    print("Lines are parallel")
+
+
 
     def behavioural_planning(self, look_ahead_point, look_ahead_point_index, current_closest_point_to_vehicle_index, isTurnDetected):
         # Current vehicle position
@@ -744,15 +770,20 @@ class Planning(Node):
         
         # Manage traffic lights and collision avoidance
         isTrafficLightDetected, vehicleTaskForTrafficLight, trafficLightColor, stop_point_for_traffic_light = self.manage_traffic_lights()
-        objects_ahead = self.get_detected_objects_in_front()
-        objects_in_range = self.get_objects_in_range(objects_ahead, self.detection_radius)
-        isObjectAhead, stop_point_for_collision_avoidance, collision_task = self.collision_avoidance(
-            objects_in_range, current_closest_point_to_vehicle_index, vehicle_pose
-        )
-        self.collison_prediction(
-            objects_in_range, current_closest_point_to_vehicle_index, vehicle_pose
-        )
         
+        isObjectAhead = False
+        objects_ahead = self.get_detected_objects_in_front()
+        objects_in_range = self.get_objects_in_range(objects_ahead, 15.0)
+        if objects_in_range:
+            isObjectAhead, stop_point_for_collision_avoidance, collision_task = self.collision_avoidance(
+                objects_in_range, current_closest_point_to_vehicle_index, vehicle_pose
+            )
+            self.collison_prediction(
+                objects_in_range, current_closest_point_to_vehicle_index, vehicle_pose
+            )
+
+        self.status.data = 'Cruise'
+        return self.destination
         # Helper function to calculate distances
         def calculate_distance_to(point):
             return self.calculate_distance(
@@ -852,7 +883,6 @@ class Planning(Node):
             self.mission_planning()  # generates the path and dencifies it.
         else:
             if not self.location and not self.pose:
-                self.get_logger().info("path planning")
                 self.get_logger().warning("No location/pose input")
                 return None
             
@@ -881,13 +911,13 @@ class Planning(Node):
             
             
             self.publish_planning_msgs(look_ahead_point, stop_point, speed) # publishing
-            self.get_logger().info(
-                f'planning\n'
-                f'lookahead distance:  {self.lookahead_distance}\n'
-                f'is turn detected: {isTurnDetected}\n'
-                f'speed: {speed}\n'
-                f'status: {self.status.data}\n'
-            )
+            # self.get_logger().info(
+            #     f'planning\n'
+            #     f'lookahead distance:  {self.lookahead_distance}\n'
+            #     f'is turn detected: {isTurnDetected}\n'
+            #     f'speed: {speed}\n'
+            #     f'status: {self.status.data}\n'
+            # )
 
 def main(args=None):
     rclpy.init(args=args)
