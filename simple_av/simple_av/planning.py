@@ -711,7 +711,7 @@ class Planning(Node):
         
     def get_forward_vector(self, quaternion):
         # Define the local forward vector (Unity's forward is [0, 0, 1])
-        local_forward = np.array([-1, 0, 0])
+        local_forward = np.array([1, 0, 0])
         # Convert the quaternion to a rotation object
         rotation = R.from_quat(np.array([quaternion.x, quaternion.y, quaternion.z, quaternion.w]))  # Quaternion format: [x, y, z, w]
         # Apply the rotation to the local forward vector
