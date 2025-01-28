@@ -15,6 +15,7 @@ from v2x_msgs.msg import CooperativeSignalsMessage
 import numpy as np
 from simple_av_msgs.msg import TrafficSignalsArray, DetectedObjectsArray, DetectedObject
 from scipy.spatial.transform import Rotation as R
+from autoware_auto_vehicle_msgs.msg import VelocityReport
 
 class PathCurveDetector:
     def __init__(self, points, angle_threshold=15):
@@ -80,6 +81,15 @@ class Planning(Node):
             'prevLanes': lanelet.get('prevLanes', []),
             'adjacentLanes': lanelet.get('adjacentLanes', []),
         } for lanelet in self.map_data}
+
+        self.subscriptionVelocityReport = self.create_subscription(
+            VelocityReport,
+            '/vehicle/status/velocity_status',
+            self.velocity_report_callback,
+            10
+        )
+        self.velocity_report = VelocityReport()
+        self.collison_time_threshold = 5.0 #seconds
 
         # Create subscriber to 'simple_av/perception/traffic_signals' topic /v2x/traffic_signals1
         self.subscriptionTrafficSignal = self.create_subscription(TrafficSignalsArray, 'simple_av/perception/traffic_signals', self.trafficSignal_callback, 10)
@@ -147,6 +157,9 @@ class Planning(Node):
         self.dest_lanelet = self.test_config['destination']
 
         self.node_shut = False
+    
+    def velocity_report_callback(self, msg):
+        self.velocity_report = msg
     
     def load_test_config(self):
         # Path to the YAML file
@@ -717,15 +730,32 @@ class Planning(Node):
         global_forward = rotation.apply(local_forward)
         return global_forward [:2]
     
-    def objects_speed_info(self, object_type):
-        speed = None
-        if object_type == 7:
-            speed = 1.0  
+    def get_object_speed(self, vehicle_type):
+        if vehicle_type == 7:
+            return 2.0
+        return 4.0
+
+    def get_time_to_collison(self, current_pose, collison_point, speed):
+        dist = self.calculate_distance({'x': collison_point.x,'y': collison_point.y}, current_pose)
+        print(f"DEBUG - dist {dist}, speed: {speed}, time: {dist/speed}")
+        return dist/speed
+
+    def will_clooide_on_path(self, object_type, object_pose, vehicle_pose, collison_point):
+        current_vehicle_speed = self.velocity_report.longitudinal_velocity if self.velocity_report else 0.0   
+        print("DEBUG - object type - ", object_type)
+        t_vehicle = self.get_time_to_collison(vehicle_pose, collison_point, current_vehicle_speed)
+        t_object = self.get_time_to_collison({'x': object_pose.x,'y': object_pose.y}, collison_point, self.get_object_speed(object_type))
+        time_difference = abs(t_vehicle - t_object)
+        if time_difference <= self.collison_time_threshold:
+            print(f"Potential collision detected! Time difference: {time_difference:.2f} seconds.")
+            return True
+        else:
+            print(f"Safe to proceed. Time difference: {time_difference:.2f} seconds.")
+            return False
         
     def collison_prediction(self, objects_in_range, current_closest_point_to_vehicle_index, vehicle_pose):
         objects_absulute_positions = [self.get_object_absolute_position(self.pose.pose.orientation, vehicle_pose, obj.position) for obj in objects_in_range]
         path_to_predict = self.path[current_closest_point_to_vehicle_index:current_closest_point_to_vehicle_index + int(self.reaction_distance / self.densify_interval) + 1]
-        predicted_collison_points = []
         predicted_stop_points = []
         for i in range(len(objects_in_range)):
             for j in range(len(path_to_predict) - 1):
@@ -733,13 +763,18 @@ class Planning(Node):
                 collison_point = self.find_intersection(objects_absulute_positions[i], forward_vector, path_to_predict[j], path_to_predict[j+1])
                 if collison_point:
                     if self.is_point_on_segment(objects_absulute_positions[i], collison_point, path_to_predict[j], path_to_predict[j+1], forward_vector):
-                        if self.calculate_distance({'x': collison_point[0],'y': collison_point[1]}, {'x': objects_absulute_positions[i].x,'y': objects_absulute_positions[i].y}) <= 10.0:
-                            collison_point = Point(x=collison_point[0], y=collison_point[1], z=path_to_predict[j]['z'])
-                            predicted_collison_points.append(collison_point)
+                        collison_point = Point(x=collison_point[0], y=collison_point[1], z=path_to_predict[j]['z'])
+                        print('vehicle pose: ', self.pose.pose.position.x, self.pose.pose.position.y)
+                        print(f'object: {i}, pose: {objects_absulute_positions[i].x},  {objects_absulute_positions[i].y}')
+                        print(f'collison point: {collison_point.x}, {collison_point.y}')
+                        print("waypoint number: ", j, j+1)
+                        if self.will_clooide_on_path(objects_in_range[i].label, objects_absulute_positions[i], vehicle_pose, collison_point):
+                            print("collide detected")
                             stop_point_index = j
                             if j >= 1:
                                 stop_point_index = j - 1
                             stop_point = Point(x=path_to_predict[stop_point_index]['x'], y=path_to_predict[stop_point_index]['y'], z=path_to_predict[stop_point_index]['z'])
+                            print(f"stop point: {stop_point.x}, {stop_point.y}")
                             predicted_stop_points.append(stop_point)
                             break
         if predicted_stop_points:
@@ -781,7 +816,7 @@ class Planning(Node):
         # isTrafficLightDetected, vehicleTaskForTrafficLight, trafficLightColor, stop_point_for_traffic_light = self.manage_traffic_lights()
         
         objects_ahead = self.get_detected_objects_in_front()
-        objects_in_range = self.get_objects_in_range(objects_ahead, self.reaction_distance)
+        objects_in_range = self.get_objects_in_range(objects_ahead, self.detection_radius)
         if objects_in_range:
             # isObjectAhead, stop_point_for_collision_avoidance, collision_task = self.collision_avoidance(objects_in_range, current_closest_point_to_vehicle_index, vehicle_pose)
             isCollisonPredicted, predicted_collison_points = self.collison_prediction(objects_in_range, current_closest_point_to_vehicle_index, vehicle_pose)
