@@ -645,19 +645,20 @@ class Planning(Node):
         return closest_object_info
 
     def collision_avoidance(self, objects_in_range, current_closest_point_to_vehicle_index, vehicle_pose):
-        
+        if not objects_in_range:
+            return None
         closest_object_info = self.find_obstacle_on_path(objects_in_range, current_closest_point_to_vehicle_index, vehicle_pose)
         # return False, None, 'Cruise'
         if not closest_object_info:
             self.get_logger().info("No Immediate danger")
-            return False, None
+            return None
         self.get_logger().info("Imediate threat. Objects ahead in danger zone")
         
-        stop_point_index = self.path.index(closest_object_info['waypoint']) - int(closest_object_info['object'].shape.x / self.densify_interval) - 1
+        stop_point_index = self.path.index(closest_object_info['waypoint']) - int(closest_object_info['object'].shape.x / self.densify_interval)
         stop_point = self.path[stop_point_index]
         stop_point = Point(x=stop_point['x'], y=stop_point['y'], z=stop_point['z'])
 
-        return True, stop_point
+        return stop_point
     
     def get_traffic_light_StopPoint(self, p1, p2):
         return Point(x=(p1[0] + p2[0])/2, y=(p1[1] + p2[1])/2, z=(p1[2] + p2[2])/2)
@@ -727,10 +728,13 @@ class Planning(Node):
             return 2.0
         return 4.0
 
-    def get_time_to_collison(self, current_pose, collison_point, speed):
-        dist = self.calculate_distance({'x': collison_point.x,'y': collison_point.y}, current_pose)
-        print(f"DEBUG - dist {dist}, speed: {speed}, time: {dist/speed}")
-        return dist/speed
+    def get_time_to_collison(self, current_pose, collision_point, speed):
+        if speed == 0.0:
+            return float('inf')  # Return infinity to indicate no collision
+        dist = self.calculate_distance({'x': collision_point.x, 'y': collision_point.y}, current_pose)
+        time_to_collision = dist / speed
+        print(f"DEBUG - dist: {dist}, speed: {speed}, time: {time_to_collision}")
+        return time_to_collision
 
     def will_clooide_on_path(self, object_type, object_pose, vehicle_pose, collison_point):
         current_vehicle_speed = self.velocity_report.longitudinal_velocity if self.velocity_report else 0.0   
@@ -746,6 +750,8 @@ class Planning(Node):
             return False
         
     def collison_prediction(self, objects_in_range, current_closest_point_to_vehicle_index, vehicle_pose):
+        if not objects_in_range:
+            return None
         objects_absulute_positions = [self.get_object_absolute_position(self.pose.pose.orientation, vehicle_pose, obj.position) for obj in objects_in_range]
         path_to_predict = self.path[current_closest_point_to_vehicle_index:current_closest_point_to_vehicle_index + int(self.reaction_distance / self.densify_interval) + 1]
         predicted_stop_points = []
@@ -756,33 +762,33 @@ class Planning(Node):
                 if collison_point:
                     if self.is_point_on_segment(objects_absulute_positions[i], collison_point, path_to_predict[j], path_to_predict[j+1], forward_vector):
                         collison_point = Point(x=collison_point[0], y=collison_point[1], z=path_to_predict[j]['z'])
-                        print('vehicle pose: ', self.pose.pose.position.x, self.pose.pose.position.y)
-                        print(f'object: {i}, pose: {objects_absulute_positions[i].x},  {objects_absulute_positions[i].y}')
-                        print(f'collison point: {collison_point.x}, {collison_point.y}')
-                        print("waypoint number: ", j, j+1)
+                        # print('vehicle pose: ', self.pose.pose.position.x, self.pose.pose.position.y)
+                        # print(f'object: {i}, pose: {objects_absulute_positions[i].x},  {objects_absulute_positions[i].y}')
+                        # print(f'collison point: {collison_point.x}, {collison_point.y}')
+                        # print("waypoint number: ", j, j+1)
                         if self.will_clooide_on_path(objects_in_range[i].label, objects_absulute_positions[i], vehicle_pose, collison_point):
-                            print("collide detected")
                             stop_point_index = j
                             if j >= 1:
                                 stop_point_index = j - 1
                             stop_point = Point(x=path_to_predict[stop_point_index]['x'], y=path_to_predict[stop_point_index]['y'], z=path_to_predict[stop_point_index]['z'])
-                            print(f"stop point: {stop_point.x}, {stop_point.y}")
+                            # print(f"stop point: {stop_point.x}, {stop_point.y}")
                             predicted_stop_points.append(stop_point)
                             break
         return predicted_stop_points
     
     def get_closest_stop_point(self, traffic_light_stopPoint, collision_avoidance_stopPoint, predicted_collisons_stopPoints, destination_stopPoint, vehicle_pose):
-        # create a dictionary for stop points
+        # Create a dictionary for stop points
         stop_points = {}
+        
         if traffic_light_stopPoint:
-            stop_points[traffic_light_stopPoint] = 'TrafficLight'
+            stop_points[id(traffic_light_stopPoint)] = ('TrafficLight', traffic_light_stopPoint)
         if collision_avoidance_stopPoint:
-            stop_points[traffic_light_stopPoint] = 'CollisonAvoidance'
+            stop_points[id(collision_avoidance_stopPoint)] = ('CollisonAvoidance', collision_avoidance_stopPoint)
         if predicted_collisons_stopPoints:
             for point in predicted_collisons_stopPoints:
-                stop_points[point] = 'CollisonPrediction'
+                stop_points[id(point)] = ('CollisonPrediction', point)
         if destination_stopPoint:
-            stop_points[destination_stopPoint] = 'Destination'
+            stop_points[id(destination_stopPoint)] = ('Destination', destination_stopPoint)
         
         # Helper function to calculate distances
         def calculate_distance_to(point):
@@ -790,17 +796,22 @@ class Planning(Node):
                 vehicle_pose, 
                 {'x': point.x, 'y': point.y, 'z': point.z}
             )
-        minimum_distance, closest_stop_point, stop_point_type = float("inf"), None, None
-        for stop_point, type in stop_points.items():
+        
+        minimum_distance = float("inf")
+        closest_stop_point = None
+        stop_point_type = None
+        
+        for _, (type, stop_point) in stop_points.items():
             dist = calculate_distance_to(stop_point)
             if dist < minimum_distance:
                 minimum_distance = dist
                 closest_stop_point = stop_point
                 stop_point_type = type
-        print(f'closest stop point: {closest_stop_point}')
+        
         print(f'closest stop point type: {stop_point_type}')
         print(f'distance to stop point: {minimum_distance}')
         return closest_stop_point, stop_point_type
+
 
     def behavioural_planning(self, look_ahead_point, look_ahead_point_index, current_closest_point_to_vehicle_index, isTurnDetected):
         # Current vehicle position
@@ -820,9 +831,8 @@ class Planning(Node):
         trafficLightTask, traffic_light_stopPoint = self.manage_traffic_lights()
         objects_ahead = self.get_detected_objects_in_front()
         objects_in_range = self.get_objects_in_range(objects_ahead, self.detection_radius)
-        if objects_in_range:
-            collision_avoidance_stopPoint = self.collision_avoidance(objects_in_range, current_closest_point_to_vehicle_index, vehicle_pose)
-            predicted_collisons_stopPoints = self.collison_prediction(objects_in_range, current_closest_point_to_vehicle_index, vehicle_pose)
+        collision_avoidance_stopPoint = self.collision_avoidance(objects_in_range, current_closest_point_to_vehicle_index, vehicle_pose)
+        predicted_collisons_stopPoints = self.collison_prediction(objects_in_range, current_closest_point_to_vehicle_index, vehicle_pose)
         
         stop_point, stop_point_type = self.get_closest_stop_point(traffic_light_stopPoint, collision_avoidance_stopPoint, predicted_collisons_stopPoints, self.destination, vehicle_pose)
         
@@ -916,9 +926,9 @@ class Planning(Node):
             
             self.publish_planning_msgs(look_ahead_point, stop_point, speed) # publishing
             self.get_logger().info(
-                f'planning\n'
-                f'lookahead distance:  {self.lookahead_distance}\n'
-                f'is turn detected: {isTurnDetected}\n'
+                # f'planning\n'
+                # f'lookahead distance:  {self.lookahead_distance}\n'
+                # f'is turn detected: {isTurnDetected}\n'
                 f'speed: {speed}\n'
                 f'status: {self.status.data}\n'
             )
