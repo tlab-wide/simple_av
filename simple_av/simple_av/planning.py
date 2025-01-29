@@ -154,6 +154,7 @@ class Planning(Node):
         
         self.test_config = self.load_test_config()
         self.dest_lanelet = self.test_config['destination']
+        self.start_lanelet = None
 
         self.node_shut = False
     
@@ -859,14 +860,16 @@ class Planning(Node):
 
            
 
-    def mission_planning(self):
+    def mission_planning(self, start_lanelet_respawn=None):
         """
         Perform global path planning to create a path from the current location to the destination.
         """
         if self.location:
             self.get_logger().info("path planning")
-            start_lanelet = self.location.closest_lane_names.data
-            self.bfs(start_lanelet, self.dest_lanelet) # Creates the path
+            self.start_lanelet = self.location.closest_lane_names.data
+            if start_lanelet_respawn:
+                self.start_lanelet = start_lanelet_respawn
+            self.bfs(self.start_lanelet, self.dest_lanelet) # Creates the path
             print(self.path_as_lanes)
             if self.path and self.path_as_lanes:
                 self.destination = Point(x=self.path[-1]['x'], y=self.path[-1]['y'], z=self.path[-1]['z'])
@@ -914,7 +917,9 @@ class Planning(Node):
             if self.reset:
                 self.get_logger().warning("RESET")
                 self.isPathPlanned = False
-                return
+                self.get_logger().info("Misson planning")
+                print("DEBUG - start_lanelet_respawn: ", self.start_lanelet)
+                self.mission_planning(self.start_lanelet)  # generates the path and dencifies it.
             
             search_area, search_area_as_lanes = self.create_search_area()
             look_ahead_point_index, look_ahead_point, current_closest_point_to_vehicle_index, isTurnDetected, speed = self.local_planning(search_area)
