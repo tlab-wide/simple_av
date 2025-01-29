@@ -622,7 +622,8 @@ class Planning(Node):
             for waypoint in self.path[current_closest_point_to_vehicle_index:current_closest_point_to_vehicle_index + int(self.reaction_distance / self.densify_interval) + 1]:
                 object_pose = {'x': objects_absulute_positions[i].x, 'y': objects_absulute_positions[i].y, 'z': objects_absulute_positions[i].z}
                 dist = self.calculate_distance(object_pose, waypoint)
-                if dist <= self.densify_interval*2:
+                if dist <= self.densify_interval*1:
+                    print("DEBUG collison avoidance object dist to waypoint: ", dist)
                     objects_on_path.append({"object": objects_in_range[i], "waypoint": waypoint})
                     break
         
@@ -844,7 +845,10 @@ class Planning(Node):
             self.status.data = 'Turn'
         
         if stop_point_type == 'CollisonAvoidance' or stop_point_type == 'CollisonPrediction':
-            self.get_logger().warning('CollisonAvoidance')
+            if stop_point_type == 'CollisonAvoidance':
+                self.get_logger().warning('CollisonAvoidance')
+            else:
+                self.get_logger().warning('CollisonPrediction')
             self.status.data = 'Decelerate'
         
         if stop_point_type == 'TrafficLight':
@@ -878,7 +882,7 @@ class Planning(Node):
             if self.path and self.path_as_lanes and self.curves:
                 self.isPathPlanned = True
                 print("path of lanes: ", self.path_as_lanes)
-                self.initial_lane = self.location.closest_lane_names.data
+                # self.initial_lane = self.location.closest_lane_names.data
                 self.route = self.path_as_lanes[:]
                 self.current_lane_index = 0
                 # print("path of lanes: ", self.path)
@@ -904,9 +908,9 @@ class Planning(Node):
                 self.get_logger().warning("No location/pose input")
                 return None
             
-            if self.initial_lane != self.path_as_lanes[0]:
-                self.get_logger().error("Contradiction between Location initial Lane and the first Lane on the path")
-                return
+            # if self.initial_lane != self.path_as_lanes[0]:
+            #     self.get_logger().error("Contradiction between Location initial Lane and the first Lane on the path")
+            #     return
             
             if self.finished:
                 self.status.data = 'Park'
