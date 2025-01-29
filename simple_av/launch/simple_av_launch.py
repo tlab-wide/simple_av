@@ -9,6 +9,12 @@ def generate_launch_description():
             name='localization_node',
             output='screen'
         ),
+        Node(
+            package='simple_av',
+            executable='portal',
+            name='portal_node',
+            output='screen'
+        ),
          Node(
             package='simple_av',
             executable='perception',

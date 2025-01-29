@@ -185,11 +185,11 @@ class VehicleControl(Node):
         # Turn Indicator Light Control
         turn_indicator_msg = TurnIndicatorsCommand()
         turn_indicator_msg.stamp = self.get_clock().now().to_msg()
-        if self.lookAhead.status.data == 'Turn':
-            steering_angle = control_msg.lateral.steering_tire_angle
-            turn_indicator_msg.command = TurnIndicatorsCommand.ENABLE_LEFT if steering_angle >= 0 else TurnIndicatorsCommand.ENABLE_RIGHT
-        else:
-            turn_indicator_msg.command = TurnIndicatorsCommand.DISABLE
+        # if self.lookAhead.status.data == 'Turn':
+        #     steering_angle = control_msg.lateral.steering_tire_angle
+        #     turn_indicator_msg.command = TurnIndicatorsCommand.ENABLE_LEFT if steering_angle >= 0 else TurnIndicatorsCommand.ENABLE_RIGHT
+        # else:
+        #     turn_indicator_msg.command = TurnIndicatorsCommand.DISABLE
         
         # Gear Control
         gear_msg = GearCommand()
@@ -236,7 +236,7 @@ class VehicleControl(Node):
             if status == "Stop_red" and distance_to_stop <= 5.0:
                 self.get_logger().warning("Full stop!")
                 target_speed = 0.0
-            if status == "Decelerate" and distance_to_stop <= 1.0:
+            if status == "Decelerate" and distance_to_stop <= 1.5:
                 self.get_logger().warning("Full stop!")
                 target_speed = 0.0
         
