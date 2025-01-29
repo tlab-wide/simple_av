@@ -24,6 +24,6 @@ vehicles:
     max_speed: 20.0  # m/s
     base_speed: 7.0 # m/s
     turning_speed: 1.75 # m/s
-    max_acceleration: 1.5 #m/s^2
+    max_acceleration: 1.6 #m/s^2
     max_braking_accel: -3.0 #m/s^2
     
