@@ -28,7 +28,8 @@ setup(
             'localization = simple_av.localization:main',
             'planning = simple_av.planning:main',
             'perception = simple_av.perception:main',
-            'portal = simple_av.portal:main'
+            'portal = simple_av.portal:main',
+            'sim_monitor = simple_av.sim_clock_monitor:main'
         ],
     },
 )
