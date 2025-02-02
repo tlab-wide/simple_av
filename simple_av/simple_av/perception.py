@@ -234,10 +234,14 @@ class Perception(Node):
                 object_relative_pose = self.apply_inverse_quaternion_rotation(self.vehicle_pose.pose.orientation, vector)
                 detected_obj_msg.orientation = Quaternion(x=pose.orientation.x, y=pose.orientation.y, z=pose.orientation.z, w=pose.orientation.w)
                 detected_obj_msg.position = Point(x=object_relative_pose.x, y=object_relative_pose.y, z=object_relative_pose.z)
+                object_linear_velocity = obj.kinematics.initial_twist_with_covariance.twist.linear.x
+                detected_obj_msg.velocity = object_linear_velocity
             else:
                 pose = obj.kinematics.pose_with_covariance.pose
                 detected_obj_msg.orientation = self.convert_to_global_orientation(pose.orientation, self.vehicle_pose.pose.orientation)
                 detected_obj_msg.position = Point(x=pose.position.x, y=pose.position.y, z=pose.position.z)
+                object_linear_velocity = obj.kinematics.twist_with_covariance.twist.linear.x
+                detected_obj_msg.velocity = object_linear_velocity
             
             detected_obj_msg.relative_direction.data = self.object_direction(detected_obj_msg.position.x, detected_obj_msg.position.y)
             shape = obj.shape.dimensions
