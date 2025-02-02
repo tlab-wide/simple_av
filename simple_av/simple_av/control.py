@@ -17,17 +17,20 @@ import yaml
 import os
 from ament_index_python.packages import get_package_share_directory
 from simple_av_msgs.msg import Portal
+from rclpy.parameter import Parameter
 
 
 class PIDController:
-    def __init__(self, p_gain, i_gain, d_gain, delta_t=0.01):
+    def __init__(self, p_gain, i_gain, d_gain, sim_clock, delta_t=0.01):
         self.kp = p_gain
         self.ki = i_gain
         self.kd = d_gain
         self.delta_t = delta_t
 
-        self.current_time = time.time()
+        self.current_time = sim_clock
         self.last_time = self.current_time
+        self.test_current_time = time.time()
+        self.test_last_time = self.test_current_time
 
         self.integrated_error = 0.0
 
@@ -35,15 +38,21 @@ class PIDController:
 
         self.previous_error = 0.0
     
-    def updatePID(self, observed_vel, target_vel):
+    def updatePID(self, observed_vel, target_vel, sim_clock):
         # print("debug speed: ", target_vel, observed_vel)
         error = target_vel - observed_vel
-        self.current_time = time.time()
-        delta_time = self.current_time - self.last_time
+        self.current_time = sim_clock
+        self.test_current_time = time.time()
+        delta_time = self.current_time - self.last_time  # Convert to seconds
+        delta_time_test = self.test_current_time - self.test_last_time
+        print("Current time: ", self.current_time)
+        print("DT: ", delta_time)
+        print("Current time test: ", self.test_current_time)
+        print("DT test: ", delta_time_test)
         self.slidingWindow.append(error)
-
+        
         self.integrated_error = sum(self.slidingWindow) * delta_time
-        derivative = (error - self.previous_error) / delta_time
+        derivative = (error - self.previous_error) / delta_time if delta_time > 0 else 0.0005
 
         P = self.kp * error
         I = self.ki * self.integrated_error
@@ -52,6 +61,7 @@ class PIDController:
         acc_cmd = P + I + D
 
         self.last_time = self.current_time
+        self.test_last_time = self.test_current_time
         self.previous_error = error
 
         return acc_cmd
@@ -61,6 +71,10 @@ class PIDController:
 class VehicleControl(Node):
     def __init__(self, vehicle_type):
         super().__init__('control')
+        if not self.has_parameter('use_sim_time'):
+            self.declare_parameter('use_sim_time', True)
+        self.set_parameters([Parameter('use_sim_time', Parameter.Type.BOOL, True)])
+        
         self.vehicle_type = vehicle_type
         self.vehicle_config = self.load_vehicle_config(vehicle_type)
 
@@ -110,7 +124,8 @@ class VehicleControl(Node):
         self.gear_publisher = self.create_publisher(GearCommand, '/control/command/gear_cmd', qos_profile)
         self.turn_indicator_publisher = self.create_publisher(TurnIndicatorsCommand, '/control/command/turn_indicators_cmd', qos_profile)
 
-        self.pid_controller = PIDController(p_gain=1.5, i_gain=20.0, d_gain=0.5)
+        self.sim_time = self.get_clock().now().nanoseconds / 1e9  # Get the simulation clock in seconds
+        self.pid_controller = PIDController(p_gain=1.5, i_gain=20.0, d_gain=0.5, sim_clock=self.sim_time)
         self.vehicle_length = self.vehicle_config['dimensions']['length'] #meters
         self.vehicle_width = self.vehicle_config['dimensions']['width'] #meters
         self.wheel_base = self.vehicle_config['dimensions']['wheel_base'] #meters
@@ -163,6 +178,7 @@ class VehicleControl(Node):
         return np.sqrt((point1.x - point2.x)**2 + (point1.y - point2.y)**2)
 
     def control(self):
+
         if not self.velocity_report and not self.lookAhead and not self.pose and not self.ground_truth:
             return
         
@@ -235,7 +251,8 @@ class VehicleControl(Node):
                 self.get_logger().warning("Full stop!")
                 target_speed = 0.0
         
-        accel = self.pid_controller.updatePID(current_speed, target_speed)
+        self.sim_time = self.get_clock().now().nanoseconds / 1e9  # Get the simulation clock in seconds
+        accel = self.pid_controller.updatePID(current_speed, target_speed, self.sim_time)
         if accel > self.maximum_accel:
             accel = self.maximum_accel
         if accel < self.maximum_braking_accel:
