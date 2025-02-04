@@ -726,10 +726,6 @@ class Planning(Node):
         global_forward = rotation.apply(local_forward)
         return global_forward [:2]
     
-    def get_object_speed(self, vehicle_type):
-        if vehicle_type == 7:
-            return 2.0
-        return 4.0
 
     def get_time_to_collison(self, current_pose, collision_point, speed):
         if speed == 0.0:
@@ -771,7 +767,9 @@ class Planning(Node):
                         # print("waypoint number: ", j, j+1)
                         if self.will_clooide_on_path(objects_in_range[i].label, objects_in_range[i].velocity, objects_absulute_positions[i], vehicle_pose, collison_point):
                             stop_point_index = j
-                            if j >= 1:
+                            if j >= 2:
+                                stop_point_index = j - 2
+                            elif j == 1:
                                 stop_point_index = j - 1
                             stop_point = Point(x=path_to_predict[stop_point_index]['x'], y=path_to_predict[stop_point_index]['y'], z=path_to_predict[stop_point_index]['z'])
                             # print(f"stop point: {stop_point.x}, {stop_point.y}")
@@ -936,13 +934,15 @@ class Planning(Node):
             stop_point = self.behavioural_planning(look_ahead_point, look_ahead_point_index, current_closest_point_to_vehicle_index, isTurnDetected)
             
             self.publish_planning_msgs(look_ahead_point, stop_point, speed) # publishing
+            '''
             self.get_logger().info(
-                # f'planning\n'
-                # f'lookahead distance:  {self.lookahead_distance}\n'
-                # f'is turn detected: {isTurnDetected}\n'
+                f'planning\n'
+                f'lookahead distance:  {self.lookahead_distance}\n'
+                f'is turn detected: {isTurnDetected}\n'
                 f'speed: {speed}\n'
                 f'status: {self.status.data}\n'
             )
+            '''
 
 def main(args=None):
     rclpy.init(args=args)

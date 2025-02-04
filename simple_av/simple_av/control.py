@@ -236,7 +236,7 @@ class VehicleControl(Node):
             if status == "Stop_red" and distance_to_stop <= 5.0:
                 self.get_logger().warning("Full stop!")
                 target_speed = 0.0
-            if status == "Decelerate" and distance_to_stop <= 2.5:
+            if status == "Decelerate" and distance_to_stop <= 3.0:
                 self.get_logger().warning("Full stop!")
                 target_speed = 0.0
         
