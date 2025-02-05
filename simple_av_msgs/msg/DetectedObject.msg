@@ -7,6 +7,9 @@ int32 label
 # relative Position of the detected object
 geometry_msgs/Point position
 
+# Object liniear speed
+float64 velocity
+
 # Orientation of the detected object
 geometry_msgs/Quaternion orientation
 

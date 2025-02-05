@@ -1,4 +1,4 @@
-Version 1.6.0
+Version 1.7.0
 
 vehicle moves in the defined path using the V3_map.json
 localization: return current lanelet use global and local search on the json map with pose/gnss
@@ -17,4 +17,8 @@ control:
     - pure pursuit for steering
     - nonlinear deceleration curve for braking
 
-new Feature: Predicting collison on the path. merge prediction with traffic light, collison avoidance and turning
+new Feature: Consideration of objects speed in collison prediction
+Other modifications: new config files:
+    - motion_behaviour_config
+    - scenario_config
+    - feature_flags
