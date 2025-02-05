@@ -5,5 +5,5 @@ motion:
     highway: 30.0  # m/s
   
 behaviour:
-  saftey_distance: 8.0  # meters, minimum distance to stop behind an object
+  saftey_distance: 6.0  # meters, minimum distance to stop behind an object
   reaction_time_threshold: 5  # seconds, time delay before reacting to an event

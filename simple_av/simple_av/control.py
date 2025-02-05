@@ -31,7 +31,7 @@ class PIDController:
 
         self.integrated_error = 0.0
 
-        self.slidingWindow = deque(maxlen=15) # for storing only the 10 most recent errors
+        self.slidingWindow = deque(maxlen=20) # for storing only the 10 most recent errors
 
         self.previous_error = 0.0
     
@@ -103,7 +103,7 @@ class VehicleControl(Node):
         self.gear_publisher = self.create_publisher(GearCommand, '/control/command/gear_cmd', qos_profile)
         self.turn_indicator_publisher = self.create_publisher(TurnIndicatorsCommand, '/control/command/turn_indicators_cmd', qos_profile)
 
-        self.pid_controller = PIDController(p_gain=1.5, i_gain=20.0, d_gain=0.5)
+        self.pid_controller = PIDController(p_gain=1.8, i_gain=20.0, d_gain=0.5)
 
         self.node_shut = False
 
@@ -218,7 +218,7 @@ class VehicleControl(Node):
             if status == "Stop_red" and distance_to_stop <= 4.0:
                 self.get_logger().warning("Full stop!")
                 target_speed = 0.0
-            if status == "Decelerate" and distance_to_stop <= 1.0:
+            if status == "Decelerate" and distance_to_stop <= 2.0:
                 self.get_logger().warning("Full stop!")
                 target_speed = 0.0
         
