@@ -80,32 +80,21 @@ class Planning(Node):
         } for lanelet in self.map_data}
 
         # Subscribe topics
-
-        self.subscriptionVelocityReport = self.create_subscription(
-            VelocityReport,
-            '/vehicle/status/velocity_status',
-            self.velocity_report_callback,
-            10
-        )
+        self.subscriptionVelocityReport = self.create_subscription(VelocityReport, '/vehicle/status/velocity_status', self.velocity_report_callback, 10)
         self.velocity_report = VelocityReport()
 
-        # Create subscriber to 'simple_av/perception/traffic_signals' topic /v2x/traffic_signals1
         self.subscriptionTrafficSignal = self.create_subscription(TrafficSignalsArray, 'simple_av/perception/traffic_signals', self.trafficSignal_callback, 10)
-        self.trafficSignal = TrafficSignalsArray() # Initialize traffic signal
+        self.trafficSignal = TrafficSignalsArray()
 
-        # Create subscriber to 'simple_av/perception/detected_objects' topic
         self.subscriptionDetectedObjects = self.create_subscription(DetectedObjectsArray, 'simple_av/perception/detected_objects', self.detectedObjects_callback, 10)
-        self.detectedObjects = DetectedObjectsArray() # Initialize traffic signal
+        self.detectedObjects = DetectedObjectsArray()
 
-        # Create subscriber to /sensing/gnss/pose topic
         self.subscriptionPose = self.create_subscription(PoseStamped, '/sensing/gnss/pose', self.pose_callback, 10)
-        self.pose = PoseStamped()  # Initialize pose
+        self.pose = PoseStamped()
 
-        # Create subscriber to /localization/location topic
         self.subscriptionLocation = self.create_subscription(LocalizationMsg, 'simple_av/localization/location', self.location_callback, 10)
-        self.location = LocalizationMsg()  # Initialize location
+        self.location = LocalizationMsg()
 
-        # Create subscriber to simple_av/portal topic
         self.subscriptionPortal = self.create_subscription(Portal, 'simple_av/portal', self.portal_callback, 10)
         self.reset = False
         self.finished = False
@@ -113,41 +102,39 @@ class Planning(Node):
         # Publish topics
         self.planning_publisher = self.create_publisher(LookAheadMsg, 'simple_av/planning/lookahead_point', 10)
 
-
+        #Path planning
         self.isPathPlanned = False  # Flag to check if the path has been planned
         self.path_as_lanes = None  # List of lanes from start lane to destination
         self.path = None  # List of waypoints in order of path_as_lanes
         self.route = None # List of lanes from start lane to destination
         self.current_lane_index = 0
+        self.initial_lane = None
+        self.search_depth = 5
+        self.destination = Point()
         
-        
+        #Lookahead and Observation
         self.lookahead_distance = self.base_speed * 2.0 + 3.0 # meters
         self.reaction_distance = self.base_speed * 5.0 + 5.25 # meters
         self.detection_radius = self.base_speed * 6.0 + 8.0 # meters
         self.status = String() # Cruise, Decelerate, PrepareToStop, Turn
+        
+        #Curve handling
         self.curves = None
-
-        # self.saftey_distance = 2.0 + self.vehicle_length/2 #meters
-        
-        
         self.isCurveFinished = False
         self.isCurveStarted = False
         self.curve_angle = 0.0
-        
-        self.densify_interval = 2.0 # meters
-        
-        self.initial_lane = None
-        self.search_depth = 5
-
         self.curve_finish_point = None
 
-        self.destination = Point()
+        self.densify_interval = 2.0 # meters / Distance between each two consecutive waypoints in a lane
+        
+        #Traffic light
         self.traffic_light_stopPoint_lastState = Point()
         self.traffic_light_state_lastState = 'Cruise_green'
 
+        #Shutting down
         self.node_shut = False
 
-        # Load configs
+        # Load vehicle configs
         self.vehicle_type = vehicle_type
         self.vehicle_config = self.load_vehicle_config(vehicle_type)
         self.base_speed = self.vehicle_config['base_speed'] # m/s
@@ -156,10 +143,12 @@ class Planning(Node):
         self.vehicle_length = self.vehicle_config['dimensions']['length'] #meters
         self.vehicle_width = self.vehicle_config['dimensions']['width'] #meters
 
+        # Load scenario configs
         self.scenario_config = self.config_file_loader("scenario_config.yaml")
         self.dest_lanelet = self.scenario_config['scenario']['destination']
         self.start_lanelet = None
 
+        # Load motion & behaviour configs
         self.motion_behaviour_config = self.config_file_loader("motion_behaviour_config.yaml")
         self.saftey_distance = self.motion_behaviour_config['behaviour']['saftey_distance'] #meters
         self.reaction_time_threshold = self.test_config['behaviour']['reaction_time_threshold']
