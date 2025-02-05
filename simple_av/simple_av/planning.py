@@ -67,6 +67,25 @@ class PathCurveDetector:
 class Planning(Node):
     def __init__(self, vehicle_type):
         super().__init__('Planning')
+
+        # Load vehicle configs
+        self.vehicle_type = vehicle_type
+        self.vehicle_config = self.load_vehicle_config(vehicle_type)
+        self.base_speed = self.vehicle_config['base_speed'] # m/s
+        self.max_speed = self.vehicle_config['max_speed'] # m/s
+        self.turning_speed = self.vehicle_config['turning_speed'] # m/s
+        self.vehicle_length = self.vehicle_config['dimensions']['length'] #meters
+        self.vehicle_width = self.vehicle_config['dimensions']['width'] #meters
+
+        # Load scenario configs
+        self.scenario_config = self.config_file_loader("scenario_config.yaml")
+        self.dest_lanelet = self.scenario_config['scenario']['destination']
+        self.start_lanelet = None
+
+        # Load motion & behaviour configs
+        self.motion_behaviour_config = self.config_file_loader("motion_behaviour_config.yaml")
+        self.saftey_distance = self.motion_behaviour_config['behaviour']['saftey_distance'] #meters
+        self.reaction_time_threshold = self.test_config['behaviour']['reaction_time_threshold']
         
         # Load the map
         self.map_data = self.load_map_data()
@@ -133,25 +152,6 @@ class Planning(Node):
 
         #Shutting down
         self.node_shut = False
-
-        # Load vehicle configs
-        self.vehicle_type = vehicle_type
-        self.vehicle_config = self.load_vehicle_config(vehicle_type)
-        self.base_speed = self.vehicle_config['base_speed'] # m/s
-        self.max_speed = self.vehicle_config['max_speed'] # m/s
-        self.turning_speed = self.vehicle_config['turning_speed'] # m/s
-        self.vehicle_length = self.vehicle_config['dimensions']['length'] #meters
-        self.vehicle_width = self.vehicle_config['dimensions']['width'] #meters
-
-        # Load scenario configs
-        self.scenario_config = self.config_file_loader("scenario_config.yaml")
-        self.dest_lanelet = self.scenario_config['scenario']['destination']
-        self.start_lanelet = None
-
-        # Load motion & behaviour configs
-        self.motion_behaviour_config = self.config_file_loader("motion_behaviour_config.yaml")
-        self.saftey_distance = self.motion_behaviour_config['behaviour']['saftey_distance'] #meters
-        self.reaction_time_threshold = self.test_config['behaviour']['reaction_time_threshold']
     
     def velocity_report_callback(self, msg):
         self.velocity_report = msg

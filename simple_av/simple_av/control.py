@@ -57,59 +57,10 @@ class PIDController:
         return acc_cmd
 
 
-
 class VehicleControl(Node):
     def __init__(self, vehicle_type):
         super().__init__('control')
 
-        qos_profile = QoSProfile(
-            reliability=ReliabilityPolicy.RELIABLE,
-            history=HistoryPolicy.KEEP_LAST,
-            depth=10,
-            durability=DurabilityPolicy.TRANSIENT_LOCAL
-        )
-
-        self.subscriptionPose = self.create_subscription(
-            PoseStamped,
-            '/sensing/gnss/pose',
-            self.pose_callback,
-            10
-        )
-        self.subscriptionPose = self.create_subscription(
-            PoseStamped,
-            '/awsim/ground_truth/vehicle/pose',
-            self.ground_truth_callback,
-            10
-        )
-        self.subscriptionVelocityReport = self.create_subscription(
-            VelocityReport,
-            '/vehicle/status/velocity_status',
-            self.velocity_report_callback,
-            10
-        )
-        self.subscriptionLookahead = self.create_subscription(
-            LookAheadMsg,
-            '/simple_av/planning/lookahead_point',
-            self.lookahead_callback,
-            10
-        )
-
-        # Create subscriber to simple_av/portal topic
-        self.subscriptionPortal = self.create_subscription(Portal, 'simple_av/portal', self.portal_callback, 10)
-        self.reset = False
-        self.finished = False
-
-        self.pose = PoseStamped()
-        self.ground_truth = PoseStamped()
-        self.velocity_report = VelocityReport()
-        self.lookAhead = LookAheadMsg()
-
-        self.control_publisher = self.create_publisher(AckermannControlCommand, '/control/command/control_cmd', qos_profile)
-        self.gear_publisher = self.create_publisher(GearCommand, '/control/command/gear_cmd', qos_profile)
-        self.turn_indicator_publisher = self.create_publisher(TurnIndicatorsCommand, '/control/command/turn_indicators_cmd', qos_profile)
-
-        self.pid_controller = PIDController(p_gain=1.5, i_gain=20.0, d_gain=0.5)
-        
         # Load configs
         self.vehicle_type = vehicle_type
         self.vehicle_config = self.load_vehicle_config(vehicle_type)
@@ -124,6 +75,35 @@ class VehicleControl(Node):
         self.maximum_accel = self.vehicle_config['max_acceleration']
         self.maximum_Stereing = None
         self.maximum_braking_accel = self.vehicle_config['max_braking_accel']
+
+        # Subscribe topics
+        self.subscriptionPose = self.create_subscription(PoseStamped, '/sensing/gnss/pose', self.pose_callback, 10)
+        self.subscriptionPose = self.create_subscription(PoseStamped, '/awsim/ground_truth/vehicle/pose', self.ground_truth_callback, 10)
+        self.subscriptionVelocityReport = self.create_subscription(VelocityReport, '/vehicle/status/velocity_status', self.velocity_report_callback, 10)
+        self.subscriptionLookahead = self.create_subscription(LookAheadMsg, '/simple_av/planning/lookahead_point', self.lookahead_callback, 10)
+
+        # Create subscriber to simple_av/portal topic
+        self.subscriptionPortal = self.create_subscription(Portal, 'simple_av/portal', self.portal_callback, 10)
+        self.reset = False
+        self.finished = False
+
+        self.pose = PoseStamped()
+        self.ground_truth = PoseStamped()
+        self.velocity_report = VelocityReport()
+        self.lookAhead = LookAheadMsg()
+
+        # Publish topics
+        qos_profile = QoSProfile(
+            reliability=ReliabilityPolicy.RELIABLE,
+            history=HistoryPolicy.KEEP_LAST,
+            depth=10,
+            durability=DurabilityPolicy.TRANSIENT_LOCAL
+        )
+        self.control_publisher = self.create_publisher(AckermannControlCommand, '/control/command/control_cmd', qos_profile)
+        self.gear_publisher = self.create_publisher(GearCommand, '/control/command/gear_cmd', qos_profile)
+        self.turn_indicator_publisher = self.create_publisher(TurnIndicatorsCommand, '/control/command/turn_indicators_cmd', qos_profile)
+
+        self.pid_controller = PIDController(p_gain=1.5, i_gain=20.0, d_gain=0.5)
 
         self.node_shut = False
 
