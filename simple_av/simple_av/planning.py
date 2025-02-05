@@ -68,10 +68,7 @@ class Planning(Node):
     def __init__(self, vehicle_type):
         super().__init__('Planning')
         
-        self.vehicle_type = vehicle_type
-        self.vehicle_config = self.load_vehicle_config(vehicle_type)
-        
-        # Load the Json map
+        # Load the map
         self.map_data = self.load_map_data()
         self.map_data = self.map_data["LaneLetsArray"]
 
@@ -82,6 +79,8 @@ class Planning(Node):
             'adjacentLanes': lanelet.get('adjacentLanes', []),
         } for lanelet in self.map_data}
 
+        # Subscribe topics
+
         self.subscriptionVelocityReport = self.create_subscription(
             VelocityReport,
             '/vehicle/status/velocity_status',
@@ -89,33 +88,31 @@ class Planning(Node):
             10
         )
         self.velocity_report = VelocityReport()
-        self.collison_time_threshold = 5.0 #seconds
 
         # Create subscriber to 'simple_av/perception/traffic_signals' topic /v2x/traffic_signals1
         self.subscriptionTrafficSignal = self.create_subscription(TrafficSignalsArray, 'simple_av/perception/traffic_signals', self.trafficSignal_callback, 10)
+        self.trafficSignal = TrafficSignalsArray() # Initialize traffic signal
 
         # Create subscriber to 'simple_av/perception/detected_objects' topic
         self.subscriptionDetectedObjects = self.create_subscription(DetectedObjectsArray, 'simple_av/perception/detected_objects', self.detectedObjects_callback, 10)
+        self.detectedObjects = DetectedObjectsArray() # Initialize traffic signal
 
         # Create subscriber to /sensing/gnss/pose topic
         self.subscriptionPose = self.create_subscription(PoseStamped, '/sensing/gnss/pose', self.pose_callback, 10)
+        self.pose = PoseStamped()  # Initialize pose
 
         # Create subscriber to /localization/location topic
         self.subscriptionLocation = self.create_subscription(LocalizationMsg, 'simple_av/localization/location', self.location_callback, 10)
+        self.location = LocalizationMsg()  # Initialize location
 
         # Create subscriber to simple_av/portal topic
         self.subscriptionPortal = self.create_subscription(Portal, 'simple_av/portal', self.portal_callback, 10)
         self.reset = False
         self.finished = False
 
-        # Initialize the publisher
-        ## TODO: rename the lookahead_point topic to planned_route
+        # Publish topics
         self.planning_publisher = self.create_publisher(LookAheadMsg, 'simple_av/planning/lookahead_point', 10)
 
-        self.pose = PoseStamped()  # Initialize pose
-        self.location = LocalizationMsg()  # Initialize location
-        self.trafficSignal = TrafficSignalsArray() # Initialize traffic signal
-        self.detectedObjects = DetectedObjectsArray() # Initialize traffic signal
 
         self.isPathPlanned = False  # Flag to check if the path has been planned
         self.path_as_lanes = None  # List of lanes from start lane to destination
@@ -123,19 +120,15 @@ class Planning(Node):
         self.route = None # List of lanes from start lane to destination
         self.current_lane_index = 0
         
-        self.base_speed = self.vehicle_config['base_speed'] # m/s
-        self.max_speed = self.vehicle_config['max_speed'] # m/s
-        self.turning_speed = self.vehicle_config['turning_speed'] # m/s
+        
         self.lookahead_distance = self.base_speed * 2.0 + 3.0 # meters
         self.reaction_distance = self.base_speed * 5.0 + 5.25 # meters
         self.detection_radius = self.base_speed * 6.0 + 8.0 # meters
         self.status = String() # Cruise, Decelerate, PrepareToStop, Turn
-        self.vehicle_length = self.vehicle_config['dimensions']['length'] #meters
-        self.vehicle_width = self.vehicle_config['dimensions']['width'] #meters
         self.curves = None
 
         # self.saftey_distance = 2.0 + self.vehicle_length/2 #meters
-        self.saftey_distance = 2.0 #meters
+        
         
         self.isCurveFinished = False
         self.isCurveStarted = False
@@ -151,20 +144,33 @@ class Planning(Node):
         self.destination = Point()
         self.traffic_light_stopPoint_lastState = Point()
         self.traffic_light_state_lastState = 'Cruise_green'
-        
-        self.test_config = self.load_test_config()
-        self.dest_lanelet = self.test_config['destination']
-        self.start_lanelet = None
 
         self.node_shut = False
+
+        # Load configs
+        self.vehicle_type = vehicle_type
+        self.vehicle_config = self.load_vehicle_config(vehicle_type)
+        self.base_speed = self.vehicle_config['base_speed'] # m/s
+        self.max_speed = self.vehicle_config['max_speed'] # m/s
+        self.turning_speed = self.vehicle_config['turning_speed'] # m/s
+        self.vehicle_length = self.vehicle_config['dimensions']['length'] #meters
+        self.vehicle_width = self.vehicle_config['dimensions']['width'] #meters
+
+        self.scenario_config = self.config_file_loader("scenario_config.yaml")
+        self.dest_lanelet = self.scenario_config['scenario']['destination']
+        self.start_lanelet = None
+
+        self.motion_behaviour_config = self.config_file_loader("motion_behaviour_config.yaml")
+        self.saftey_distance = self.motion_behaviour_config['behaviour']['saftey_distance'] #meters
+        self.reaction_time_threshold = self.test_config['behaviour']['reaction_time_threshold']
     
     def velocity_report_callback(self, msg):
         self.velocity_report = msg
     
-    def load_test_config(self):
+    def config_file_loader(self, file_name):
         # Path to the YAML file
         package_share_directory = get_package_share_directory('simple_av')
-        config_path = os.path.join(package_share_directory, "resource", "test_config.yaml")
+        config_path = os.path.join(package_share_directory, "resource", file_name)
         # Load the configuration file
         with open(config_path, "r") as file:
             config = yaml.safe_load(file)
@@ -741,7 +747,7 @@ class Planning(Node):
         t_vehicle = self.get_time_to_collison(vehicle_pose, collison_point, current_vehicle_speed)
         t_object = self.get_time_to_collison({'x': object_pose.x,'y': object_pose.y}, collison_point, object_speed)
         time_difference = abs(t_vehicle - t_object)
-        if time_difference <= self.collison_time_threshold:
+        if time_difference <= self.reaction_time_threshold:
             print(f"Potential collision detected! Time difference: {time_difference:.2f} seconds.")
             return True
         else:

@@ -1,5 +1,0 @@
-destination: 'lanelet1162' # Scenarion 1 lanelet761-- for scenarion 2 enter lanelet1162'
-repeat_count: 5
-TrafficLight_detction: 1
-collision_avoidance: 0
-object_prediction: 0

@@ -61,8 +61,6 @@ class PIDController:
 class VehicleControl(Node):
     def __init__(self, vehicle_type):
         super().__init__('control')
-        self.vehicle_type = vehicle_type
-        self.vehicle_config = self.load_vehicle_config(vehicle_type)
 
         qos_profile = QoSProfile(
             reliability=ReliabilityPolicy.RELIABLE,
@@ -111,6 +109,10 @@ class VehicleControl(Node):
         self.turn_indicator_publisher = self.create_publisher(TurnIndicatorsCommand, '/control/command/turn_indicators_cmd', qos_profile)
 
         self.pid_controller = PIDController(p_gain=1.5, i_gain=20.0, d_gain=0.5)
+        
+        # Load configs
+        self.vehicle_type = vehicle_type
+        self.vehicle_config = self.load_vehicle_config(vehicle_type)
         self.vehicle_length = self.vehicle_config['dimensions']['length'] #meters
         self.vehicle_width = self.vehicle_config['dimensions']['width'] #meters
         self.wheel_base = self.vehicle_config['dimensions']['wheel_base'] #meters

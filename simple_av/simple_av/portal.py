@@ -32,25 +32,30 @@ class portal(Node):
         self.repeat_counter = 0
         self.proximityToInitThreshold = 15.0 #meters
         self.jumpThreshold = 50.0 # meters
+
+        # Load configs
+        self.scenario_config = self.config_file_loader("scenario_config.yaml")
+        self.repeat_count = self.scenario_config['scenario']['repeat_count']
     
-    def pose_callback(self, msg):
-        self.pose = msg
-    
-    def get_repeat_count(self):
+    def config_file_loader(self, file_name):
         # Path to the YAML file
         package_share_directory = get_package_share_directory('simple_av')
-        config_path = os.path.join(package_share_directory, "resource", "test_config.yaml")
+        config_path = os.path.join(package_share_directory, "resource", file_name)
         # Load the configuration file
         with open(config_path, "r") as file:
             config = yaml.safe_load(file)
-        return config["repeat_count"]
-        
+        return config
+
+    def pose_callback(self, msg):
+        self.pose = msg
+    
+
     def calculate_distance(self, point1, point2):
         return  math.sqrt((point1.x - point2.x)**2 + (point1.y - point2.y)**2)
 
     def initial_pose(self):
         if self.pose and self.pose.pose.position.x != 0 and self.pose.pose.position.y != 0 and self.pose.pose.position.z != 0:
-            print("counter: ", self.repeat_counter, " target: ", self.get_repeat_count())
+            print("counter: ", self.repeat_counter, " target: ", self.repeat_count)
             # print(pose_msg.pose.position.x, pose_msg.pose.position.y, pose_msg.pose.position.z)
             self.initial_position = self.pose.pose.position
             self.current_pose = self.pose.pose.position
@@ -68,8 +73,8 @@ class portal(Node):
                 self.isPortalReached = True
                 self.initial_position = self.current_pose
                 self.repeat_counter += 1
-                print("counter: ", self.repeat_counter, " target: ", self.get_repeat_count())
-                if self.repeat_counter == self.get_repeat_count():
+                print("counter: ", self.repeat_counter, " target: ", self.repeat_count)
+                if self.repeat_counter == self.repeat_count:
                     print("Test finished")
                     self.finished = True
         self.last_pose = self.current_pose
