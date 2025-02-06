@@ -1,4 +1,4 @@
-Version 1.7.0
+Version 1.7.1
 
 vehicle moves in the defined path using the V3_map.json
 localization: return current lanelet use global and local search on the json map with pose/gnss
@@ -17,8 +17,4 @@ control:
     - pure pursuit for steering
     - nonlinear deceleration curve for braking
 
-new Feature: Consideration of objects speed in collison prediction
-Other modifications: new config files:
-    - motion_behaviour_config
-    - scenario_config
-    - feature_flags
+Fixed bug: Portal is functional again.

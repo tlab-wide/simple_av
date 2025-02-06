@@ -30,8 +30,8 @@ class portal(Node):
         self.last_pose = Point()
         self.current_pose = Point()
         self.repeat_counter = 0
-        self.proximityToInitThreshold = 15.0 #meters
-        self.jumpThreshold = 50.0 # meters
+        self.proximityToInitThreshold = 35.0 #meters
+        self.jumpThreshold = 75.0 # meters
 
         # Load configs
         self.scenario_config = self.config_file_loader("scenario_config.yaml")
