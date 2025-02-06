@@ -871,12 +871,11 @@ class Planning(Node):
                 path_curve_detector = PathCurveDetector(self.path, angle_threshold=3) # initializing object from class
                 self.curves = path_curve_detector.find_curves_in_path() # locating curves on the route/path
             if self.path and self.path_as_lanes and self.curves:
-                self.isPathPlanned = True
                 print("path of lanes: ", self.path_as_lanes)
                 # self.initial_lane = self.location.closest_lane_names.data
                 self.route = self.path_as_lanes[:]
                 self.current_lane_index = 0
-                # print("path of lanes: ", self.path)
+                self.isPathPlanned = True
             
 
     def publish_planning_msgs(self, look_ahead_point, stop_point, speed):
@@ -894,46 +893,47 @@ class Planning(Node):
         if not self.isPathPlanned:
             self.get_logger().info("Misson planning")
             self.mission_planning()  # generates the path and dencifies it.
-        else:
-            if not self.location and not self.pose:
-                self.get_logger().warning("No location/pose input")
-                return None
-            
-            # if self.initial_lane != self.path_as_lanes[0]:
-            #     self.get_logger().error("Contradiction between Location initial Lane and the first Lane on the path")
-            #     return
-            
-            if self.finished:
-                self.status.data = 'Park'
-                self.node_shut = True
-                self.publish_planning_msgs(None, None, 0) # publishing
-                return
+            return
         
-            if self.reset:
-                self.get_logger().warning("RESET")
-                self.isPathPlanned = False
-                self.get_logger().info("Misson planning")
-                print("DEBUG - start_lanelet_respawn: ", self.start_lanelet)
-                self.mission_planning(self.start_lanelet)  # generates the path and dencifies it.
-            
-            search_area, search_area_as_lanes = self.create_search_area()
-            look_ahead_point_index, look_ahead_point, current_closest_point_to_vehicle_index, isTurnDetected, speed = self.local_planning(search_area)
-            if not look_ahead_point and not look_ahead_point_index:
-                self.get_logger().warning("Lookahead point not set in local planning")
-                return
-            
-            stop_point = self.behavioural_planning(look_ahead_point, look_ahead_point_index, current_closest_point_to_vehicle_index, isTurnDetected)
-            
-            self.publish_planning_msgs(look_ahead_point, stop_point, speed) # publishing
-            '''
-            self.get_logger().info(
-                f'planning\n'
-                f'lookahead distance:  {self.lookahead_distance}\n'
-                f'is turn detected: {isTurnDetected}\n'
-                f'speed: {speed}\n'
-                f'status: {self.status.data}\n'
-            )
-            '''
+        if not self.location and not self.pose:
+            self.get_logger().warning("No location/pose input")
+            return None
+        
+        # if self.initial_lane != self.path_as_lanes[0]:
+        #     self.get_logger().error("Contradiction between Location initial Lane and the first Lane on the path")
+        #     return
+        
+        if self.finished:
+            self.status.data = 'Park'
+            self.node_shut = True
+            self.publish_planning_msgs(None, None, 0) # publishing
+            return
+    
+        if self.reset:
+            self.get_logger().error("RESET")
+            # self.isPathPlanned = False
+            self.get_logger().info("Misson planning")
+            print("DEBUG - start_lanelet_respawn: ", self.start_lanelet)
+            self.mission_planning(self.start_lanelet)  # generates the path and dencifies it.
+        
+        search_area, search_area_as_lanes = self.create_search_area()
+        look_ahead_point_index, look_ahead_point, current_closest_point_to_vehicle_index, isTurnDetected, speed = self.local_planning(search_area)
+        if not look_ahead_point and not look_ahead_point_index:
+            self.get_logger().warning("Lookahead point not set in local planning")
+            return
+        
+        stop_point = self.behavioural_planning(look_ahead_point, look_ahead_point_index, current_closest_point_to_vehicle_index, isTurnDetected)
+        
+        self.publish_planning_msgs(look_ahead_point, stop_point, speed) # publishing
+        '''
+        self.get_logger().info(
+            f'planning\n'
+            f'lookahead distance:  {self.lookahead_distance}\n'
+            f'is turn detected: {isTurnDetected}\n'
+            f'speed: {speed}\n'
+            f'status: {self.status.data}\n'
+        )
+        '''
 
 def main(args=None):
     rclpy.init(args=args)
