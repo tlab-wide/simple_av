@@ -1,22 +1,32 @@
-feature_ros_clock_sync
-Version 1.8.0
+Stable Version
+Version 1.9.0-alpha
 
-vehicle moves in the defined path using the V3_map.json
-localization: return current lanelet use global and local search on the json map with pose/gnss
+vehicle moves in the defined path using the V8_Kashiwa.json
+
+localization: 
+    - return current lanelet use global and local search on the json map with pose/gnss
 perception: 
-    - Reads traffic light messages and object detection messages from AWSIM. 
-    - convert object detection messages to: bounding_box, distance from nearest side of the objects bounding_box
-    - publishes the traffic light and DetecetdObjects messages.
-    - RSU + mounted-sensors
+    - detects Traffic light
+    - detects objects from Bus mounted sensors
+    - detects objects from RSU
 planning: 
-    - plan the route and the movement of the vehilce (Crusing, Turning, line change)
-    - Dont use traffic light messages
-    - Does Collision avoidance (not using Orientation values in this version). does not collide to objects from nither sides of the objects
-    - Lookahead distance changes by speed
+    - Mission planning: plan the route from source to destination .
+    - local planning: plan the movement of the vehilce (Crusing, Turning, line change).
+    - Behavioral Planning: collison avoidance, collison prediction, traffic light detection.
+    - collison prediction: uses The vehicle and detected objects speed, position, heading to find if there will be any collison on the path
+    - collison prediction: uses a time threshold for prediction collison.
+    - Collision avoidance: detects any object on the path of the vehicle and acts accordingly.
 control: 
     - PID for speed
-    - pure pursuit for steering
-    - nonlinear deceleration curve for braking
+    - Pure pursuit for steering
+    - Use nonlinear deceleration curve for braking
+    - Consider simulator lag in time
+Portal:
+    - Detects sudden jump in the vehicle position
+    - Reports whether the vehicle teleported or not
+    - reports whether the vehicle has teleported the specified times or not 
+    - Repeat count can be modified in the scenario_config file.
+Sim_monitor:
+    - Monitors the clock comming from the simulator and calculates lag between system and simulator
+    - Reports system time, simulator time and lag between them.
 
-feature_ros_clock_sync
-new Feature: New module to analyse the time differnece between simulator and system and find lag.

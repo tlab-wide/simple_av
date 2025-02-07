@@ -8,9 +8,9 @@ import numpy as np
 import time
 from rclpy.parameter import Parameter
 
-class ClockRateCalculator(Node):
+class SimulationMonitor(Node):
     def __init__(self):
-        super().__init__('clock_rate_calculator')
+        super().__init__('sim_monitor')
         if not self.has_parameter('use_sim_time'):
             self.declare_parameter('use_sim_time', True)
         self.set_parameters([Parameter('use_sim_time', Parameter.Type.BOOL, True)])
@@ -59,7 +59,7 @@ class ClockRateCalculator(Node):
             self.lag = (sim_time - self.sim_snap_shot)/(system_time - self.system_snap_shot)
             if self.lag > 1: 
                 self.lag = 1.0
-            print(f"lag: {self.lag}")
+        self.get_logger().info(f"lag: {self.lag}")
 
         '''
         print("-----------")
@@ -87,13 +87,13 @@ def main(args=None):
     rclpy.init(args=args)
     
     # Create the node
-    clock_rate_calculator = ClockRateCalculator()
+    sim_monitor = SimulationMonitor()
     
     # Spin the node to process callbacks
-    rclpy.spin(clock_rate_calculator)
+    rclpy.spin(sim_monitor)
     
     # Clean up
-    clock_rate_calculator.destroy_node()
+    sim_monitor.destroy_node()
     rclpy.shutdown()
 
 if __name__ == '__main__':
