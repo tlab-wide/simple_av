@@ -1,4 +1,4 @@
-Version 1.6.0
+Version 1.8.0
 
 vehicle moves in the defined path using the V3_map.json
 localization: return current lanelet use global and local search on the json map with pose/gnss
@@ -17,4 +17,4 @@ control:
     - pure pursuit for steering
     - nonlinear deceleration curve for braking
 
-new Feature: Predicting collison on the path. merge prediction with traffic light, collison avoidance and turning
+new Feature: New module to analyse the time differnece between simulator and system and find lag.
