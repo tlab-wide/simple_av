@@ -30,7 +30,7 @@ class ClockRateCalculator(Node):
             self.clock_callback,  # Callback function
             qos_profile  # Use the custom QoS profile
         )
-        self.publisher = self.create_publisher(SimMonitor, 'simple_av/sim_monitor', 10)
+        self.publisher = self.create_publisher(SimMonitor, 'simple_av/sim_monitor', 100)
         
         self.last_system_t = 0
         self.last_sim_t = 0

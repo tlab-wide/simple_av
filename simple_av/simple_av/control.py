@@ -8,7 +8,7 @@ from autoware_auto_vehicle_msgs.msg import GearCommand
 from autoware_auto_control_msgs.msg import AckermannControlCommand, AckermannLateralCommand, LongitudinalCommand
 from autoware_auto_vehicle_msgs.msg import TurnIndicatorsCommand
 from rclpy.qos import QoSProfile, DurabilityPolicy, HistoryPolicy, ReliabilityPolicy
-from simple_av_msgs.msg import LookAheadMsg
+from simple_av_msgs.msg import LookAheadMsg, SimMonitor
 import time
 import math
 from collections import deque
@@ -21,16 +21,13 @@ from rclpy.parameter import Parameter
 
 
 class PIDController:
-    def __init__(self, p_gain, i_gain, d_gain, sim_clock, delta_t=0.01):
+    def __init__(self, p_gain, i_gain, d_gain, sim_time=0.05):
         self.kp = p_gain
         self.ki = i_gain
         self.kd = d_gain
-        self.delta_t = delta_t
 
-        self.current_time = sim_clock
+        self.current_time = sim_time
         self.last_time = self.current_time
-        self.test_current_time = time.time()
-        self.test_last_time = self.test_current_time
 
         self.integrated_error = 0.0
 
@@ -38,17 +35,14 @@ class PIDController:
 
         self.previous_error = 0.0
     
-    def updatePID(self, observed_vel, target_vel, sim_clock):
+    def updatePID(self, observed_vel, target_vel, sim_time):
         # print("debug speed: ", target_vel, observed_vel)
         error = target_vel - observed_vel
-        self.current_time = sim_clock
-        self.test_current_time = time.time()
+        self.current_time = sim_time
+        
         delta_time = self.current_time - self.last_time  # Convert to seconds
-        delta_time_test = self.test_current_time - self.test_last_time
         print("Current time: ", self.current_time)
         print("DT: ", delta_time)
-        print("Current time test: ", self.test_current_time)
-        print("DT test: ", delta_time_test)
         self.slidingWindow.append(error)
         
         self.integrated_error = sum(self.slidingWindow) * delta_time
@@ -61,7 +55,6 @@ class PIDController:
         acc_cmd = P + I + D
 
         self.last_time = self.current_time
-        self.test_last_time = self.test_current_time
         self.previous_error = error
 
         return acc_cmd
@@ -70,6 +63,10 @@ class PIDController:
 class VehicleControl(Node):
     def __init__(self, vehicle_type):
         super().__init__('control')
+        if not self.has_parameter('use_sim_time'):
+            self.declare_parameter('use_sim_time', True)
+        self.set_parameters([Parameter('use_sim_time', Parameter.Type.BOOL, True)])
+        
         # Load configs
         self.vehicle_type = vehicle_type
         self.vehicle_config = self.load_vehicle_config(vehicle_type)
@@ -90,8 +87,10 @@ class VehicleControl(Node):
         self.subscriptionPose = self.create_subscription(PoseStamped, '/awsim/ground_truth/vehicle/pose', self.ground_truth_callback, 10)
         self.subscriptionVelocityReport = self.create_subscription(VelocityReport, '/vehicle/status/velocity_status', self.velocity_report_callback, 10)
         self.subscriptionLookahead = self.create_subscription(LookAheadMsg, '/simple_av/planning/lookahead_point', self.lookahead_callback, 10)
+        
+        self.subscriptionSimMonitor = self.create_subscription(SimMonitor, 'simple_av/sim_monitor', self.sim_monitor_callback, 100)
+        self.sim_lag = 0
 
-        # Create subscriber to simple_av/portal topic
         self.subscriptionPortal = self.create_subscription(Portal, 'simple_av/portal', self.portal_callback, 10)
         self.reset = False
         self.finished = False
@@ -130,6 +129,9 @@ class VehicleControl(Node):
             return config["vehicles"][vehicle_type]
         else:
             raise ValueError(f"Vehicle type '{vehicle_type}' not found in the configuration.")
+
+    def sim_monitor_callback(self, msg):
+        self.sim_lag = msg.lag
 
     def portal_callback(self, msg):
         self.reset = msg.reset
@@ -189,15 +191,13 @@ class VehicleControl(Node):
             gear_msg.command = GearCommand.DRIVE
 
         self.control_publisher.publish(control_msg)
-        self.turn_indicator_publisher.publish(turn_indicator_msg)
+        # self.turn_indicator_publisher.publish(turn_indicator_msg)
         self.gear_publisher.publish(gear_msg)  
 
 
     
     def get_lateral_command(self, status):
         lateral_command = AckermannLateralCommand()
-        distance_to_stop = self.calculate_distance(self.lookAhead.stop_point, self.pose.pose.position)
-        # or (status == "Decelerate" and distance_to_stop < 10.0)
         if status == "Park":
             print("debug PARK")
             lateral_command.steering_tire_angle = 0.0
@@ -226,9 +226,8 @@ class VehicleControl(Node):
             if status == "Decelerate" and distance_to_stop <= 2.0:
                 self.get_logger().warning("Full stop!")
                 target_speed = 0.0
-        
-        self.sim_time = self.get_clock().now().nanoseconds / 1e9  # Get the simulation clock in seconds
-        accel = self.pid_controller.updatePID(current_speed, target_speed, self.sim_time)
+
+        accel = self.pid_controller.updatePID(current_speed, target_speed, time.time() * self.sim_lag)
         if accel > self.maximum_accel:
             accel = self.maximum_accel
         if accel < self.maximum_braking_accel:
