@@ -34,7 +34,7 @@ class PIDController:
 
         self.integrated_error = 0.0
 
-        self.slidingWindow = deque(maxlen=15) # for storing only the 10 most recent errors
+        self.slidingWindow = deque(maxlen=20) # for storing only the 10 most recent errors
 
         self.previous_error = 0.0
     
@@ -67,65 +67,12 @@ class PIDController:
         return acc_cmd
 
 
-
 class VehicleControl(Node):
     def __init__(self, vehicle_type):
         super().__init__('control')
-        if not self.has_parameter('use_sim_time'):
-            self.declare_parameter('use_sim_time', True)
-        self.set_parameters([Parameter('use_sim_time', Parameter.Type.BOOL, True)])
-        
+        # Load configs
         self.vehicle_type = vehicle_type
         self.vehicle_config = self.load_vehicle_config(vehicle_type)
-
-        qos_profile = QoSProfile(
-            reliability=ReliabilityPolicy.RELIABLE,
-            history=HistoryPolicy.KEEP_LAST,
-            depth=10,
-            durability=DurabilityPolicy.TRANSIENT_LOCAL
-        )
-
-        self.subscriptionPose = self.create_subscription(
-            PoseStamped,
-            '/sensing/gnss/pose',
-            self.pose_callback,
-            10
-        )
-        self.subscriptionPose = self.create_subscription(
-            PoseStamped,
-            '/awsim/ground_truth/vehicle/pose',
-            self.ground_truth_callback,
-            10
-        )
-        self.subscriptionVelocityReport = self.create_subscription(
-            VelocityReport,
-            '/vehicle/status/velocity_status',
-            self.velocity_report_callback,
-            10
-        )
-        self.subscriptionLookahead = self.create_subscription(
-            LookAheadMsg,
-            '/simple_av/planning/lookahead_point',
-            self.lookahead_callback,
-            10
-        )
-
-        # Create subscriber to simple_av/portal topic
-        self.subscriptionPortal = self.create_subscription(Portal, 'simple_av/portal', self.portal_callback, 10)
-        self.reset = False
-        self.finished = False
-
-        self.pose = PoseStamped()
-        self.ground_truth = PoseStamped()
-        self.velocity_report = VelocityReport()
-        self.lookAhead = LookAheadMsg()
-
-        self.control_publisher = self.create_publisher(AckermannControlCommand, '/control/command/control_cmd', qos_profile)
-        self.gear_publisher = self.create_publisher(GearCommand, '/control/command/gear_cmd', qos_profile)
-        self.turn_indicator_publisher = self.create_publisher(TurnIndicatorsCommand, '/control/command/turn_indicators_cmd', qos_profile)
-
-        self.sim_time = self.get_clock().now().nanoseconds / 1e9  # Get the simulation clock in seconds
-        self.pid_controller = PIDController(p_gain=1.5, i_gain=20.0, d_gain=0.5, sim_clock=self.sim_time)
         self.vehicle_length = self.vehicle_config['dimensions']['length'] #meters
         self.vehicle_width = self.vehicle_config['dimensions']['width'] #meters
         self.wheel_base = self.vehicle_config['dimensions']['wheel_base'] #meters
@@ -137,6 +84,35 @@ class VehicleControl(Node):
         self.maximum_accel = self.vehicle_config['max_acceleration']
         self.maximum_Stereing = None
         self.maximum_braking_accel = self.vehicle_config['max_braking_accel']
+
+        # Subscribe topics
+        self.subscriptionPose = self.create_subscription(PoseStamped, '/sensing/gnss/pose', self.pose_callback, 10)
+        self.subscriptionPose = self.create_subscription(PoseStamped, '/awsim/ground_truth/vehicle/pose', self.ground_truth_callback, 10)
+        self.subscriptionVelocityReport = self.create_subscription(VelocityReport, '/vehicle/status/velocity_status', self.velocity_report_callback, 10)
+        self.subscriptionLookahead = self.create_subscription(LookAheadMsg, '/simple_av/planning/lookahead_point', self.lookahead_callback, 10)
+
+        # Create subscriber to simple_av/portal topic
+        self.subscriptionPortal = self.create_subscription(Portal, 'simple_av/portal', self.portal_callback, 10)
+        self.reset = False
+        self.finished = False
+
+        self.pose = PoseStamped()
+        self.ground_truth = PoseStamped()
+        self.velocity_report = VelocityReport()
+        self.lookAhead = LookAheadMsg()
+
+        # Publish topics
+        qos_profile = QoSProfile(
+            reliability=ReliabilityPolicy.RELIABLE,
+            history=HistoryPolicy.KEEP_LAST,
+            depth=10,
+            durability=DurabilityPolicy.TRANSIENT_LOCAL
+        )
+        self.control_publisher = self.create_publisher(AckermannControlCommand, '/control/command/control_cmd', qos_profile)
+        self.gear_publisher = self.create_publisher(GearCommand, '/control/command/gear_cmd', qos_profile)
+        self.turn_indicator_publisher = self.create_publisher(TurnIndicatorsCommand, '/control/command/turn_indicators_cmd', qos_profile)
+
+        self.pid_controller = PIDController(p_gain=1.8, i_gain=20.0, d_gain=0.5)
 
         self.node_shut = False
 
@@ -244,10 +220,10 @@ class VehicleControl(Node):
         if status == "Decelerate" or status == "Stop_red":
             distance_to_stop = self.calculate_distance(self.lookAhead.stop_point, self.pose.pose.position)
             target_speed = self.calculate_target_speed_for_stop(distance_to_stop, current_speed)
-            if status == "Stop_red" and distance_to_stop <= 5.0:
+            if status == "Stop_red" and distance_to_stop <= 4.0:
                 self.get_logger().warning("Full stop!")
                 target_speed = 0.0
-            if status == "Decelerate" and distance_to_stop <= 1.5:
+            if status == "Decelerate" and distance_to_stop <= 2.0:
                 self.get_logger().warning("Full stop!")
                 target_speed = 0.0
         
