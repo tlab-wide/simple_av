@@ -281,16 +281,14 @@ class Perception(Node):
         v2i_traffic_signals_colors = []
 
         # Ensure the station_id matches 2
-        # if self.trafficSignal.station_id == 2:
+        if self.trafficSignal.station_id == 2:
             # Loop through traffic signals
-        for traffic_signal in self.trafficSignal.traffic_signals.signals:
-            for element in traffic_signal.elements:
-                # Append traffic signal ID and color
-                v2i_traffic_signals_id.append(traffic_signal.traffic_signal_id)
-                v2i_traffic_signals_colors.append(element.color)
+            for traffic_signal in self.trafficSignal.traffic_signals.signals:
+                for element in traffic_signal.elements:
+                    # Append traffic signal ID and color
+                    v2i_traffic_signals_id.append(traffic_signal.traffic_signal_id)
+                    v2i_traffic_signals_colors.append(element.color)
         return v2i_traffic_signals_id, v2i_traffic_signals_colors
-
-        return np.array([x, y, z, w])
 
     def perception(self):
         if self.finished:
@@ -305,7 +303,30 @@ class Perception(Node):
         
         # Handle traffic signals
         v2i_traffic_signals_id, v2i_traffic_signals_colors = self.process_traffic_signals()
-
+        if v2i_traffic_signals_id and v2i_traffic_signals_colors:
+            # print(v2i_traffic_signals_colors)
+            # print(v2i_traffic_signals_id)
+            colors = ['red', 'yellow', 'green']
+            g1 = 166928
+            g2_1 = 166947
+            g2_2 = 166935
+            g3 = 166953
+            index_g1 = v2i_traffic_signals_id.index(g1)
+            index_g2_1 = v2i_traffic_signals_id.index(g2_1)
+            index_g2_2 = v2i_traffic_signals_id.index(g2_2)
+            index_g3 = v2i_traffic_signals_id.index(g3)
+            if v2i_traffic_signals_colors[index_g2_1] != v2i_traffic_signals_colors[index_g2_2]:
+                self.get_logger().warning('----------------------------------')
+                print(f'{g2_1}: {colors[v2i_traffic_signals_colors[index_g2_1]-1]}')
+                print(f'{g2_2}: {colors[v2i_traffic_signals_colors[index_g2_2]-1]}')
+                print(f'{g3}: {colors[v2i_traffic_signals_colors[index_g3]-1]}')
+            else:
+                print("---------------------------")
+                print(f'{g2_1}: {colors[v2i_traffic_signals_colors[index_g2_1]-1]}')
+                print(f'{g2_2}: {colors[v2i_traffic_signals_colors[index_g2_2]-1]}')
+                print(f'{g3}: {colors[v2i_traffic_signals_colors[index_g3]-1]}')
+        
+        return
         # Create and publish traffic signals message
         traffic_signals_msg = TrafficSignalsArray()
         traffic_signals_msg.v2i_traffic_signals_id = v2i_traffic_signals_id

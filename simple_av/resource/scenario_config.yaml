@@ -1,3 +1,3 @@
 scenario:
-  destination: 'lanelet1162' # Scenarion 1 lanelet761-- for scenarion 2 enter lanelet1162'
+  destination: 'lanelet761' # Scenarion 1 lanelet761-- for scenarion 2 enter lanelet1162'
   repeat_count: 5  # Number of times to repeat the scenario for testing

@@ -7,3 +7,7 @@ motion:
 behaviour:
   saftey_distance: 6.0  # meters, minimum distance to stop behind an object
   reaction_time_threshold: 5  # seconds, time delay before reacting to an event
+
+
+
+  
