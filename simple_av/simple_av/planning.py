@@ -10,7 +10,7 @@ import math
 from collections import deque
 from simple_av_msgs.msg import LocalizationMsg
 from simple_av_msgs.msg import Portal
-from simple_av_msgs.msg import LookAheadMsg
+from simple_av_msgs.msg import LookAheadMsg, SimMonitor
 from v2x_msgs.msg import CooperativeSignalsMessage
 import numpy as np
 from simple_av_msgs.msg import TrafficSignalsArray, DetectedObjectsArray, DetectedObject
@@ -118,6 +118,9 @@ class Planning(Node):
         self.reset = False
         self.finished = False
 
+        self.subscriptionSimMonitor = self.create_subscription(SimMonitor, 'simple_av/sim_monitor', self.sim_monitor_callback, 100)
+        self.sim_clock_rate = 0
+
         # Publish topics
         self.planning_publisher = self.create_publisher(LookAheadMsg, 'simple_av/planning/lookahead_point', 10)
 
@@ -152,6 +155,9 @@ class Planning(Node):
 
         #Shutting down
         self.node_shut = False
+
+    def sim_monitor_callback(self, msg):
+        self.sim_clock_rate = msg.sim_clock_rate
     
     def velocity_report_callback(self, msg):
         self.velocity_report = msg
@@ -709,6 +715,7 @@ class Planning(Node):
             return float('inf')  # Return infinity to indicate no collision
         dist = self.calculate_distance({'x': collision_point.x, 'y': collision_point.y}, current_pose)
         time_to_collision = dist / speed
+        time_to_collision *= self.sim_clock_rate
         print(f"DEBUG - dist: {dist}, speed: {speed}, time: {time_to_collision}")
         return time_to_collision
 

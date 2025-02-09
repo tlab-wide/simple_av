@@ -40,7 +40,7 @@ class SimulationMonitor(Node):
         self.sim_snap_shot = 0
         self.has_seccond_passed = True
 
-        self.lag = 1.0
+        self.sim_clock_rate = 1.0
 
     
     def clock_callback(self, msg):
@@ -56,10 +56,10 @@ class SimulationMonitor(Node):
             # print(f"{system_time - self.system_snap_shot} seccond has passed in system")
             # print(f"{sim_time - self.sim_snap_shot} secconds has passed in awsim")
             self.has_seccond_passed = True
-            self.lag = (sim_time - self.sim_snap_shot)/(system_time - self.system_snap_shot)
-            if self.lag > 1: 
-                self.lag = 1.0
-        self.get_logger().info(f"lag: {self.lag}")
+            self.sim_clock_rate = (sim_time - self.sim_snap_shot)/(system_time - self.system_snap_shot)
+            if self.sim_clock_rate > 1: 
+                self.sim_clock_rate = 1.0
+        self.get_logger().info(f"sim_clock_rate: {self.sim_clock_rate}")
 
         '''
         print("-----------")
@@ -76,7 +76,7 @@ class SimulationMonitor(Node):
         sim_monitor = SimMonitor()
         sim_monitor.system_time = system_time
         sim_monitor.sim_time = sim_time
-        sim_monitor.lag = self.lag
+        sim_monitor.sim_clock_rate = self.sim_clock_rate
         self.publisher.publish(sim_monitor)
 
     def get_timestamp_in_seconds(self, msg):

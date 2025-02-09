@@ -89,7 +89,7 @@ class VehicleControl(Node):
         self.subscriptionLookahead = self.create_subscription(LookAheadMsg, '/simple_av/planning/lookahead_point', self.lookahead_callback, 10)
         
         self.subscriptionSimMonitor = self.create_subscription(SimMonitor, 'simple_av/sim_monitor', self.sim_monitor_callback, 100)
-        self.sim_lag = 0
+        self.sim_clock_rate = 0
 
         self.subscriptionPortal = self.create_subscription(Portal, 'simple_av/portal', self.portal_callback, 10)
         self.reset = False
@@ -131,7 +131,7 @@ class VehicleControl(Node):
             raise ValueError(f"Vehicle type '{vehicle_type}' not found in the configuration.")
 
     def sim_monitor_callback(self, msg):
-        self.sim_lag = msg.lag
+        self.sim_clock_rate = msg.sim_clock_rate
 
     def portal_callback(self, msg):
         self.reset = msg.reset
@@ -227,7 +227,7 @@ class VehicleControl(Node):
                 self.get_logger().warning("Full stop!")
                 target_speed = 0.0
 
-        accel = self.pid_controller.updatePID(current_speed, target_speed, time.time() * self.sim_lag)
+        accel = self.pid_controller.updatePID(current_speed, target_speed, time.time() * self.sim_clock_rate)
         if accel > self.maximum_accel:
             accel = self.maximum_accel
         if accel < self.maximum_braking_accel:
