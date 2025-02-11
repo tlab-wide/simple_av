@@ -512,6 +512,7 @@ class Planning(Node):
         return speed
     
     def update_lookahead_distances(self, speed):
+        speed = self.velocity_report.longitudinal_velocity if self.velocity_report else 0.0  
         self.lookahead_distance = speed * 2.0 + 2.5  # speed 7m/s: 16.5m / speed 1.75m/s: 6m
         self.reaction_distance = speed * 5.0 + 5.25  # 40m / 14m
         self.detection_radius = speed * 6.0 + 8.0  # 50m / 18.5m
@@ -574,7 +575,7 @@ class Planning(Node):
         objects_ahead = []
         for obj in self.detectedObjects.objects:
             object_direction = obj.relative_direction.data
-            if object_direction == 'above' or object_direction == 'NW' or object_direction == 'NE':
+            if object_direction == 'above' or object_direction == 'NW' or object_direction == 'NE' or object_direction == 'SE' or object_direction == 'SW':
                 objects_ahead.append(obj)
         print("Number of Detected Objects in front: ", len(objects_ahead))
         return objects_ahead
@@ -670,7 +671,7 @@ class Planning(Node):
 
         # Handle the vertical lines (infinite slope)
         if m1 == m2:
-            self.get_logger().warning("Parallel lines")
+            self.get_logger().error("Parallel lines")
             return None  # Parallel vertical lines
         elif m1 == float('inf'):  # Line 1 is vertical
             x = x1

@@ -41,8 +41,6 @@ class PIDController:
         self.current_time = sim_time
         
         delta_time = self.current_time - self.last_time  # Convert to seconds
-        print("Current time: ", self.current_time)
-        print("DT: ", delta_time)
         self.slidingWindow.append(error)
         
         self.integrated_error = sum(self.slidingWindow) * delta_time
