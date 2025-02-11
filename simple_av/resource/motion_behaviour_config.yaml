@@ -12,10 +12,10 @@ behaviour:
   reaction_time_threshold: 20  # seconds, time delay before reacting to an event
   reaction_distance:
     K: 10.0
-    V: 10.0
+    V: 25.0
   detection_radius:
-    K: 20.0
-    V: 15.0
+    K: 15.0
+    V: 30.0
 
 
 

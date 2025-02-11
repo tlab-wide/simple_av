@@ -309,7 +309,7 @@ class Perception(Node):
 
         # Handle detected objects
         detected_objects_list = self.handle_detected_objects(self.detectedObjects, False) # Mounted-sensor data
-        detected_objects_list.extend(self.handle_detected_objects(self.RSU_detectedObjects, True)) # RSU data
+        # detected_objects_list.extend(self.handle_detected_objects(self.RSU_detectedObjects, True)) # RSU data
 
         # Create and publish detected objects message
         detected_objects_msg = DetectedObjectsArray()
