@@ -80,6 +80,7 @@ class Planning(Node):
         # Load scenario configs
         self.scenario_config = self.config_file_loader("scenario_config.yaml")
         self.dest_lanelet = self.scenario_config['scenario']['destination']
+        self.is_RSU_on = self.scenario_config['scenario']['is_RSU_on']
         self.start_lanelet = None
 
         # Load motion & behaviour configs
@@ -159,6 +160,7 @@ class Planning(Node):
         #Traffic light
         self.traffic_light_stopPoint_lastState = Point()
         self.traffic_light_state_lastState = 'Cruise_green'
+        self.opposite_traffic_light_last_Color = 'Green'
 
         #Shutting down
         self.node_shut = False
@@ -541,16 +543,26 @@ class Planning(Node):
         # print("DEBUG - look ahead distance: ", self.lookahead_distance)
         return look_ahead_point_index, look_ahead_point, current_closest_point_to_vehicle_index, isTurnDetected, target_speed
     
-    
+    def get_traffic_light_color(self, traffic_light_id):
+        v2i_traffic_signals_id = list(self.trafficSignal.v2i_traffic_signals_id)
+        v2i_traffic_signals_colors = list(self.trafficSignal.v2i_traffic_signals_colors)
+        if traffic_light_id in v2i_traffic_signals_id:
+            self.opposite_traffic_light_last_Color = v2i_traffic_signals_colors[v2i_traffic_signals_id.index(traffic_light_id)]
+        return self.opposite_traffic_light_last_Color
+
+    def get_lane_traffic_light_stop_point(self, lane):
+        lane_obj = self.find_lane_by_name(lane)
+        current_lane_traffic_light_id = lane_obj['trafficlightsWayIDs']
+        stop_point = self.get_traffic_light_StopPoint(lane_obj['stopLinePoseP1'], lane_obj['stopLinePoseP2'])
+        return stop_point
+
     def manage_traffic_lights(self):
-      
         v2i_traffic_signals_id = list(self.trafficSignal.v2i_traffic_signals_id)
         v2i_traffic_signals_colors = list(self.trafficSignal.v2i_traffic_signals_colors)
 
         current_lane = self.route[self.current_lane_index]
         lane_obj = self.find_lane_by_name(current_lane)
         current_lane_traffic_light_id = lane_obj['trafficlightsWayIDs']
-        
         if current_lane_traffic_light_id: # this lane have a traffic light
             # self.get_logger().info(f"traffic light detected on {lane_obj['name']}")
             if current_lane_traffic_light_id[0] in v2i_traffic_signals_id: # traffic light id is on the list
@@ -716,7 +728,6 @@ class Planning(Node):
         global_forward = rotation.apply(local_forward)
         return global_forward [:2]
     
-
     def get_time_to_collison(self, current_pose, collision_point, speed):
         if speed == 0.0:
             return float('inf')  # Return infinity to indicate no collision
@@ -730,7 +741,7 @@ class Planning(Node):
         print("---------------------")
         current_vehicle_speed = self.velocity_report.longitudinal_velocity if self.velocity_report else 0.0   
         t_vehicle = self.get_time_to_collison(vehicle_pose, collison_point, current_vehicle_speed)
-        t_object = self.get_time_to_collison({'x': object_pose.x,'y': object_pose.y}, collison_point, 7.0)
+        t_object = self.get_time_to_collison({'x': object_pose.x,'y': object_pose.y}, collison_point, object_speed)
         time_difference = abs(t_vehicle - t_object)
         dist_to_waypoint = self.calculate_distance(corresponding_waypoint, vehicle_pose)
         print(f"D - time_difference {time_difference}, dist to waypoint {dist_to_waypoint} current_vehicle_speed {current_vehicle_speed}")
@@ -776,24 +787,26 @@ class Planning(Node):
         waypoints = self.path[current_closest_point_to_vehicle_index:current_closest_point_to_vehicle_index + int(self.reaction_distance / self.densify_interval) + 1]
         # print(f"waypoints segment {len(waypoints)}")
         predicted_stop_points = []
-        for i in range(len(objects_in_range)):
-            print(f"P - object {i}")
-            dist_to_veh = self.calculate_distance(vehicle_pose, {'x': objects_absulute_positions[i].x,'y': objects_absulute_positions[i].y})
-            for j in range(len(waypoints) - 1):
-                # print(f"P - object {i}, type: {objects_in_range[i].label}, dist: {dist_to_veh} - Waypoint {j}, {j+1}")
-                forward_vector = self.get_forward_vector(objects_in_range[i].orientation)
-                collison_point = self.find_intersection(objects_absulute_positions[i], forward_vector, waypoints[j], waypoints[j+1])
-                if collison_point:
-                    # print(f"P - collision point founded")
-                    if self.is_point_on_segment(objects_absulute_positions[i], collison_point, waypoints[j], waypoints[j+1], forward_vector):
-                        # print(f"P - collision point is on segment")
-                        collison_point = Point(x=collison_point[0], y=collison_point[1], z=waypoints[j]['z'])
-                        # print(f'P - CollisonPoint found on: {collison_point.x, collison_point.y}')
-                        # print(f'P - corresponding waypoint:  {waypoints[j]}')
-                        if self.will_clooide_on_path(objects_in_range[i].label, objects_in_range[i].velocity, objects_absulute_positions[i], vehicle_pose, collison_point, waypoints[j]):
-                            stop_point = self.get_stop_point(waypoints[j], vehicle_pose)
-                            predicted_stop_points.append(stop_point)
-                            break
+        if self.get_traffic_light_color(166893) != 1:
+            self.get_logger().warning(f"Traffic light enemy: {self.get_traffic_light_color(166893)}")
+            for i in range(len(objects_in_range)):
+                print(f"P - object {i}")
+                dist_to_veh = self.calculate_distance(vehicle_pose, {'x': objects_absulute_positions[i].x,'y': objects_absulute_positions[i].y})
+                for j in range(len(waypoints) - 1):
+                    # print(f"P - object {i}, type: {objects_in_range[i].label}, dist: {dist_to_veh} - Waypoint {j}, {j+1}")
+                    forward_vector = self.get_forward_vector(objects_in_range[i].orientation)
+                    collison_point = self.find_intersection(objects_absulute_positions[i], forward_vector, waypoints[j], waypoints[j+1])
+                    if collison_point:
+                        # print(f"P - collision point founded")
+                        if self.is_point_on_segment(objects_absulute_positions[i], collison_point, waypoints[j], waypoints[j+1], forward_vector):
+                            # print(f"P - collision point is on segment")
+                            collison_point = Point(x=collison_point[0], y=collison_point[1], z=waypoints[j]['z'])
+                            # print(f'P - CollisonPoint found on: {collison_point.x, collison_point.y}')
+                            # print(f'P - corresponding waypoint:  {waypoints[j]}')
+                            if self.will_clooide_on_path(objects_in_range[i].label, objects_in_range[i].velocity, objects_absulute_positions[i], vehicle_pose, collison_point, waypoints[j]):
+                                stop_point = self.get_stop_point(waypoints[j], vehicle_pose)
+                                predicted_stop_points.append(stop_point)
+                                break
         return predicted_stop_points
     
     def find_closest_stop_point(self, traffic_light_stopPoint, collision_avoidance_stopPoint, predicted_collisons_stopPoints, destination_stopPoint, vehicle_pose):
@@ -856,12 +869,15 @@ class Planning(Node):
         print(f"D - detection radius: {self.detection_radius}, reaction distance: {self.reaction_distance}")
         collision_avoidance_stopPoint = self.collision_avoidance(objects_in_range, current_closest_point_to_vehicle_index, vehicle_pose)
         predicted_collisons_stopPoints = self.collison_prediction(objects_in_range, current_closest_point_to_vehicle_index, vehicle_pose)
+        # if predicted_collisons_stopPoints:
+        #     predicted_collisons_stopPoints = []
+        #     predicted_collisons_stopPoints.append(self.get_lane_traffic_light_stop_point('lanelet871'))
         stop_point, stop_point_type = self.find_closest_stop_point(traffic_light_stopPoint, collision_avoidance_stopPoint, predicted_collisons_stopPoints, self.destination, vehicle_pose)
         
         self.status.data = 'Cruise'
 
         if isTurnDetected:
-            # self.get_logger().info("Turn detected")
+            self.get_logger().info("Turn detected")
             self.status.data = 'Turn'
         
         if stop_point_type == 'CollisonAvoidance' or stop_point_type == 'CollisonPrediction':
@@ -872,7 +888,7 @@ class Planning(Node):
             self.status.data = 'Decelerate'
         
         if stop_point_type == 'TrafficLight':
-            # self.get_logger().warning('TrafficLight')
+            self.get_logger().warning('TrafficLight')
             self.status.data = trafficLightTask
          
         if (distance_to_destination <= self.reaction_distance and 

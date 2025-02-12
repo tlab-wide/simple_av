@@ -6,16 +6,16 @@ motion:
   lookahead:
     K: 3
     V: 2.5
-  
+
 behaviour:
-  saftey_distance: 8.0  # meters, minimum distance to stop behind an object
-  reaction_time_threshold: 10  # seconds, time delay before reacting to an event
+  saftey_distance: 18.0  # meters, minimum distance to stop behind an object
+  reaction_time_threshold: 25  # seconds, time delay before reacting to an event
   reaction_distance:
     K: 10.0
-    V: 25.0
+    V: 90.0
   detection_radius:
     K: 10.0
-    V: 30.0
+    V: 100.0
 
 
 
