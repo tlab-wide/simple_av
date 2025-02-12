@@ -28,7 +28,8 @@ class Perception(Node):
         # Create subscriber for /OBU/Sensing topic. This topic publishes the information of detected objects from the POV of the vehicle.
         self.subscriptionSensor = self.create_subscription(DetectedObjects, '/OBU/Sensing', self.detectedObjects_callback, 10)
         # Create subscriber for /v2x/cooperative2 topic. This topic publishes the information of detected objects from RSU.
-        self.subscriptionRSU = self.create_subscription(PredictedObjects, '/v2x/predicted_object2', self.RSU_detectedObjects_callback, 10)
+        self.subscriptionRSU_intersection2 = self.create_subscription(PredictedObjects, '/v2x/predicted_object2', self.intersection2_RSU_detectedObjects_callback, 10)
+        self.subscriptionRSU_intersection1 = self.create_subscription(PredictedObjects, '/v2x/predicted_object1', self.intersection1_RSU_detectedObjects_callback, 10)
         self.subscriptionPose = self.create_subscription(PoseStamped, '/sensing/gnss/pose', self.pose_callback, 10)
         # Create subscriber to simple_av/portal topic
         self.subscriptionPortal = self.create_subscription(Portal, 'simple_av/portal', self.portal_callback, 10)
@@ -37,7 +38,8 @@ class Perception(Node):
         
         self.trafficSignal = CooperativeSignalsMessage()  # Initialize traffic signal
         self.detectedObjects = DetectedObjects()  # Initialize detected objects message
-        self.RSU_detectedObjects = PredictedObjects()
+        self.intersection2_RSU_detectedObjects = PredictedObjects()
+        self.intersection1_RSU_detectedObjects = PredictedObjects()
 
         # Initialize the publishers
         self.publisher_traffic_signals = self.create_publisher(TrafficSignalsArray, 'simple_av/perception/traffic_signals', 10)
@@ -62,9 +64,13 @@ class Perception(Node):
         """Callback function to update the pose data."""
         self.detectedObjects = msg
     
-    def RSU_detectedObjects_callback(self, msg):
+    def intersection2_RSU_detectedObjects_callback(self, msg):
         """Callback function to update the pose data."""
-        self.RSU_detectedObjects = msg
+        self.intersection2_RSU_detectedObjects = msg
+    
+    def intersection1_RSU_detectedObjects_callback(self, msg):
+        """Callback function to update the pose data."""
+        self.intersection1_RSU_detectedObjects = msg
 
     def pose_callback(self, msg):
         self.vehicle_pose = msg
@@ -281,11 +287,15 @@ class Perception(Node):
 
         # Ensure the station_id matches 2
         # Loop through traffic signals
-        for traffic_signal in self.trafficSignal.traffic_signals.signals:
-            for element in traffic_signal.elements:
-                # Append traffic signal ID and color
-                v2i_traffic_signals_id.append(traffic_signal.traffic_signal_id)
-                v2i_traffic_signals_colors.append(element.color)
+        if self.trafficSignal.station_id == 1:
+            print("-------------------")
+            for traffic_signal in self.trafficSignal.traffic_signals.signals:
+                
+                for element in traffic_signal.elements:
+                    # Append traffic signal ID and color
+                    print(traffic_signal.traffic_signal_id, element.color)
+                    v2i_traffic_signals_id.append(traffic_signal.traffic_signal_id)
+                    v2i_traffic_signals_colors.append(element.color)
         return v2i_traffic_signals_id, v2i_traffic_signals_colors
 
     def perception(self):
@@ -301,6 +311,11 @@ class Perception(Node):
         
         # Handle traffic signals
         v2i_traffic_signals_id, v2i_traffic_signals_colors = self.process_traffic_signals()
+        # if 166844 in v2i_traffic_signals_id:
+        #     print(v2i_traffic_signals_id)
+        #     print(v2i_traffic_signals_colors)
+
+        
         # Create and publish traffic signals message
         traffic_signals_msg = TrafficSignalsArray()
         traffic_signals_msg.v2i_traffic_signals_id = v2i_traffic_signals_id
@@ -309,7 +324,7 @@ class Perception(Node):
 
         # Handle detected objects
         detected_objects_list = self.handle_detected_objects(self.detectedObjects, False) # Mounted-sensor data
-        detected_objects_list.extend(self.handle_detected_objects(self.RSU_detectedObjects, True)) # RSU data
+        detected_objects_list.extend(self.handle_detected_objects(self.intersection1_RSU_detectedObjects, True)) # RSU data
 
         # Create and publish detected objects message
         detected_objects_msg = DetectedObjectsArray()
