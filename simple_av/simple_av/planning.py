@@ -869,15 +869,15 @@ class Planning(Node):
         print(f"D - detection radius: {self.detection_radius}, reaction distance: {self.reaction_distance}")
         collision_avoidance_stopPoint = self.collision_avoidance(objects_in_range, current_closest_point_to_vehicle_index, vehicle_pose)
         predicted_collisons_stopPoints = self.collison_prediction(objects_in_range, current_closest_point_to_vehicle_index, vehicle_pose)
-        if predicted_collisons_stopPoints:
-            predicted_collisons_stopPoints = []
-            predicted_collisons_stopPoints.append(self.get_lane_traffic_light_stop_point('lanelet871'))
+        # if predicted_collisons_stopPoints:
+        #     predicted_collisons_stopPoints = []
+        #     predicted_collisons_stopPoints.append(self.get_lane_traffic_light_stop_point('lanelet871'))
         stop_point, stop_point_type = self.find_closest_stop_point(traffic_light_stopPoint, collision_avoidance_stopPoint, predicted_collisons_stopPoints, self.destination, vehicle_pose)
         
         self.status.data = 'Cruise'
 
         if isTurnDetected:
-            # self.get_logger().info("Turn detected")
+            self.get_logger().info("Turn detected")
             self.status.data = 'Turn'
         
         if stop_point_type == 'CollisonAvoidance' or stop_point_type == 'CollisonPrediction':
@@ -888,7 +888,7 @@ class Planning(Node):
             self.status.data = 'Decelerate'
         
         if stop_point_type == 'TrafficLight':
-            # self.get_logger().warning('TrafficLight')
+            self.get_logger().warning('TrafficLight')
             self.status.data = trafficLightTask
          
         if (distance_to_destination <= self.reaction_distance and 
