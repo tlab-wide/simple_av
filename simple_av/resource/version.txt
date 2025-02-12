@@ -1,5 +1,5 @@
 Stable Version
-Version 1.9.0-alpha
+Version 1.9.2-beta
 
 vehicle moves in the defined path using the V8_Kashiwa.json
 
