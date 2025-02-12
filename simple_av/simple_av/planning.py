@@ -709,13 +709,11 @@ class Planning(Node):
         return False  # Intersection point is outside the segment
         
     def get_forward_vector(self, quaternion):
-        # Define the local forward vector (Unity's forward is [0, 0, 1])
         local_forward = np.array([1, 0, 0])
         # Convert the quaternion to a rotation object
         rotation = R.from_quat(np.array([quaternion.x, quaternion.y, quaternion.z, quaternion.w]))  # Quaternion format: [x, y, z, w]
         # Apply the rotation to the local forward vector
         global_forward = rotation.apply(local_forward)
-        print("P - forward vector: ", global_forward)
         return global_forward [:2]
     
 
@@ -728,15 +726,19 @@ class Planning(Node):
         print(f"P - dist: {dist}, speed: {speed}, time: {time_to_collision}")
         return time_to_collision
 
-    def will_clooide_on_path(self, object_type, object_speed, object_pose, vehicle_pose, collison_point):
+    def will_clooide_on_path(self, object_type, object_speed, object_pose, vehicle_pose, collison_point, corresponding_waypoint):
+        print("---------------------")
         current_vehicle_speed = self.velocity_report.longitudinal_velocity if self.velocity_report else 0.0   
-        print(f'P - Ego vehicle: ')
-        t_vehicle = self.get_time_to_collison(vehicle_pose, collison_point, 5.0)
-        print(f'P - Object {object_type}: ')
+        t_vehicle = self.get_time_to_collison(vehicle_pose, collison_point, current_vehicle_speed)
         t_object = self.get_time_to_collison({'x': object_pose.x,'y': object_pose.y}, collison_point, 7.0)
         time_difference = abs(t_vehicle - t_object)
+        dist_to_waypoint = self.calculate_distance(corresponding_waypoint, vehicle_pose)
+        print(f"D - time_difference {time_difference}, dist to waypoint {dist_to_waypoint} current_vehicle_speed {current_vehicle_speed}")
         if time_difference <= self.reaction_time_threshold:
-            print(f"P - Potential collision detected! Time difference: {time_difference:.2f} seconds.")
+            self.get_logger().warning(f"P - Vehciel mooving - Potential collision detected! Time difference: {time_difference:.2f} seconds.")
+            return True
+        elif current_vehicle_speed <= 0.5 and t_object <= self.reaction_time_threshold and dist_to_waypoint <= self.saftey_distance:
+            self.get_logger().warning(f"P - Vehciel stopping - Potential collision detected! Time difference: {time_difference:.2f} seconds.")
             return True
         else:
             print(f"P - Safe to proceed. Time difference: {time_difference:.2f} seconds.")
@@ -746,7 +748,7 @@ class Planning(Node):
         # Helper function to calculate distances
         dist_to_waypoint = self.calculate_distance(waypoint, vehicle_pose)
 
-        if dist_to_waypoint < self.saftey_distance: # Stop the vehicle if distance to the object is less that safety distance
+        if dist_to_waypoint <= self.saftey_distance: # Stop the vehicle if distance to the object is less that safety distance
             return Point(x=vehicle_pose['x'], y=vehicle_pose['y'], z=vehicle_pose['z'])
 
         stop_point_index = self.path.index(waypoint) - int(self.saftey_distance/self.densify_interval)
@@ -772,22 +774,23 @@ class Planning(Node):
             return None
         objects_absulute_positions = [self.get_object_absolute_position(self.pose.pose.orientation, vehicle_pose, obj.position) for obj in objects_in_range]
         waypoints = self.path[current_closest_point_to_vehicle_index:current_closest_point_to_vehicle_index + int(self.reaction_distance / self.densify_interval) + 1]
-        print(f"waypoints segment {len(waypoints)}")
+        # print(f"waypoints segment {len(waypoints)}")
         predicted_stop_points = []
         for i in range(len(objects_in_range)):
+            print(f"P - object {i}")
             dist_to_veh = self.calculate_distance(vehicle_pose, {'x': objects_absulute_positions[i].x,'y': objects_absulute_positions[i].y})
             for j in range(len(waypoints) - 1):
-                print(f"P - object {i}, type: {objects_in_range[i].label}, dist: {dist_to_veh} - Waypoint {j}, {j+1}")
+                # print(f"P - object {i}, type: {objects_in_range[i].label}, dist: {dist_to_veh} - Waypoint {j}, {j+1}")
                 forward_vector = self.get_forward_vector(objects_in_range[i].orientation)
                 collison_point = self.find_intersection(objects_absulute_positions[i], forward_vector, waypoints[j], waypoints[j+1])
                 if collison_point:
-                    print(f"P - collision point founded")
+                    # print(f"P - collision point founded")
                     if self.is_point_on_segment(objects_absulute_positions[i], collison_point, waypoints[j], waypoints[j+1], forward_vector):
-                        print(f"P - collision point is on segment")
+                        # print(f"P - collision point is on segment")
                         collison_point = Point(x=collison_point[0], y=collison_point[1], z=waypoints[j]['z'])
-                        print(f'P - CollisonPoint found on: {collison_point.x, collison_point.y}')
-                        print(f'P - corresponding waypoint:  {waypoints[j]}')
-                        if self.will_clooide_on_path(objects_in_range[i].label, objects_in_range[i].velocity, objects_absulute_positions[i], vehicle_pose, collison_point):
+                        # print(f'P - CollisonPoint found on: {collison_point.x, collison_point.y}')
+                        # print(f'P - corresponding waypoint:  {waypoints[j]}')
+                        if self.will_clooide_on_path(objects_in_range[i].label, objects_in_range[i].velocity, objects_absulute_positions[i], vehicle_pose, collison_point, waypoints[j]):
                             stop_point = self.get_stop_point(waypoints[j], vehicle_pose)
                             predicted_stop_points.append(stop_point)
                             break

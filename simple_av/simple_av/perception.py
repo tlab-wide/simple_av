@@ -309,7 +309,7 @@ class Perception(Node):
 
         # Handle detected objects
         detected_objects_list = self.handle_detected_objects(self.detectedObjects, False) # Mounted-sensor data
-        # detected_objects_list.extend(self.handle_detected_objects(self.RSU_detectedObjects, True)) # RSU data
+        detected_objects_list.extend(self.handle_detected_objects(self.RSU_detectedObjects, True)) # RSU data
 
         # Create and publish detected objects message
         detected_objects_msg = DetectedObjectsArray()
@@ -325,6 +325,7 @@ class Perception(Node):
                 print("Direction from vehicle POV: ", obj.relative_direction.data)
                 print("Object relative Position from Vehicle: ", obj.position.x, obj.position.y)
                 print("Object Orientation: ", obj.orientation.x, obj.orientation.y, obj.orientation.z, obj.orientation.w)
+                print("Object speed: ", obj.velocity)
                 print("DEBUG - min dist: ", obj.distance) 
                 print("object shape size: ", obj.shape)
                 print("---------------------")
