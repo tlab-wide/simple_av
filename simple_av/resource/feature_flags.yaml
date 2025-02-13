@@ -1,4 +1,0 @@
-features:
-  enable_traffic_light_detection: true
-  enable_collision_prediction: true
-  enable_collision_avoidance: true

@@ -2,28 +2,27 @@ vehicles:
   lexus:
     model: "RX450H"
     dimensions:
-      length: 4.8895  # meters
-      width: 1.895   # meters
-      height: 1.6  # meters
-      wheel_base: 2.75  # meters
-    max_speed: 30.0  # m/s
-    base_speed: 8.0 # m/s
-    turning_speed: 2.5 # m/s
-    max_acceleration: 3.8 #m/s^2
-    max_braking_accel: -6.0 #m/s^2
+      length: 4.8895  # Vehicle length (meters)
+      width: 1.895    # Vehicle width (meters)
+      height: 1.6     # Vehicle height (meters)
+      wheel_base: 2.75 # Distance between front and rear axles (meters)
+    weight: 3000  # Vehicle weight (kg)
+    performance:
+      max_speed: 30.0          # Maximum speed (m/s)
+      max_acceleration: 3.8     # Maximum acceleration (m/s²)
+      max_braking_acceleration: -6.0 # Maximum braking acceleration (m/s²)
 
   bus:
     model: "TierIV"
     dimensions:
-      length: 10.3  # meters
-      width: 2.9    # meters
-      height: 3.2   # meters
-      wheel_base: 4.8  # meters
-      front_overhang: 2.3 # meters
-      back_overhang: 3.2 # meters
-    max_speed: 20.0  # m/s
-    base_speed: 7.0 # m/s
-    turning_speed: 1.75 # m/s
-    max_acceleration: 1.6 #m/s^2
-    max_braking_accel: -3.2 #m/s^2
-    
+      length: 10.3   # Vehicle length (meters)
+      width: 2.9     # Vehicle width (meters)
+      height: 3.2    # Vehicle height (meters)
+      wheel_base: 4.8 # Distance between front and rear axles (meters)
+      front_overhang: 2.3 # Distance from front axle to vehicle front (meters)
+      rear_overhang: 3.2  # Distance from rear axle to vehicle back (meters)
+    weight: 10000  # Vehicle weight (kg)
+    performance:
+      max_speed: 20.0          # Maximum speed (m/s)
+      max_acceleration: 1.6     # Maximum acceleration (m/s²)
+      max_braking_acceleration: -3.2 # Maximum braking acceleration (m/s²)

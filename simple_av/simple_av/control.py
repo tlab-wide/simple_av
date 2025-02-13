@@ -72,13 +72,13 @@ class VehicleControl(Node):
         self.vehicle_width = self.vehicle_config['dimensions']['width'] #meters
         self.wheel_base = self.vehicle_config['dimensions']['wheel_base'] #meters
         self.front_overhang = self.vehicle_config['dimensions']['front_overhang'] #meters
-        self.back_overhang = self.vehicle_config['dimensions']['back_overhang'] #meters
+        self.back_overhang = self.vehicle_config['dimensions']['rear_overhang'] #meters
         
         self.previous_steering_angle = 0
         self.steering_gain = 0.3  # Proportional gain for steering
-        self.maximum_accel = self.vehicle_config['max_acceleration']
+        self.maximum_accel = self.vehicle_config['performance']['max_acceleration']
         self.maximum_Stereing = None
-        self.maximum_braking_accel = self.vehicle_config['max_braking_accel']
+        self.maximum_braking_accel = self.vehicle_config['performance']['max_braking_acceleration']
 
         # Subscribe topics
         self.subscriptionPose = self.create_subscription(PoseStamped, '/sensing/gnss/pose', self.pose_callback, 10)
@@ -221,7 +221,7 @@ class VehicleControl(Node):
             if status == "Stop_red" and distance_to_stop <= 5.0:
                 self.get_logger().warning("Full stop!")
                 target_speed = 0.0
-            if status == "Decelerate" and distance_to_stop <= 5.0:
+            if status == "Decelerate" and distance_to_stop <= 3.0:
                 self.get_logger().warning("Full stop!")
                 target_speed = 0.0
 
