@@ -1,5 +1,5 @@
 Stable Version
-Version 1.10.2-beta - Intersection 1 Modified
+Version 1.10.3-beta
 
 vehicle moves in the defined path using the V8_Kashiwa.json
 
@@ -30,3 +30,5 @@ Sim_monitor:
     - Monitors the clock comming from the simulator and calculates lag between system and simulator
     - Reports system time, simulator time and lag between them.
 
+bug fixed: Detection range expand using speed but shrinkes after applying into a low pass filter.
+shrinking range is slower than expanding it.
