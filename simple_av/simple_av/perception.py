@@ -287,15 +287,13 @@ class Perception(Node):
 
         # Ensure the station_id matches 2
         # Loop through traffic signals
-        if self.trafficSignal.station_id == 1:
-            print("-------------------")
-            for traffic_signal in self.trafficSignal.traffic_signals.signals:
-                
-                for element in traffic_signal.elements:
-                    # Append traffic signal ID and color
-                    print(traffic_signal.traffic_signal_id, element.color)
-                    v2i_traffic_signals_id.append(traffic_signal.traffic_signal_id)
-                    v2i_traffic_signals_colors.append(element.color)
+        # if self.trafficSignal.station_id == 1:
+        for traffic_signal in self.trafficSignal.traffic_signals.signals:
+            for element in traffic_signal.elements:
+                # Append traffic signal ID and color
+                print(traffic_signal.traffic_signal_id, element.color)
+                v2i_traffic_signals_id.append(traffic_signal.traffic_signal_id)
+                v2i_traffic_signals_colors.append(element.color)
         return v2i_traffic_signals_id, v2i_traffic_signals_colors
 
     def perception(self):
@@ -311,11 +309,10 @@ class Perception(Node):
         
         # Handle traffic signals
         v2i_traffic_signals_id, v2i_traffic_signals_colors = self.process_traffic_signals()
-        # if 166844 in v2i_traffic_signals_id:
-        #     print(v2i_traffic_signals_id)
-        #     print(v2i_traffic_signals_colors)
 
-        
+        print(v2i_traffic_signals_id)
+        print(v2i_traffic_signals_colors)
+
         # Create and publish traffic signals message
         traffic_signals_msg = TrafficSignalsArray()
         traffic_signals_msg.v2i_traffic_signals_id = v2i_traffic_signals_id
@@ -332,7 +329,6 @@ class Perception(Node):
         self.publisher_detected_objects.publish(detected_objects_msg)
 
         print("number of objects: ", len(detected_objects_msg.objects))
-        print("vehicle orientation: ", self.vehicle_pose.pose.orientation)
         for obj in detected_objects_msg.objects:
             if obj.label != 8:
                 print("is RSU:", obj.is_from_rsu)

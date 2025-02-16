@@ -95,6 +95,7 @@ class Planning(Node):
 
         self.saftey_distance = self.motion_behavior_config['behavior']['safety_distance'] #meters
         self.reaction_time_threshold = self.motion_behavior_config['behavior']['reaction_time_threshold'] #meters
+        self.range_low_pass_gain = self.motion_behavior_config['behavior']['range_low_pass_gain'] #meters
 
         self.on_path_detection_range_C = self.motion_behavior_config['behavior']['on_path_detection_range']['coefficient']
         self.on_path_detection_range_B = self.motion_behavior_config['behavior']['on_path_detection_range']['base']
@@ -151,11 +152,14 @@ class Planning(Node):
         self.search_depth = 5
         self.destination = Point()
         
-        #Lookahead and Observation
+        #Lookahead, Observation and detection range
         self.lookahead_distance = self.base_speed * self.lookahead_distance_C + self.lookahead_distance_B # meters
         self.on_path_detection_range = self.base_speed * self.on_path_detection_range_C + self.on_path_detection_range_B # meters
         self.reaction_range = self.base_speed * self.prediction_reaction_range_C + self.prediction_reaction_range_B # meters
         self.detection_range = self.base_speed * self.prediction_detection_range_C + self.prediction_detection_range_B # meters
+        self.current_speed = 0.0
+        self.previous_speed_slidingWindow = deque(maxlen=8) # for storing 10 recent previous speed values
+        self.previous_speed_slidingWindow.append(0.0)  # initializing the queue
         self.status = String() # Cruise, Decelerate, PrepareToStop, Turn
         
         #Curve handling
@@ -213,8 +217,8 @@ class Planning(Node):
             dict: The map data loaded from the JSON file.
         """
         package_share_directory = get_package_share_directory('simple_av')
-        # json_file_path = os.path.join(package_share_directory, 'resource', 'Kashiwa.json')
-        json_file_path = os.path.join(package_share_directory, 'resource', 'Shinjuku.json')
+        json_file_path = os.path.join(package_share_directory, 'resource', 'Kashiwa.json')
+        # json_file_path = os.path.join(package_share_directory, 'resource', 'Shinjuku.json')
         # Load and read the JSON file
         with open(json_file_path, 'r') as json_file:
             map_data = json.load(json_file)
@@ -530,11 +534,18 @@ class Planning(Node):
             speed = self.turning_speed
         return speed
     
-    def update_lookahead_distances(self, speed):
-        self.lookahead_distance = speed * self.lookahead_distance_C + self.lookahead_distance_B # meters
-        self.on_path_detection_range = speed * self.on_path_detection_range_C + self.on_path_detection_range_B # meters
-        self.reaction_range = speed * self.prediction_reaction_range_C + self.prediction_reaction_range_B # meters
+    def update_observation_range1(self, speed, static_speed):
+        self.lookahead_distance = static_speed * self.lookahead_distance_C + self.lookahead_distance_B # meters
+        self.on_path_detection_range = speed * self.on_path_detection_range_C + self.on_path_detection_range_B
+        self.reaction_range = speed * self.prediction_reaction_range_C + self.prediction_reaction_range_B# meters
         self.detection_range = speed * self.prediction_detection_range_C + self.prediction_detection_range_B # meters
+
+    def update_observation_range(self, speed, is_speed_declining):
+        self.lookahead_distance = speed * self.lookahead_distance_C + self.lookahead_distance_B # meters
+        gain = self.range_low_pass_gain if is_speed_declining else 0
+        self.on_path_detection_range = (1 - gain) * (speed * self.on_path_detection_range_C + self.on_path_detection_range_B) + gain * self.on_path_detection_range 
+        self.reaction_range = (1 - gain) * (speed * self.prediction_reaction_range_C + self.prediction_reaction_range_B) + gain * self.reaction_range # meters
+        self.detection_range = (1 - gain) * (speed * self.prediction_detection_range_C + self.prediction_detection_range_B) + gain * self.detection_range # meters
 
     def local_planning(self, search_area):
         """
@@ -549,7 +560,6 @@ class Planning(Node):
         look_ahead_point_index, look_ahead_point = self.find_lookahead_point(vehicle_pose, current_closest_point_to_vehicle_index, search_area)
         isTurnDetected = self.curve_handler(look_ahead_point, look_ahead_point_index)
         target_speed = self.update_target_speed(isTurnDetected)
-        self.update_lookahead_distances(self.velocity_report.longitudinal_velocity if self.velocity_report else 0.0)
 
         # print("DEBUG - look ahead distance: ", self.lookahead_distance)
         return look_ahead_point_index, look_ahead_point, current_closest_point_to_vehicle_index, isTurnDetected, target_speed
@@ -584,7 +594,6 @@ class Planning(Node):
         current_lane_traffic_light_id = lane_obj['trafficlightsWayIDs']
         if current_lane_traffic_light_id: # this lane have a traffic light
             if current_lane_traffic_light_id[0] in v2i_traffic_signals_id: # traffic light id is on the list
-                color = v2i_traffic_signals_colors[v2i_traffic_signals_id.index(current_lane_traffic_light_id[0])]
                 color = v2i_traffic_signals_colors[v2i_traffic_signals_id.index(current_lane_traffic_light_id[0])]
                 stop_point = self.get_traffic_light_stop_point_by_lane(current_lane)
                 self.traffic_light_stopPoint_lastState = stop_point
@@ -887,8 +896,7 @@ class Planning(Node):
         )
         
         # Traffic light detection
-        # trafficLightTask, traffic_light_stopPoint = self.manage_traffic_lights()
-        traffic_light_stopPoint = None
+        trafficLightTask, traffic_light_stopPoint = self.manage_traffic_lights()
         
         # Collision avoidance
         objects_ahead = self.get_detected_objects_in_front()
@@ -914,9 +922,9 @@ class Planning(Node):
                 self.get_logger().warning('Prediction')
             self.status.data = 'Decelerate'
         
-        # if stop_point_type == 'TrafficLight':
-        #     self.get_logger().warning('TrafficLight')
-        #     self.status.data = trafficLightTask
+        if stop_point_type == 'TrafficLight':
+            self.get_logger().warning('TrafficLight')
+            self.status.data = trafficLightTask
          
         if (distance_to_destination <= self.reaction_range and 
             look_ahead_point_index > len(self.path) - (self.reaction_range / self.densify_interval + 1)):
@@ -971,10 +979,6 @@ class Planning(Node):
             self.get_logger().warning("No location/pose input")
             return None
         
-        # if self.initial_lane != self.path_as_lanes[0]:
-        #     self.get_logger().error("Contradiction between Location initial Lane and the first Lane on the path")
-        #     return
-        
         if self.finished:
             self.status.data = 'Park'
             self.node_shut = True
@@ -988,6 +992,9 @@ class Planning(Node):
             print("DEBUG - start_lanelet_respawn: ", self.start_lanelet)
             self.mission_planning(self.start_lanelet)  # generates the path and dencifies it.
         
+        self.current_speed = self.velocity_report.longitudinal_velocity if self.velocity_report else 0.0
+        self.update_observation_range(self.current_speed, self.current_speed < self.previous_speed_slidingWindow[0])
+
         search_area, search_area_as_lanes = self.create_search_area()
         look_ahead_point_index, look_ahead_point, current_closest_point_to_vehicle_index, isTurnDetected, speed = self.local_planning(search_area)
         if not look_ahead_point and not look_ahead_point_index:
@@ -997,7 +1004,7 @@ class Planning(Node):
         stop_point = self.behavioral_planning(look_ahead_point, look_ahead_point_index, current_closest_point_to_vehicle_index, isTurnDetected)
         
         self.publish_planning_msgs(look_ahead_point, stop_point, speed) # publishing
-        '''
+        
         self.get_logger().info(
             f'planning\n'
             f'lookahead distance:  {self.lookahead_distance}\n'
@@ -1005,7 +1012,8 @@ class Planning(Node):
             f'speed: {speed}\n'
             f'status: {self.status.data}\n'
         )
-        '''
+        
+        self.previous_speed_slidingWindow.append(self.current_speed)
 
 def main(args=None):
     rclpy.init(args=args)
