@@ -81,9 +81,7 @@ class Planning(Node):
 
         # Load av features configs
         self.av_features = self.config_file_loader("av_features.yaml")
-        self.use_RSU_for_trafficlight = self.av_features['traffic_light']['enable']
         self.use_RSU_for_trafficlight = self.av_features['traffic_light']['use_rsu']
-        self.use_object_detection = self.av_features['object_detection']['enable']
         self.use_RSU_for_object_detection = self.av_features['object_detection']['use_rsu']
 
         # Load motion & behavior configs
@@ -533,12 +531,6 @@ class Planning(Node):
         if isTurnDetected:
             speed = self.turning_speed
         return speed
-    
-    def update_observation_range1(self, speed, static_speed):
-        self.lookahead_distance = static_speed * self.lookahead_distance_C + self.lookahead_distance_B # meters
-        self.on_path_detection_range = speed * self.on_path_detection_range_C + self.on_path_detection_range_B
-        self.reaction_range = speed * self.prediction_reaction_range_C + self.prediction_reaction_range_B# meters
-        self.detection_range = speed * self.prediction_detection_range_C + self.prediction_detection_range_B # meters
 
     def update_observation_range(self, speed, is_speed_declining):
         self.lookahead_distance = speed * self.lookahead_distance_C + self.lookahead_distance_B # meters
@@ -560,7 +552,7 @@ class Planning(Node):
         look_ahead_point_index, look_ahead_point = self.find_lookahead_point(vehicle_pose, current_closest_point_to_vehicle_index, search_area)
         isTurnDetected = self.curve_handler(look_ahead_point, look_ahead_point_index)
         target_speed = self.update_target_speed(isTurnDetected)
-
+        
         # print("DEBUG - look ahead distance: ", self.lookahead_distance)
         return look_ahead_point_index, look_ahead_point, current_closest_point_to_vehicle_index, isTurnDetected, target_speed
     
@@ -806,9 +798,9 @@ class Planning(Node):
         closest_object_info = self.find_obstacle_on_path(objects_in_range, current_closest_point_to_vehicle_index, vehicle_pose)
         # return False, None, 'Cruise'
         if not closest_object_info:
-            self.get_logger().info("CC - No Immediate danger")
+            self.get_logger().info("No Immediate danger")
             return None
-        self.get_logger().info("CC - Imediate threat. Objects ahead in danger zone")
+        self.get_logger().info("Imediate threat. Objects ahead in danger zone")
         return self.get_stop_point_by_safety_distance(closest_object_info['waypoint'], vehicle_pose)
     
     def collison_prediction(self, objects_ahead, current_closest_point_to_vehicle_index, vehicle_pose):
@@ -897,16 +889,15 @@ class Planning(Node):
         
         # Traffic light detection
         trafficLightTask, traffic_light_stopPoint = self.manage_traffic_lights()
-        
         # Collision avoidance
         objects_ahead = self.get_detected_objects_in_front()
         on_path_collision_avoidance_stopPoint = self.on_path_collision_avoidance(objects_ahead, current_closest_point_to_vehicle_index, vehicle_pose)
-        print("-------------------------------")
         # predicted_collisons_stopPoints = self.collison_prediction(objects_ahead, current_closest_point_to_vehicle_index, vehicle_pose)
         predicted_collisons_stopPoints = []
         # if predicted_collisons_stopPoints:
         #     predicted_collisons_stopPoints = []
             # predicted_collisons_stopPoints.append(self.get_traffic_light_stop_point_by_lane('lanelet871'))
+        
         stop_point, stop_point_type = self.find_closest_stop_point(traffic_light_stopPoint, on_path_collision_avoidance_stopPoint, predicted_collisons_stopPoints, self.destination, vehicle_pose)
         
         self.status.data = 'Cruise'
@@ -994,6 +985,7 @@ class Planning(Node):
         
         self.current_speed = self.velocity_report.longitudinal_velocity if self.velocity_report else 0.0
         self.update_observation_range(self.current_speed, self.current_speed < self.previous_speed_slidingWindow[0])
+
 
         search_area, search_area_as_lanes = self.create_search_area()
         look_ahead_point_index, look_ahead_point, current_closest_point_to_vehicle_index, isTurnDetected, speed = self.local_planning(search_area)
