@@ -10,12 +10,12 @@ motion:
     base: 2.5 # Multiplier based on vehicle speed
 
 behavior:
-  safety_distance: 12.0  # Minimum stopping distance behind an object (meters)
-  reaction_time_threshold: 25  # Time delay before reacting to an event (seconds)
+  safety_distance: 10.0  # Minimum stopping distance behind an object (meters)
+  reaction_time_threshold: 20  # Time delay before reacting to an event (seconds)
 
   on_path_detection_range: # Detection range for Objects on the path
     coefficient: 6.0 # Scaling factor for reaction distance
-    base: 8.0        # Base reaction distance (meters)
+    base: 16.0        # Base reaction distance (meters)
 
   prediction_reaction_range: 
     coefficient: 10.0  # Scaling factor for reaction distance
