@@ -10,7 +10,7 @@ motion:
     base: 2.5 # Multiplier based on vehicle speed
 
 behavior:
-  safety_distance: 8.0  # Minimum stopping distance behind an object (meters)
+  safety_distance: 22.0  # Minimum stopping distance behind an object (meters)
   reaction_time_threshold: 20  # Time delay before reacting to an event (seconds)
   range_low_pass_gain: 0.90
 
