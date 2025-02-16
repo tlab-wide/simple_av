@@ -41,6 +41,7 @@ class PIDController:
         self.current_time = sim_time
         
         delta_time = self.current_time - self.last_time  # Convert to seconds
+        print("debug - delta time: ", delta_time, " sim time: ", sim_time, " real time: ", time.time())
         self.slidingWindow.append(error)
         
         self.integrated_error = sum(self.slidingWindow) * delta_time
@@ -72,13 +73,13 @@ class VehicleControl(Node):
         self.vehicle_width = self.vehicle_config['dimensions']['width'] #meters
         self.wheel_base = self.vehicle_config['dimensions']['wheel_base'] #meters
         self.front_overhang = self.vehicle_config['dimensions']['front_overhang'] #meters
-        self.back_overhang = self.vehicle_config['dimensions']['back_overhang'] #meters
+        self.back_overhang = self.vehicle_config['dimensions']['rear_overhang'] #meters
         
         self.previous_steering_angle = 0
         self.steering_gain = 0.3  # Proportional gain for steering
-        self.maximum_accel = self.vehicle_config['max_acceleration']
+        self.maximum_accel = self.vehicle_config['performance']['max_acceleration']
         self.maximum_Stereing = None
-        self.maximum_braking_accel = self.vehicle_config['max_braking_accel']
+        self.maximum_braking_accel = self.vehicle_config['performance']['max_braking_acceleration']
 
         # Subscribe topics
         self.subscriptionPose = self.create_subscription(PoseStamped, '/sensing/gnss/pose', self.pose_callback, 10)
@@ -109,7 +110,7 @@ class VehicleControl(Node):
         self.gear_publisher = self.create_publisher(GearCommand, '/control/command/gear_cmd', qos_profile)
         self.turn_indicator_publisher = self.create_publisher(TurnIndicatorsCommand, '/control/command/turn_indicators_cmd', qos_profile)
 
-        self.pid_controller = PIDController(p_gain=2.0, i_gain=21.0, d_gain=0.5)
+        self.pid_controller = PIDController(p_gain=1.9, i_gain=20.0, d_gain=1.5)
 
         self.node_shut = False
 
@@ -221,7 +222,7 @@ class VehicleControl(Node):
             if status == "Stop_red" and distance_to_stop <= 5.0:
                 self.get_logger().warning("Full stop!")
                 target_speed = 0.0
-            if status == "Decelerate" and distance_to_stop <= 5.0:
+            if status == "Decelerate" and distance_to_stop <= 4.0:
                 self.get_logger().warning("Full stop!")
                 target_speed = 0.0
 
@@ -250,7 +251,6 @@ class VehicleControl(Node):
                 f'target speed: {target_speed}\n'
                 f'status : {self.lookAhead.status.data}\n'
             )
-
         return longitudinal_command
     
     def calculate_target_speed_for_stop(self, distance_to_stop, current_speed):

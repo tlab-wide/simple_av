@@ -1,4 +1,4 @@
 scenario:
   destination: 'lanelet761' # Scenarion 1 lanelet761-- for scenarion 2 enter lanelet1162'
+  # destination: 'lanelet177' # Scenarion SHinjuku start from 96
   repeat_count: 5  # Number of times to repeat the scenario for testing
-  is_RSU_on: True
