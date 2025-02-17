@@ -1,2 +1,0 @@
-dm_object_info_msgs/DistanceValue dx
-dm_object_info_msgs/DistanceValue dy

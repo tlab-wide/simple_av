@@ -1,4 +1,0 @@
-uint64 station_id
-uint64 sensor_type
-geometry_msgs/PoseStamped station_pose
-dm_object_info_msgs/ObjectInfoArray object_info_array

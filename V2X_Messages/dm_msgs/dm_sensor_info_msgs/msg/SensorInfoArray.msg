@@ -1,1 +1,0 @@
-SensorInfo[] array

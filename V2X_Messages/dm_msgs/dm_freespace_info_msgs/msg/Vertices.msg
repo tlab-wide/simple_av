@@ -1,2 +1,0 @@
-dm_object_info_msgs/Location begin
-OffsetPointXyArray array

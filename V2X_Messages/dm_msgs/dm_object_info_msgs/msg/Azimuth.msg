@@ -1,2 +1,0 @@
-AzimuthValue value
-AzimuthAccuracy accuracy
