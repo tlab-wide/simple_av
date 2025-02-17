@@ -2,8 +2,7 @@ motion:
   max_turning_angle: 35.0  # Maximum allowable turning angle (degrees)
   
   speed_limits:
-    # base: 11.0     # Default base speed (m/s)
-    base: 2.7     # Default base speed (m/s)
+    base: 11.0     # Default base speed (m/s)
     turning_speed: 2.7 # Default speed on turns (m/s)
 
   lookahead:
@@ -17,7 +16,7 @@ behavior:
 
   on_path_detection_range: # Detection range for Objects on the path
     coefficient: 5.0 # Scaling factor for reaction distance
-    base: 15.0        # Base reaction distance (meters)
+    base: 25.0        # Base reaction distance (meters)
 
   prediction_reaction_range: 
     coefficient: 10.0  # Scaling factor for reaction distance
