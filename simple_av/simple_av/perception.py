@@ -25,6 +25,8 @@ class Perception(Node):
         self.av_features = self.config_file_loader("av_features.yaml")
         self.use_RSU_for_trafficlight = self.av_features['traffic_light']['use_rsu']
         self.use_RSU_for_object_detection = self.av_features['object_detection']['use_rsu']
+        self.RSU_delay_enable = self.av_features['RSU_delay']['enable']
+        self.RSU_delay_value = self.av_features['RSU_delay']['value']
 
         self.vehicle_type = vehicle_type
         self.vehicle_config = self.load_vehicle_config(vehicle_type)

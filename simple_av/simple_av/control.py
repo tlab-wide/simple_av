@@ -110,7 +110,7 @@ class VehicleControl(Node):
         self.gear_publisher = self.create_publisher(GearCommand, '/control/command/gear_cmd', qos_profile)
         self.turn_indicator_publisher = self.create_publisher(TurnIndicatorsCommand, '/control/command/turn_indicators_cmd', qos_profile)
 
-        self.pid_controller = PIDController(p_gain=1.9, i_gain=20.0, d_gain=1.5)
+        self.pid_controller = PIDController(p_gain=2.2, i_gain=22.0, d_gain=1.5)
 
         self.node_shut = False
 
@@ -222,7 +222,7 @@ class VehicleControl(Node):
             if status == "Stop_red" and distance_to_stop <= 5.0:
                 self.get_logger().warning("Full stop!")
                 target_speed = 0.0
-            if status == "Decelerate" and distance_to_stop <= 4.0:
+            if status == "Decelerate" and distance_to_stop <= 5.0:
                 self.get_logger().warning("Full stop!")
                 target_speed = 0.0
 

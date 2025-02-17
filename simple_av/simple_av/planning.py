@@ -759,10 +759,11 @@ class Planning(Node):
         print(f"P - dist: {dist}, speed: {speed}, time: {time_to_collision}")
         return time_to_collision
 
-    def will_clooide_on_path(self, object_type, object_speed, object_pose, vehicle_pose, collison_point, corresponding_waypoint):
+    def will_collide_on_path(self, object_type, object_speed, object_pose, vehicle_pose, collison_point, corresponding_waypoint):
         print("---------------------")
         current_vehicle_speed = self.velocity_report.longitudinal_velocity if self.velocity_report else 0.0   
-        t_vehicle = self.get_time_to_collison(vehicle_pose, collison_point, current_vehicle_speed)
+        t_vehicle = self.get_time_to_collison(vehicle_pose, collison_point, self.turning_speed)
+        # t_vehicle = self.get_time_to_collison(vehicle_pose, collison_point, current_vehicle_speed)
         t_object = self.get_time_to_collison({'x': object_pose.x,'y': object_pose.y}, collison_point, object_speed)
         time_difference = abs(t_vehicle - t_object)
         dist_to_waypoint = self.calculate_distance(corresponding_waypoint, vehicle_pose)
@@ -770,18 +771,15 @@ class Planning(Node):
         if time_difference <= self.reaction_time_threshold:
             self.get_logger().warning(f"P - Vehciel mooving - Potential collision detected! Time difference: {time_difference:.2f} seconds.")
             return True
-        elif current_vehicle_speed <= 0.5 and t_object <= self.reaction_time_threshold and dist_to_waypoint <= self.saftey_distance:
-            self.get_logger().warning(f"P - Vehciel stopping - Potential collision detected! Time difference: {time_difference:.2f} seconds.")
-            return True
-        else:
-            print(f"P - Safe to proceed. Time difference: {time_difference:.2f} seconds.")
-            return False
+        print(f"P - Safe to proceed. Time difference: {time_difference:.2f} seconds.")
+        return False
     
     def get_stop_point_by_safety_distance(self, waypoint, vehicle_pose):
         # Helper function to calculate distances
         dist_to_waypoint = self.calculate_distance(waypoint, vehicle_pose)
         print("CC - vehicle distance to waypoint: ", dist_to_waypoint)
         if dist_to_waypoint <= self.saftey_distance: # Stop the vehicle if distance to the object is less that safety distance
+            self.get_logger().warning("P - INSTANT STOP!!")
             return Point(x=vehicle_pose['x'], y=vehicle_pose['y'], z=vehicle_pose['z'])
 
         stop_point_index = self.path.index(waypoint) - int(self.saftey_distance/self.densify_interval)
@@ -836,7 +834,8 @@ class Planning(Node):
                         collison_point = Point(x=collison_point[0], y=collison_point[1], z=waypoints[j]['z'])
                         # print(f'P - CollisonPoint found on: {collison_point.x, collison_point.y}')
                         # print(f'P - corresponding waypoint:  {waypoints[j]}')
-                        if self.will_clooide_on_path(objects_in_range[i].label, objects_in_range[i].velocity, objects_absulute_positions[i], vehicle_pose, collison_point, waypoints[j]):
+                        if self.will_collide_on_path(objects_in_range[i].label, objects_in_range[i].velocity, objects_absulute_positions[i], vehicle_pose, collison_point, waypoints[j]):
+                            self.get_logger().warning('P - Collide predicted!!!')
                             stop_point = self.get_stop_point_by_safety_distance(waypoints[j], vehicle_pose)
                             predicted_stop_points.append(stop_point)
                             break
@@ -901,7 +900,6 @@ class Planning(Node):
         objects_ahead = self.get_detected_objects_in_front()
         on_path_collision_avoidance_stopPoint = self.on_path_collision_avoidance(objects_ahead, current_closest_point_to_vehicle_index, vehicle_pose)
         predicted_collisons_stopPoints = self.collison_prediction(objects_ahead, current_closest_point_to_vehicle_index, vehicle_pose)
-        predicted_collisons_stopPoints = []
         # if predicted_collisons_stopPoints:
         #     predicted_collisons_stopPoints = []
             # predicted_collisons_stopPoints.append(self.get_traffic_light_stop_point_by_lane('lanelet871'))
