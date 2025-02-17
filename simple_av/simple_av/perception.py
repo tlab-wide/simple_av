@@ -34,7 +34,7 @@ class Perception(Node):
         self.subscriptionSensor = self.create_subscription(DetectedObjects, '/OBU/Sensing', self.detectedObjects_callback, 10)
         # Create subscriber for /v2x/cooperative2 topic. This topic publishes the information of detected objects from RSU.
         self.subscriptionRSU_intersection2 = self.create_subscription(PredictedObjects, '/v2x/predicted_object2', self.intersection2_RSU_detectedObjects_callback, 10)
-        self.subscriptionRSU_intersection1 = self.create_subscription(PredictedObjects, '/v2x/predicted_object1', self.intersection1_RSU_detectedObjects_callback, 10)
+        self.subscriptionRSU_intersection1 = self.create_subscription(PredictedObjects, '/v2x/predicted_objects1', self.intersection1_RSU_detectedObjects_callback, 10)
         self.subscriptionPose = self.create_subscription(PoseStamped, '/sensing/gnss/pose', self.pose_callback, 10)
         # Create subscriber to simple_av/portal topic
         self.subscriptionPortal = self.create_subscription(Portal, 'simple_av/portal', self.portal_callback, 10)
@@ -323,8 +323,8 @@ class Perception(Node):
         
         # Handle traffic signals
         v2i_traffic_signals_id, v2i_traffic_signals_colors = self.process_traffic_signals()
-        print(v2i_traffic_signals_id)
-        print(v2i_traffic_signals_colors)
+        # print(v2i_traffic_signals_id)
+        # print(v2i_traffic_signals_colors)
 
         # Create and publish traffic signals message
         traffic_signals_msg = TrafficSignalsArray()

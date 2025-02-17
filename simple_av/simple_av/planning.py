@@ -813,9 +813,13 @@ class Planning(Node):
         # print(f"waypoints segment {len(waypoints)}")
         
         self.get_logger().warning(f"Traffic light enemy: {self.get_traffic_light_color_by_id(166893)}")
-        if self.use_RSU_for_trafficlight and self.get_traffic_light_color_by_id(166893) == 1:
-            self.get_logger().warning('dont use RSU')
-            return []
+        if self.use_RSU_for_trafficlight:
+            self.get_logger().warning('Use RSU for traffic light')
+            if self.get_traffic_light_color_by_id(166893) == 1:
+                self.get_logger().warning('Traffic light of Opposite side of the road is RED')
+                return []
+        else:
+            self.get_logger().warning('Dont use RSU for traffic light')
         
         predicted_stop_points = []
         for i in range(len(objects_in_range)):
@@ -960,6 +964,9 @@ class Planning(Node):
         lookahead_point.status = self.status
         lookahead_point.speed_limit = speed
         self.planning_publisher.publish(lookahead_point)
+
+    def green_light_delay(self):
+        pass
   
     def planning(self):
         """
