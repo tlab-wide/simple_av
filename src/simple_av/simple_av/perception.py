@@ -307,7 +307,7 @@ class Perception(Node):
         for traffic_signal in self.trafficSignal.traffic_signals.signals:
             for element in traffic_signal.elements:
                 # Append traffic signal ID and color
-                print(traffic_signal.traffic_signal_id, element.color)
+                # print(traffic_signal.traffic_signal_id, element.color)
                 v2i_traffic_signals_id.append(traffic_signal.traffic_signal_id)
                 v2i_traffic_signals_colors.append(element.color)
         return v2i_traffic_signals_id, v2i_traffic_signals_colors

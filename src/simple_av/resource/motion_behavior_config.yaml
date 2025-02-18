@@ -3,15 +3,15 @@ motion:
   
   speed_limits:
     base: 11.0     # Default base speed (m/s)
-    turning_speed: 2.7 # Default speed on turns (m/s)
+    turning_speed: 3.0 # Default speed on turns (m/s)
 
   lookahead:
-    coefficient: 3    # Scaling factor for lookahead distance
-    base: 1.5 # Multiplier based on vehicle speed
+    coefficient: 1.75    # Scaling factor for lookahead distance
+    base: 2.0 # Multiplier based on vehicle speed
 
 behavior:
-  safety_distance: 28.0  # Minimum stopping distance behind an object (meters)
-  reaction_time_threshold: 20  # Time delay before reacting to an event (seconds)
+  safety_distance: 16.0  # Minimum stopping distance behind an object (meters)
+  reaction_time_threshold: 10.0  # Time delay before reacting to an event (seconds)
   range_low_pass_gain: 0.90
 
   on_path_detection_range: # Detection range for Objects on the path

@@ -76,7 +76,7 @@ class VehicleControl(Node):
         self.back_overhang = self.vehicle_config['dimensions']['rear_overhang'] #meters
         
         self.previous_steering_angle = 0
-        self.steering_gain = 0.3  # Proportional gain for steering
+        self.steering_gain = 0.2  # Proportional gain for steering
         self.maximum_accel = self.vehicle_config['performance']['max_acceleration']
         self.maximum_Stereing = None
         self.maximum_braking_accel = self.vehicle_config['performance']['max_braking_acceleration']
@@ -110,7 +110,7 @@ class VehicleControl(Node):
         self.gear_publisher = self.create_publisher(GearCommand, '/control/command/gear_cmd', qos_profile)
         self.turn_indicator_publisher = self.create_publisher(TurnIndicatorsCommand, '/control/command/turn_indicators_cmd', qos_profile)
 
-        self.pid_controller = PIDController(p_gain=2.2, i_gain=22.0, d_gain=1.5)
+        self.pid_controller = PIDController(p_gain=2.4, i_gain=25.0, d_gain=1.5)
 
         self.node_shut = False
 
@@ -219,10 +219,10 @@ class VehicleControl(Node):
         if status == "Decelerate" or status == "Stop_red":
             distance_to_stop = self.calculate_distance(self.lookAhead.stop_point, self.pose.pose.position)
             target_speed = self.calculate_target_speed_for_stop(distance_to_stop, current_speed)
-            if status == "Stop_red" and distance_to_stop <= 5.0:
+            if status == "Stop_red" and distance_to_stop <= 4.0:
                 self.get_logger().warning("Full stop!")
                 target_speed = 0.0
-            if status == "Decelerate" and distance_to_stop <= 5.0:
+            if status == "Decelerate" and distance_to_stop <= 3.0:
                 self.get_logger().warning("Full stop!")
                 target_speed = 0.0
 
@@ -261,7 +261,7 @@ class VehicleControl(Node):
         target_speed = current_speed * (distance_to_stop / (self.lookAhead.speed_limit * 3.0))**1.0
         
         # Clamp for realistic behavior
-        return min(self.lookAhead.speed_limit, max(1.0, target_speed))
+        return min(self.lookAhead.speed_limit, max(1.5, target_speed))
 
     def filter(self, new_value, previous_value, gain):
         return gain * previous_value + (1 - gain) * new_value

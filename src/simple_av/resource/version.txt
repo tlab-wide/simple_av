@@ -1,5 +1,5 @@
 Stable Version
-Version 1.11.4-beta
+Version 1.12.4-beta
 
 vehicle moves in the defined path using the V8_Kashiwa.json
 
@@ -30,4 +30,4 @@ Sim_monitor:
     - Monitors the clock comming from the simulator and calculates lag between system and simulator
     - Reports system time, simulator time and lag between them.
 
-fixed bug: portal detection range reduces from 75 meter to 15 meters. Initial point consideration removed from portal.
+Stable version, json map updated.
