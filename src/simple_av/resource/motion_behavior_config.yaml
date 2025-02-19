@@ -11,7 +11,7 @@ motion:
 
 behavior:
   safety_distance: 16.0  # Minimum stopping distance behind an object (meters)
-  reaction_time_threshold: 5.0  # Time delay before reacting to an event (seconds)
+  reaction_time_threshold: 4.0  # Time delay before reacting to an event (seconds)
   range_low_pass_gain: 0.90
 
   on_path_detection_range: # Detection range for Objects on the path

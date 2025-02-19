@@ -810,20 +810,15 @@ class Planning(Node):
         waypoints = self.path[current_closest_point_to_vehicle_index:current_closest_point_to_vehicle_index + int(self.reaction_range / self.densify_interval) + 1]
         # print(f"waypoints segment {len(waypoints)}")
         
-        self.get_logger().warning(f"Traffic light enemy: {self.get_traffic_light_color_by_id(166893)}")
         if self.use_RSU_for_trafficlight:
-            self.get_logger().warning('Use RSU for traffic light')
             if self.get_traffic_light_color_by_id(166893) == 1:
-                self.get_logger().warning('Traffic light of Opposite side of the road is RED')
                 return []
-        else:
-            self.get_logger().warning('Dont use RSU for traffic light')
         
         predicted_stop_points = []
         for i in range(len(objects_in_range)):
             print(f"P - object {i}")
             dist_to_veh = self.calculate_distance(vehicle_pose, {'x': objects_absulute_positions[i].x,'y': objects_absulute_positions[i].y})
-            for j in range(len(waypoints) - 1):
+            for j in range(1, len(waypoints) - 1):
                 # print(f"P - object {i}, type: {objects_in_range[i].label}, dist: {dist_to_veh} - Waypoint {j}, {j+1}")
                 forward_vector = self.get_forward_vector(objects_in_range[i].orientation)
                 collison_point = self.find_intersection(objects_absulute_positions[i], forward_vector, waypoints[j], waypoints[j+1])
@@ -900,9 +895,6 @@ class Planning(Node):
         objects_ahead = self.get_detected_objects_in_front()
         on_path_collision_avoidance_stopPoint = self.on_path_collision_avoidance(objects_ahead, current_closest_point_to_vehicle_index, vehicle_pose)
         predicted_collisons_stopPoints = self.collison_prediction(objects_ahead, current_closest_point_to_vehicle_index, vehicle_pose)
-        # if predicted_collisons_stopPoints:
-        #     predicted_collisons_stopPoints = []
-            # predicted_collisons_stopPoints.append(self.get_traffic_light_stop_point_by_lane('lanelet871'))
         
         stop_point, stop_point_type = self.find_closest_stop_point(traffic_light_stopPoint, on_path_collision_avoidance_stopPoint, predicted_collisons_stopPoints, self.destination, vehicle_pose)
         
@@ -930,8 +922,7 @@ class Planning(Node):
         
         return stop_point
 
-           
-
+        
     def mission_planning(self, start_lanelet_respawn=None):
         """
         Perform global path planning to create a path from the current location to the destination.
