@@ -91,7 +91,6 @@ class portal(Node):
         self.portal_publisher.publish(portal_reset)
         self.isPortalReached = False
 
-
 def main(args=None):
     rclpy.init(args=args)
     node = portal()

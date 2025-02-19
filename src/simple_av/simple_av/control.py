@@ -222,7 +222,7 @@ class VehicleControl(Node):
             if status == "Stop_red" and distance_to_stop <= 4.0:
                 self.get_logger().warning("Full stop!")
                 target_speed = 0.0
-            if status == "Decelerate" and distance_to_stop <= 3.0:
+            if status == "Decelerate" and distance_to_stop <= 2.0:
                 self.get_logger().warning("Full stop!")
                 target_speed = 0.0
 
@@ -261,7 +261,7 @@ class VehicleControl(Node):
         target_speed = current_speed * (distance_to_stop / (self.lookAhead.speed_limit * 3.0))**1.0
         
         # Clamp for realistic behavior
-        return min(self.lookAhead.speed_limit, max(1.5, target_speed))
+        return min(self.lookAhead.speed_limit, max(2.0, target_speed))
 
     def filter(self, new_value, previous_value, gain):
         return gain * previous_value + (1 - gain) * new_value

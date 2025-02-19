@@ -325,8 +325,8 @@ class Perception(Node):
         
         # Handle traffic signals
         v2i_traffic_signals_id, v2i_traffic_signals_colors = self.process_traffic_signals()
-        # print(v2i_traffic_signals_id)
-        # print(v2i_traffic_signals_colors)
+        print(v2i_traffic_signals_id)
+        print(v2i_traffic_signals_colors)
 
         # Create and publish traffic signals message
         traffic_signals_msg = TrafficSignalsArray()
