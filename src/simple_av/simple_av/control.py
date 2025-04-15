@@ -60,15 +60,17 @@ class PIDController:
 
 
 class VehicleControl(Node):
-    def __init__(self, vehicle_type):
+    def __init__(self):
         super().__init__('control')
         if not self.has_parameter('use_sim_time'):
             self.declare_parameter('use_sim_time', True)
         self.set_parameters([Parameter('use_sim_time', Parameter.Type.BOOL, True)])
         
         # Load configs
-        self.vehicle_type = vehicle_type
-        self.vehicle_config = self.load_vehicle_config(vehicle_type)
+        self.scenario_config = self.config_file_loader("scenario_config.yaml")
+        self.vehicle_model = self.scenario_config['scenario']['vehicle_model']
+        self.vehicle_config = self.load_vehicle_config(self.vehicle_model)
+
         self.vehicle_length = self.vehicle_config['dimensions']['length'] #meters
         self.vehicle_width = self.vehicle_config['dimensions']['width'] #meters
         self.wheel_base = self.vehicle_config['dimensions']['wheel_base'] #meters
@@ -113,8 +115,17 @@ class VehicleControl(Node):
         self.pid_controller = PIDController(p_gain=2.4, i_gain=25.0, d_gain=1.5)
 
         self.node_shut = False
+    
+    def config_file_loader(self, file_name):
+        # Path to the YAML file
+        package_share_directory = get_package_share_directory('simple_av')
+        config_path = os.path.join(package_share_directory, "resource", file_name)
+        # Load the configuration file
+        with open(config_path, "r") as file:
+            config = yaml.safe_load(file)
+        return config
 
-    def load_vehicle_config(self, vehicle_type="lexus"):
+    def load_vehicle_config(self, vehicle_model):
         # Path to the YAML file
         package_share_directory = get_package_share_directory('simple_av')
         config_path = os.path.join(package_share_directory, "resource", "vehicle_config.yaml")
@@ -124,10 +135,10 @@ class VehicleControl(Node):
             config = yaml.safe_load(file)
 
         # Retrieve the specific vehicle's configuration
-        if vehicle_type in config["vehicles"]:
-            return config["vehicles"][vehicle_type]
+        if vehicle_model in config["vehicles"]:
+            return config["vehicles"][vehicle_model]
         else:
-            raise ValueError(f"Vehicle type '{vehicle_type}' not found in the configuration.")
+            raise ValueError(f"Vehicle type '{vehicle_model}' not found in the configuration.")
 
     def sim_monitor_callback(self, msg):
         self.sim_clock_rate = msg.sim_clock_rate
@@ -335,7 +346,7 @@ class VehicleControl(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-    node = VehicleControl('bus')
+    node = VehicleControl()
 
     try:
         while rclpy.ok() and not node.node_shut:

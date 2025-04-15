@@ -65,19 +65,19 @@ class PathCurveDetector:
 
 
 class Planning(Node):
-    def __init__(self, vehicle_type):
+    def __init__(self):
         super().__init__('Planning')
-
-        # Load vehicle configs
-        self.vehicle_type = vehicle_type
-        self.vehicle_config = self.load_vehicle_config(vehicle_type)
-        self.vehicle_length = self.vehicle_config['dimensions']['length'] #meters
-        self.vehicle_width = self.vehicle_config['dimensions']['width'] #meters
 
         # Load scenario configs
         self.scenario_config = self.config_file_loader("scenario_config.yaml")
         self.dest_lanelet = self.scenario_config['scenario']['destination']
         self.start_lanelet = None
+        self.vehicle_model = self.scenario_config['scenario']['vehicle_model']
+
+        # Load vehicle configs
+        self.vehicle_config = self.load_vehicle_config(self.vehicle_model)
+        self.vehicle_length = self.vehicle_config['dimensions']['length'] #meters
+        self.vehicle_width = self.vehicle_config['dimensions']['width'] #meters
 
         # Load av features configs
         self.av_features = self.config_file_loader("av_features.yaml")
@@ -192,7 +192,7 @@ class Planning(Node):
             config = yaml.safe_load(file)
         return config
 
-    def load_vehicle_config(self, vehicle_type="lexus"):
+    def load_vehicle_config(self, vehicle_model):
         # Path to the YAML file
         package_share_directory = get_package_share_directory('simple_av')
         config_path = os.path.join(package_share_directory, "resource", "vehicle_config.yaml")
@@ -202,10 +202,10 @@ class Planning(Node):
             config = yaml.safe_load(file)
 
         # Retrieve the specific vehicle's configuration
-        if vehicle_type in config["vehicles"]:
-            return config["vehicles"][vehicle_type]
+        if vehicle_model in config["vehicles"]:
+            return config["vehicles"][vehicle_model]
         else:
-            raise ValueError(f"Vehicle type '{vehicle_type}' not found in the configuration.")
+            raise ValueError(f"Vehicle type '{vehicle_model}' not found in the configuration.")
     
 
     def load_map_data(self):
@@ -1009,7 +1009,7 @@ class Planning(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-    node = Planning('bus')
+    node = Planning()
     try:
         while rclpy.ok() and not node.node_shut:
             rclpy.spin_once(node, timeout_sec=None)# Set timeout to 0 to avoid delay

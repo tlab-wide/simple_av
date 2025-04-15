@@ -2,3 +2,4 @@ scenario:
   destination: 'lanelet761' # Scenarion 1 lanelet761-- for scenarion 2 enter lanelet1162'
   # destination: 'lanelet177' # Scenarion SHinjuku start from 96
   repeat_count: 50  # Number of times to repeat the scenario for testing
+  vehicle_model: 'bus' # Selecting vehicle model based on what model is loaded on AWSIM: Lexus/bus or custom vehicle

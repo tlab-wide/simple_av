@@ -18,8 +18,17 @@ from transformations import euler_from_quaternion
 from simple_av_msgs.msg import Portal
 
 class Perception(Node):
-    def __init__(self, vehicle_type):
+    def __init__(self):
         super().__init__('Perception')
+
+        # Load scenario configs
+        self.scenario_config = self.config_file_loader("scenario_config.yaml")
+        self.vehicle_model = self.scenario_config['scenario']['vehicle_model']
+
+        # Load vehicle configs
+        self.vehicle_config = self.load_vehicle_config(self.vehicle_model)
+        self.vehicle_length = self.vehicle_config['dimensions']['length'] #meters
+        self.vehicle_width = self.vehicle_config['dimensions']['width'] #meters
 
         # Load av features configs
         self.av_features = self.config_file_loader("av_features.yaml")
@@ -28,8 +37,7 @@ class Perception(Node):
         self.RSU_delay_enable = self.av_features['RSU_delay']['enable']
         self.RSU_delay_value = self.av_features['RSU_delay']['value']
 
-        self.vehicle_type = vehicle_type
-        self.vehicle_config = self.load_vehicle_config(vehicle_type)
+        
         # Create subscriber for /v2x/traffic_signals topic
         self.subscriptionTrafficLight = self.create_subscription(CooperativeSignalsMessage, '/v2x/traffic_signals', self.trafficSignal_callback, 10)
         # Create subscriber for /OBU/Sensing topic. This topic publishes the information of detected objects from the POV of the vehicle.
@@ -54,8 +62,6 @@ class Perception(Node):
 
         self.vehicle_pose = PoseStamped()
 
-        self.vehicle_length = self.vehicle_config['dimensions']['length'] #meters
-        self.vehicle_width = self.vehicle_config['dimensions']['width'] #meters
 
         self.node_shut = False
 
@@ -92,7 +98,7 @@ class Perception(Node):
         self.vehicle_pose = msg
 
     
-    def load_vehicle_config(self, vehicle_type="lexus"):
+    def load_vehicle_config(self, vehicle_model):
         # Path to the YAML file
         package_share_directory = get_package_share_directory('simple_av')
         config_path = os.path.join(package_share_directory, "resource", "vehicle_config.yaml")
@@ -102,10 +108,10 @@ class Perception(Node):
             config = yaml.safe_load(file)
 
         # Retrieve the specific vehicle's configuration
-        if vehicle_type in config["vehicles"]:
-            return config["vehicles"][vehicle_type]
+        if vehicle_model in config["vehicles"]:
+            return config["vehicles"][vehicle_model]
         else:
-            raise ValueError(f"Vehicle type '{vehicle_type}' not found in the configuration.")
+            raise ValueError(f"Vehicle type '{vehicle_model}' not found in the configuration.")
 
     # Getting the direction of the object from Automated vehicle point of view
     def object_direction(self, x, y):
@@ -325,8 +331,8 @@ class Perception(Node):
         
         # Handle traffic signals
         v2i_traffic_signals_id, v2i_traffic_signals_colors = self.process_traffic_signals()
-        print(v2i_traffic_signals_id)
-        print(v2i_traffic_signals_colors)
+        # print(v2i_traffic_signals_id)
+        # print(v2i_traffic_signals_colors)
 
         # Create and publish traffic signals message
         traffic_signals_msg = TrafficSignalsArray()
@@ -359,7 +365,7 @@ class Perception(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-    node = Perception('bus')
+    node = Perception()
     try:
         while rclpy.ok() and not node.node_shut:
             rclpy.spin_once(node, timeout_sec=0)  # Set timeout to 0 to avoid delay
