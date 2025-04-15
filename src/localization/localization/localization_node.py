@@ -324,6 +324,7 @@ class Localization(Node):
         self.localization_publisher.publish(localization_result)
 
 def main(args=None):
+    print("Localization node started...")
     rclpy.init(args=args)
     node = Localization()
     try:
