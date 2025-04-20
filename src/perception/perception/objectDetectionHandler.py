@@ -1,8 +1,7 @@
 import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import Point, Quaternion, Vector3
-from simple_av_msgs.msg import LocalizationMsg, TrafficSignalsArray, DetectedObject, DetectedObjectsArray
-from v2x_msgs.msg import CooperativeSignalsMessage
+from simple_av_msgs.msg import DetectedObject, DetectedObjectsArray
 from autoware_auto_perception_msgs.msg import DetectedObjects
 from autoware_auto_perception_msgs.msg import PredictedObjects
 from geometry_msgs.msg import PoseStamped
@@ -19,7 +18,7 @@ from simple_av_msgs.msg import Portal
 
 class Perception(Node):
     def __init__(self):
-        super().__init__('Perception')
+        super().__init__('ObjectDetetionHandler')
 
         # Load scenario configs
         self.scenario_config = self.config_file_loader("scenario_config.yaml")
@@ -38,8 +37,6 @@ class Perception(Node):
         self.RSU_delay_value = self.av_features['RSU_delay']['value']
 
         
-        # Create subscriber for /v2x/traffic_signals topic
-        self.subscriptionTrafficLight = self.create_subscription(CooperativeSignalsMessage, '/v2x/traffic_signals', self.trafficSignal_callback, 10)
         # Create subscriber for /OBU/Sensing topic. This topic publishes the information of detected objects from the POV of the vehicle.
         self.subscriptionSensor = self.create_subscription(DetectedObjects, '/OBU/Sensing', self.detectedObjects_callback, 10)
         # Create subscriber for /v2x/cooperative2 topic. This topic publishes the information of detected objects from RSU.
@@ -51,18 +48,14 @@ class Perception(Node):
         self.reset = False
         self.finished = False
         
-        self.trafficSignal = CooperativeSignalsMessage()  # Initialize traffic signal
         self.detectedObjects = DetectedObjects()  # Initialize detected objects message
         self.intersection2_RSU_detectedObjects = PredictedObjects()
         self.intersection1_RSU_detectedObjects = PredictedObjects()
 
         # Initialize the publishers
-        self.publisher_traffic_signals = self.create_publisher(TrafficSignalsArray, 'simple_av/perception/traffic_signals', 10)
         self.publisher_detected_objects = self.create_publisher(DetectedObjectsArray, 'simple_av/perception/detected_objects', 10)
 
         self.vehicle_pose = PoseStamped()
-
-
         self.node_shut = False
 
     def config_file_loader(self, file_name):
@@ -78,9 +71,6 @@ class Perception(Node):
         self.reset = msg.reset
         self.finished = msg.finished
 
-    def trafficSignal_callback(self, msg):
-        """Callback function to update the traffic signal data."""
-        self.trafficSignal = msg
     
     def detectedObjects_callback(self, msg):
         """Callback function to update the pose data."""
@@ -96,7 +86,6 @@ class Perception(Node):
 
     def pose_callback(self, msg):
         self.vehicle_pose = msg
-
     
     def load_vehicle_config(self, vehicle_model):
         # Path to the YAML file
@@ -290,34 +279,6 @@ class Perception(Node):
 
         return detected_objects_list
 
-    def process_traffic_signals(self):
-        """
-        Processes traffic signals to extract signal IDs and colors for station_id = 2.
-
-        Creates two lists:
-        - v2i_traffic_signals_id: Contains traffic signal IDs for station_id = 2.
-        - v2i_traffic_signals_colors: Contains corresponding colors of traffic signals.
-        """
-        # Check if the traffic signal data exists
-        if not hasattr(self, 'trafficSignal') or not self.trafficSignal:
-            print("No traffic signal data available.")
-            return [], []
-
-        # Initialize arrays for IDs and colors
-        v2i_traffic_signals_id = []
-        v2i_traffic_signals_colors = []
-
-        # Ensure the station_id matches 2
-        # Loop through traffic signals
-        # if self.trafficSignal.station_id == 1:
-        for traffic_signal in self.trafficSignal.traffic_signals.signals:
-            for element in traffic_signal.elements:
-                # Append traffic signal ID and color
-                # print(traffic_signal.traffic_signal_id, element.color)
-                v2i_traffic_signals_id.append(traffic_signal.traffic_signal_id)
-                v2i_traffic_signals_colors.append(element.color)
-        return v2i_traffic_signals_id, v2i_traffic_signals_colors
-
     def perception(self):
         if self.finished:
             self.node_shut = True
@@ -328,17 +289,6 @@ class Perception(Node):
             self.vehicle_pose.pose.position.x == 0.0 and self.vehicle_pose.pose.position.y == 0.0 and self.vehicle_pose.pose.position.z == 0.0:
             self.get_logger().warning("Vehicle data is not available: No position nor orientation data")
             return
-        
-        # Handle traffic signals
-        v2i_traffic_signals_id, v2i_traffic_signals_colors = self.process_traffic_signals()
-        # print(v2i_traffic_signals_id)
-        # print(v2i_traffic_signals_colors)
-
-        # Create and publish traffic signals message
-        traffic_signals_msg = TrafficSignalsArray()
-        traffic_signals_msg.v2i_traffic_signals_id = v2i_traffic_signals_id
-        traffic_signals_msg.v2i_traffic_signals_colors = v2i_traffic_signals_colors
-        self.publisher_traffic_signals.publish(traffic_signals_msg)
 
         # Handle detected objects
         detected_objects_list = self.handle_detected_objects(self.detectedObjects, False) # Mounted-sensor data

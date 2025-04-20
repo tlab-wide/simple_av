@@ -22,7 +22,8 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'perception = perception.perception:main',
+            'traffic_light_handler = perception.trafficLightHandler:main',
+            'object_detection_handler = perception.objectDetectionHandler:main',
         ],
     },
 )
