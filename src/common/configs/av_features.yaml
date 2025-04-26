@@ -1,13 +1,13 @@
 # Traffic Light Configuration
 traffic_light:
   enable: True   # Enable or disable traffic lights
-  use_rsu: False  # Enable or disable RSU for traffic lights
+  use_rsu: True  # Enable or disable RSU for traffic lights
   
 
 # Object Detection Configuration
 object_detection:
   enable: True  # Enable or disable object detection
-  use_rsu: False # Enable or disable RSU for traffic lights
+  use_rsu: True # Enable or disable RSU for traffic lights
 
 
 # Collision Avoidance Configuration
