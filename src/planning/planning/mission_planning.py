@@ -7,10 +7,10 @@ from ament_index_python.packages import get_package_share_directory
 from geometry_msgs.msg import PoseStamped, Point
 from std_msgs.msg import String
 from collections import deque
-from simple_av_msgs.msg import LocalizationMsg, Portal, MissionPlan
+from simple_av_msgs.msg import LocalizationMsg, Portal, Planning_internal_MissionPlan
 from simple_av_msgs.srv import TriggerMissionPlan
 import numpy as np
-from rclpy.qos import QoSProfile
+from rclpy.qos import QoSProfile, QoSHistoryPolicy, QoSReliabilityPolicy, QoSDurabilityPolicy
 
 class MissionPlanner(Node):
     def __init__(self):
@@ -41,13 +41,18 @@ class MissionPlanner(Node):
         self.replan_service = self.create_service(TriggerMissionPlan, '/planning/trigger_mission_plan', self.handle_mission_plan_request)
 
         # Publish topics
-        qos_profile = QoSProfile(depth=10)
-        self.mission_plan_publisher = self.create_publisher(MissionPlan, 'simple_av/planning/mission_plan', qos_profile)
+        qos_profile = QoSProfile(
+            history=QoSHistoryPolicy.KEEP_LAST,
+            depth=1,
+            reliability=QoSReliabilityPolicy.RELIABLE,
+            durability=QoSDurabilityPolicy.TRANSIENT_LOCAL
+        )
+        self.mission_plan_publisher = self.create_publisher(Planning_internal_MissionPlan, 'simple_av/planning/mission_plan', qos_profile)
 
         #Path planning
         self.isPathPlanned = False  # Flag to check if the path has been planned
-        self.path_as_lanes = None  # List of lanes from start lane to destination
-        self.path = None  # List of waypoints in order of path_as_lanes
+        self.path_as_lanes = []  # List of lanes from start lane to destination
+        self.path = []  # List of waypoints in order of path_as_lanes
         self.initial_lane = None
         self.search_depth = 5
 
@@ -150,8 +155,10 @@ class MissionPlanner(Node):
         """
         Perform global path planning to create a path from the current location to the destination.
         """
-        self.path.clear()
-        self.path_as_lanes.clear()
+        if self.path is not None:
+            self.path.clear()
+        if self.path_as_lanes is not None:
+            self.path_as_lanes.clear()
 
         if self.location:
             self.get_logger().info("path planning")
@@ -166,7 +173,7 @@ class MissionPlanner(Node):
             self.get_logger().warning("No Location data")
             
     def publisher(self):
-        mission_msg = MissionPlan()
+        mission_msg = Planning_internal_MissionPlan()
         mission_msg.path = self.path
         mission_msg.path_as_lanes = self.path_as_lanes
         self.mission_plan_publisher.publish(mission_msg)
@@ -178,6 +185,7 @@ class MissionPlanner(Node):
         self.mission_planning()
 
         # Publish the new mission
+        print(self.path_as_lanes)
         self.publisher()
 
         self.get_logger().info(f"Published mission plan with {len(self.path)} points.")

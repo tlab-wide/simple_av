@@ -24,6 +24,8 @@ setup(
         'console_scripts': [
             'planning = planning.planning:main',
             'mission_planning = planning.mission_planning:main',
+            'behavior_path_planner = planning.behavior_path_planner:main',
+            'lane_following = planning.lane_following:main',
         ],
     },
 )
