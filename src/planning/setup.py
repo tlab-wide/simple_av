@@ -23,6 +23,7 @@ setup(
     entry_points={
         'console_scripts': [
             'planning = planning.planning:main',
+            'mission_planning = planning.mission_planning:main',
         ],
     },
 )
