@@ -7,7 +7,7 @@ from geometry_msgs.msg import PoseStamped, Point
 from std_msgs.msg import String
 import math
 from collections import deque
-from simple_av_msgs.msg import Planning_pathPlanningMsg, Planning_internal_curveDetectionMsg, Planning_internal_MissionPlan
+from simple_av_msgs.msg import PlanningPathPlanningMsg, PlanningInternalCurveDetectionMsg, PlanningInternalMissionPlanMsg
 from simple_av_msgs.msg import LocalizationMsg
 from simple_av_msgs.msg import Portal
 import numpy as np
@@ -90,18 +90,18 @@ class BehaviorPathPlanner(Node):
             reliability=QoSReliabilityPolicy.RELIABLE,
             durability=QoSDurabilityPolicy.TRANSIENT_LOCAL
         )
-        self.subscription_mission_plan = self.create_subscription(Planning_internal_MissionPlan, 'simple_av/planning/mission_plan', self.mission_plan_callback, qos_profile)
-        self.mission_plan = Planning_internal_MissionPlan()
-        self.path_as_lanes = []  # List of lanes from start lane to destination
-        self.path = []  # List of waypoints in order of path_as_lanes
+        self.subscription_mission_plan = self.create_subscription(PlanningInternalMissionPlanMsg, 'simple_av/planning/mission_plan', self.mission_plan_callback, qos_profile)
+        self.mission_plan = PlanningInternalMissionPlanMsg()
+        self.path_as_lanes = None  # List of lanes from start lane to destination
+        self.path = None  # List of waypoints in order of path_as_lanes
 
         self.subscriptionPortal = self.create_subscription(Portal, 'simple_av/portal', self.portal_callback, 10)
         self.reset = False
         self.finished = False
 
         # Publish topics
-        self.planning_publisher = self.create_publisher(Planning_pathPlanningMsg, 'simple_av/planning/path_planning', 10)
-        self.curve_detection_publisher = self.create_publisher(Planning_internal_curveDetectionMsg, 'simple_av/planning/curve_detection', 10)
+        self.planning_publisher = self.create_publisher(PlanningPathPlanningMsg, 'simple_av/planning/path_planning', 10)
+        self.curve_detection_publisher = self.create_publisher(PlanningInternalCurveDetectionMsg, 'simple_av/planning/curve_detection', 10)
 
         self.mission_planner_client = self.create_client(TriggerMissionPlan, '/planning/trigger_mission_plan')
         # Optional: check if service is ready
@@ -359,13 +359,13 @@ class BehaviorPathPlanner(Node):
         return v1[0] * v2[0] + v1[1] * v2[1]
             
     def publish_path_planning_msgs(self, look_ahead_point, speed):
-        lookahead_point = Planning_pathPlanningMsg()
+        lookahead_point = PlanningPathPlanningMsg()
         lookahead_point.look_ahead_point = Point(x=look_ahead_point['x'], y=look_ahead_point['y'], z=look_ahead_point['z'])
         lookahead_point.speed_limit = speed
         self.planning_publisher.publish(lookahead_point)
     
     def publish_curve_detection_msg(self, isTurnDetected):
-        curve_detection = Planning_internal_curveDetectionMsg()
+        curve_detection = PlanningInternalCurveDetectionMsg()
         curve_detection.is_curve_detected = isTurnDetected
         self.curve_detection_publisher.publish(curve_detection)
 

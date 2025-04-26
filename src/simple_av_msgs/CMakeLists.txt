@@ -16,15 +16,16 @@ find_package(std_msgs REQUIRED)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/LocalizationMsg.msg"
-  "msg/Planning_pathPlanningMsg.msg"
-  "msg/Planning_internal_curve_detection.msg"
+  "msg/PlanningPathPlanningMsg.msg"
+  "msg/PlanningInternalCurveDetectionMsg.msg"
+  "msg/PlanningInternalMissionPlanMsg.msg"
+  "msg/PlanningMotionPlanningMsg.msg"
   "msg/TrafficSignalsArray.msg"
   "msg/DetectedObject.msg"
   "msg/DetectedObjectsArray.msg"
   "msg/Portal.msg"
   "msg/SimMonitor.msg"
-  "msg/MissionPlan.msg"
-  "srv/TriggerMissionPlanner.srv"
+  "srv/TriggerMissionPlan.srv"
   DEPENDENCIES geometry_msgs std_msgs
 )
 

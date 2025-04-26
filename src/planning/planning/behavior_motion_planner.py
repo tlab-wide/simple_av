@@ -8,7 +8,7 @@ from std_msgs.msg import String
 import math
 from collections import deque
 from simple_av_msgs.msg import TrafficSignalsArray, DetectedObjectsArray
-from simple_av_msgs.msg import Planning_internal_curveDetectionMsg, Planning_internal_MissionPlan, Planning_motionPlanningMsg
+from simple_av_msgs.msg import PlanningInternalCurveDetectionMsg, PlanningInternalMissionPlanMsg, PlanningMotionPlanningMsg
 from simple_av_msgs.msg import LocalizationMsg
 from simple_av_msgs.msg import Portal
 from simple_av_msgs.msg import SimMonitor
@@ -66,7 +66,7 @@ class BehaviorMotionPlanning(Node):
         self.subscriptionLocation = self.create_subscription(LocalizationMsg, 'simple_av/localization/location', self.location_callback, 10)
         self.location = LocalizationMsg()
 
-        self.subscriptionCurveDetection = self.create_subscription(Planning_internal_curveDetectionMsg, 'simple_av/planning/curve_detection', self.curve_detection_callback, 10)
+        self.subscriptionCurveDetection = self.create_subscription(PlanningInternalCurveDetectionMsg, 'simple_av/planning/curve_detection', self.curve_detection_callback, 10)
         self.isTurnDetected = False
 
         self.subscriptionPortal = self.create_subscription(Portal, 'simple_av/portal', self.portal_callback, 10)
@@ -82,26 +82,21 @@ class BehaviorMotionPlanning(Node):
             reliability=QoSReliabilityPolicy.RELIABLE,
             durability=QoSDurabilityPolicy.TRANSIENT_LOCAL
         )
-        self.subscription_mission_plan = self.create_subscription(Planning_internal_MissionPlan, 'simple_av/planning/mission_plan', self.mission_plan_callback, qos_profile)
-        self.mission_plan = Planning_internal_MissionPlan()
-        self.path_as_lanes = []  # List of lanes from start lane to destination
-        self.path = []  # List of waypoints in order of path_as_lanes
-
-        # Publish topics
-        self.planning_publisher = self.create_publisher(Planning_motionPlanningMsg, 'simple_av/planning/motion_planning', 10)
-
-        #Path planning
-        self.isPathPlanned = False  # Flag to check if the path has been planned
+        self.subscription_mission_plan = self.create_subscription(PlanningInternalMissionPlanMsg, 'simple_av/planning/mission_plan', self.mission_plan_callback, qos_profile)
+        self.mission_plan = PlanningInternalMissionPlanMsg()
         self.path_as_lanes = None  # List of lanes from start lane to destination
         self.path = None  # List of waypoints in order of path_as_lanes
+
+        # Publish topics
+        self.planning_publisher = self.create_publisher(PlanningMotionPlanningMsg, 'simple_av/planning/motion_planning', 10)
+
+        #Path
         self.route = None # List of lanes from start lane to destination
         self.current_lane_index = 0
-        self.initial_lane = None
         self.search_depth = 5
         self.destination = Point()
         
-        #Lookahead, Observation and detection range
-        self.lookahead_distance = self.base_speed * self.lookahead_distance_C + self.lookahead_distance_B # meters
+        #Observation and detection range
         self.on_path_detection_range = self.base_speed * self.on_path_detection_range_C + self.on_path_detection_range_B # meters
         self.reaction_range = self.base_speed * self.prediction_reaction_range_C + self.prediction_reaction_range_B # meters
         self.detection_range = self.base_speed * self.prediction_detection_range_C + self.prediction_detection_range_B # meters
@@ -109,13 +104,6 @@ class BehaviorMotionPlanning(Node):
         self.previous_speed_slidingWindow = deque(maxlen=8) # for storing 10 recent previous speed values
         self.previous_speed_slidingWindow.append(0.0)  # initializing the queue
         self.status = String() # Cruise, Decelerate, PrepareToStop, Turn
-        
-        #Curve handling
-        self.curves = None
-        self.isCurveFinished = False
-        self.isCurveStarted = False
-        self.curve_angle = 0.0
-        self.curve_finish_point = None
 
         self.densify_interval = 2.0 # meters / Distance between each two consecutive waypoints on a lane
         
@@ -342,7 +330,6 @@ class BehaviorMotionPlanning(Node):
         objects_ahead = []
         for obj in self.detectedObjects.objects:
             object_direction = obj.relative_direction.data
-            # if object_direction == 'above' or object_direction == 'NW' or object_direction == 'NE' or object_direction == 'SE' or object_direction == 'SW':
             if object_direction == 'above' or object_direction == 'NW' or object_direction == 'NE':
                 objects_ahead.append(obj)
         print("Number of Detected Objects in front: ", len(objects_ahead))
@@ -606,7 +593,7 @@ class BehaviorMotionPlanning(Node):
         return closest_stop_point, stop_point_type
 
 
-    def behavioral_planning(self, current_closest_point_to_vehicle_index):
+    def motion_planner(self, current_closest_point_to_vehicle_index):
         # Current vehicle position
         vehicle_pose = {
             'x': self.pose.pose.position.x,
@@ -614,12 +601,8 @@ class BehaviorMotionPlanning(Node):
             'z': self.pose.pose.position.z
         }
         
-        # Distance to the destination
-        distance_to_destination = self.calculate_distance(
-            vehicle_pose, 
-            {'x': self.destination.x, 'y': self.destination.y, 'z': self.destination.z}
-        )
-        
+        # TODO: Distance to the destination 
+
         # Traffic light detection
         trafficLightTask, traffic_light_stopPoint = self.manage_traffic_lights()
         # Collision avoidance
@@ -630,6 +613,10 @@ class BehaviorMotionPlanning(Node):
         stop_point, stop_point_type = self.find_closest_stop_point(traffic_light_stopPoint, on_path_collision_avoidance_stopPoint, predicted_collisons_stopPoints, self.destination, vehicle_pose)
         
         self.status.data = 'Cruise'
+
+        if self.isTurnDetected:
+            self.get_logger().info("Turn detected")
+            self.status.data = 'Turn'
 
         if stop_point_type == 'CollisonAvoidance' or stop_point_type == 'CollisonPrediction':
             if stop_point_type == 'CollisonAvoidance':
@@ -644,9 +631,8 @@ class BehaviorMotionPlanning(Node):
         
         return stop_point
             
-
     def publish_motion_planning_msgs(self, stop_point):
-        motion_plan = Planning_motionPlanningMsg()
+        motion_plan = PlanningMotionPlanningMsg()
         motion_plan.stop_point = stop_point
         motion_plan.status = self.status
         self.planning_publisher.publish(motion_plan)
@@ -655,28 +641,26 @@ class BehaviorMotionPlanning(Node):
         if not self.location and not self.pose:
             self.get_logger().warning("No location/pose input")
             return None
+
+        if self.path and self.path_as_lanes:
+            self.get_logger().info("Path has successfully initialized from Mission Planner")
+        else:
+            self.get_logger().warning("Path has not initialized from Mission Planner!!")
+            return
         
         if self.finished:
             self.status.data = 'Park'
             self.node_shut = True
             self.publish_motion_planning_msgs(None) # publishing
             return
-    
-        if self.reset:
-            self.get_logger().error("RESET")
-            # self.isPathPlanned = False
-            self.get_logger().info("Misson planning")
-            print("DEBUG - start_lanelet_respawn: ", self.start_lanelet)
-            self.mission_planning(self.start_lanelet)  # generates the path and dencifies it.
 
         search_area, search_area_as_lanes = self.create_search_area()
         self.current_speed = self.velocity_report.longitudinal_velocity if self.velocity_report else 0.0
         self.update_observation_range(self.current_speed, self.current_speed < self.previous_speed_slidingWindow[0])
         vehicle_pose = {'x': self.pose.pose.position.x, 'y': self.pose.pose.position.y, 'z': self.pose.pose.position.z}
 
-
         current_closest_point_to_vehicle_index = self.find_closest_waypoint_to_vehicle(vehicle_pose, search_area)
-        stop_point = self.behavioral_planning(current_closest_point_to_vehicle_index)
+        stop_point = self.motion_planner(current_closest_point_to_vehicle_index)
         
         self.publish_motion_planning_msgs(stop_point) # publishing
         

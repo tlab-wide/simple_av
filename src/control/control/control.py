@@ -8,7 +8,8 @@ from autoware_auto_vehicle_msgs.msg import GearCommand
 from autoware_auto_control_msgs.msg import AckermannControlCommand, AckermannLateralCommand, LongitudinalCommand
 from autoware_auto_vehicle_msgs.msg import TurnIndicatorsCommand
 from rclpy.qos import QoSProfile, DurabilityPolicy, HistoryPolicy, ReliabilityPolicy
-from simple_av_msgs.msg import Planning_pathPlanningMsg, SimMonitor
+from simple_av_msgs.msg import Planning_pathPlanningMsg, Planning_motionPlanningMsg
+from simple_av_msgs.msg import SimMonitor
 import time
 import math
 from collections import deque
@@ -85,21 +86,26 @@ class VehicleControl(Node):
 
         # Subscribe topics
         self.subscriptionPose = self.create_subscription(PoseStamped, '/sensing/gnss/pose', self.pose_callback, 10)
-        self.subscriptionPose = self.create_subscription(PoseStamped, '/awsim/ground_truth/vehicle/pose', self.ground_truth_callback, 10)
-        self.subscriptionVelocityReport = self.create_subscription(VelocityReport, '/vehicle/status/velocity_status', self.velocity_report_callback, 10)
-        self.subscriptionLookahead = self.create_subscription(Planning_pathPlanningMsg, '/simple_av/planning/path_planning', self.path_planning_callback, 10)
+        self.pose = PoseStamped()
         
+        self.subscriptionPose = self.create_subscription(PoseStamped, '/awsim/ground_truth/vehicle/pose', self.ground_truth_callback, 10)
+        self.ground_truth = PoseStamped()
+
+        self.subscriptionVelocityReport = self.create_subscription(VelocityReport, '/vehicle/status/velocity_status', self.velocity_report_callback, 10)
+        self.velocity_report = VelocityReport()
+
+        self.subscriptionBehaviorPathPlanning = self.create_subscription(Planning_pathPlanningMsg, '/simple_av/planning/path_planning', self.path_planning_callback, 10)
+        self.lookAhead = Planning_pathPlanningMsg()
+        
+        self.subscriptionBehaviorMotionPlanning = self.create_subscription(Planning_motionPlanningMsg, '/simple_av/planning/motion_planning', self.motion_planning_callback, 10)
+        self.motion_plan = Planning_motionPlanningMsg()
+
         self.subscriptionSimMonitor = self.create_subscription(SimMonitor, 'simple_av/sim_monitor', self.sim_monitor_callback, 100)
         self.sim_clock_rate = 0
 
         self.subscriptionPortal = self.create_subscription(Portal, 'simple_av/portal', self.portal_callback, 10)
         self.reset = False
         self.finished = False
-
-        self.pose = PoseStamped()
-        self.ground_truth = PoseStamped()
-        self.velocity_report = VelocityReport()
-        self.lookAhead = Planning_pathPlanningMsg()
 
         # Publish topics
         qos_profile = QoSProfile(
@@ -158,6 +164,9 @@ class VehicleControl(Node):
 
     def path_planning_callback(self, msg):
         self.lookAhead = msg
+    
+    def motion_planning_callback(self, msg):
+        self.motion_plan = msg
 
     def get_latest_messages(self):
         return self.pose, self.velocity_report

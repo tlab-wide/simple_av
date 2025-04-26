@@ -25,7 +25,7 @@ setup(
             'planning = planning.planning:main',
             'mission_planning = planning.mission_planning:main',
             'behavior_path_planner = planning.behavior_path_planner:main',
-            'lane_following = planning.lane_following:main',
+            'behavior_motion_planner = planning.behavior_motion_planner:main',
         ],
     },
 )
