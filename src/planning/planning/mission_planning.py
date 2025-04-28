@@ -7,7 +7,7 @@ from ament_index_python.packages import get_package_share_directory
 from geometry_msgs.msg import PoseStamped, Point
 from std_msgs.msg import String
 from collections import deque
-from simple_av_msgs.msg import LocalizationMsg, Portal, Planning_internal_MissionPlan
+from simple_av_msgs.msg import LocalizationMsg, Portal, PlanningInternalMissionPlanMsg
 from simple_av_msgs.srv import TriggerMissionPlan
 import numpy as np
 from rclpy.qos import QoSProfile, QoSHistoryPolicy, QoSReliabilityPolicy, QoSDurabilityPolicy
@@ -47,7 +47,7 @@ class MissionPlanner(Node):
             reliability=QoSReliabilityPolicy.RELIABLE,
             durability=QoSDurabilityPolicy.TRANSIENT_LOCAL
         )
-        self.mission_plan_publisher = self.create_publisher(Planning_internal_MissionPlan, 'simple_av/planning/mission_plan', qos_profile)
+        self.mission_plan_publisher = self.create_publisher(PlanningInternalMissionPlanMsg, 'simple_av/planning/mission_plan', qos_profile)
 
         #Path planning
         self.isPathPlanned = False  # Flag to check if the path has been planned
@@ -166,15 +166,25 @@ class MissionPlanner(Node):
             if start_lanelet_respawn:
                 self.start_lanelet = start_lanelet_respawn
             self.bfs(self.start_lanelet, self.dest_lanelet) # Creates the path
-            print(self.path_as_lanes)
             if self.path and self.path_as_lanes:
                 self.isPathPlanned = True
         else:
             self.get_logger().warning("No Location data")
             
     def publisher(self):
-        mission_msg = Planning_internal_MissionPlan()
-        mission_msg.path = self.path
+        mission_msg = PlanningInternalMissionPlanMsg()
+
+        # Converting Dictionary type to list of Point
+        point_list = []
+        for wp in self.path:
+            point = Point()
+            point.x = wp['x']
+            point.y = wp['y']
+            point.z = wp['z']
+            point_list.append(point)
+        mission_msg.path = point_list
+
+         # path_as_lanes is list of strings already
         mission_msg.path_as_lanes = self.path_as_lanes
         self.mission_plan_publisher.publish(mission_msg)
 
@@ -183,9 +193,8 @@ class MissionPlanner(Node):
 
         # Generate path and path_as_lanes
         self.mission_planning()
-
-        # Publish the new mission
         print(self.path_as_lanes)
+        # Publish the new mission
         self.publisher()
 
         self.get_logger().info(f"Published mission plan with {len(self.path)} points.")

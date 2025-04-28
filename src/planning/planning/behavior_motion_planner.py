@@ -37,7 +37,7 @@ class BehaviorMotionPlanning(Node):
 
         # Load motion & behavior configs
         self.motion_behavior_config = self.config_file_loader("motion_behavior_config.yaml")
-
+        self.base_speed = self.motion_behavior_config['motion']['speed_limits']['base'] # m/s
         self.saftey_distance = self.motion_behavior_config['behavior']['safety_distance'] #meters
         self.reaction_time_threshold = self.motion_behavior_config['behavior']['reaction_time_threshold'] #meters
         self.range_low_pass_gain = self.motion_behavior_config['behavior']['range_low_pass_gain'] #meters

@@ -390,13 +390,12 @@ class BehaviorPathPlanner(Node):
             self.isPathPlanned = True
 
     def lane_following(self):
-        """
-        Main planning function to decide between global and local planning.
-        """
+        self.get_logger().info("lane following start...")
         if not self.location and not self.pose:
             self.get_logger().warning("No location/pose input")
             return None
         
+        print("self.isPathPlanned: ", self.isPathPlanned)
         if not self.isPathPlanned:
             self.get_logger().info("Requesting Misson planning Service ...")
             self.request_mission_plan()
