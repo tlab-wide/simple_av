@@ -1,6 +1,7 @@
 import rclpy
 from rclpy.node import Node
 import os
+import json
 import yaml
 from ament_index_python.packages import get_package_share_directory
 from geometry_msgs.msg import PoseStamped, Point
@@ -21,14 +22,16 @@ class BehaviorMotionPlanning(Node):
     def __init__(self):
         super().__init__('behavior_motion_planner_node')
 
-        # Load scenario configs
-        self.scenario_config = self.config_file_loader("scenario_config.yaml")
-        self.vehicle_model = self.scenario_config['scenario']['vehicle_model']
+        # Load the map
+        self.map_data = self.load_map_data()
+        self.map_data = self.map_data["LaneLetsArray"]
 
-        # Load vehicle configs
-        self.vehicle_config = self.load_vehicle_config(self.vehicle_model)
-        self.vehicle_length = self.vehicle_config['dimensions']['length'] #meters
-        self.vehicle_width = self.vehicle_config['dimensions']['width'] #meters
+        self.graph = {lanelet['name']: {
+            'waypoints': lanelet['waypoints'],
+            'nextLanes': lanelet.get('nextLanes', []),
+            'prevLanes': lanelet.get('prevLanes', []),
+            'adjacentLanes': lanelet.get('adjacentLanes', []),
+        } for lanelet in self.map_data}
 
         # Load av features configs
         self.av_features = self.config_file_loader("av_features.yaml")
@@ -38,6 +41,10 @@ class BehaviorMotionPlanning(Node):
         # Load motion & behavior configs
         self.motion_behavior_config = self.config_file_loader("motion_behavior_config.yaml")
         self.base_speed = self.motion_behavior_config['motion']['speed_limits']['base'] # m/s
+        self.turning_speed = self.motion_behavior_config['motion']['speed_limits']['turning_speed'] # m/s
+        self.lookahead_distance_C = self.motion_behavior_config['motion']['lookahead']['coefficient']
+        self.lookahead_distance_B = self.motion_behavior_config['motion']['lookahead']['base']
+
         self.saftey_distance = self.motion_behavior_config['behavior']['safety_distance'] #meters
         self.reaction_time_threshold = self.motion_behavior_config['behavior']['reaction_time_threshold'] #meters
         self.range_low_pass_gain = self.motion_behavior_config['behavior']['range_low_pass_gain'] #meters
@@ -115,6 +122,20 @@ class BehaviorMotionPlanning(Node):
         #Shutting down
         self.node_shut = False
 
+    def load_map_data(self):
+        """
+        Load the map data from a JSON file.
+        Returns:
+            dict: The map data loaded from the JSON file.
+        """
+        package_share_directory = get_package_share_directory('simple_av')
+        json_file_path = os.path.join(package_share_directory, 'resource', 'Kashiwa.json')
+        # json_file_path = os.path.join(package_share_directory, 'resource', 'Shinjuku.json')
+        # Load and read the JSON file
+        with open(json_file_path, 'r') as json_file:
+            map_data = json.load(json_file)
+            return map_data
+
     def mission_plan_callback(self, msg):
         self.mission_plan = msg
         self.path = self.mission_plan.path
@@ -134,22 +155,6 @@ class BehaviorMotionPlanning(Node):
         with open(config_path, "r") as file:
             config = yaml.safe_load(file)
         return config
-
-    def load_vehicle_config(self, vehicle_model):
-        # Path to the YAML file
-        package_share_directory = get_package_share_directory('simple_av')
-        config_path = os.path.join(package_share_directory, "resource", "vehicle_config.yaml")
-
-        # Load the configuration file
-        with open(config_path, "r") as file:
-            config = yaml.safe_load(file)
-
-        # Retrieve the specific vehicle's configuration
-        if vehicle_model in config["vehicles"]:
-            return config["vehicles"][vehicle_model]
-        else:
-            raise ValueError(f"Vehicle type '{vehicle_model}' not found in the configuration.")
-    
     
     def portal_callback(self, msg):
         self.reset = msg.reset
@@ -174,30 +179,30 @@ class BehaviorMotionPlanning(Node):
         """
         Calculate the Euclidean distance between two points.
         Args:
-            point1 (dict): The first point with 'x', 'y', 'z' coordinates.
-            point2 (dict): The second point with 'x', 'y', 'z' coordinates.
+            point1 (geometry_point): The first point with 'x', 'y', 'z' coordinates.
+            point2 (geometry_point): The second point with 'x', 'y', 'z' coordinates.
         Returns:
             float: The Euclidean distance between the two points.
         """
         if z:
-            return np.sqrt((point1['x'] - point2['x'])**2 + 
-                        (point1['y'] - point2['y'])**2 + 
-                        (point1['z'] - point2['z'])**2)
+            return np.sqrt((point1.x - point2.x)**2 + 
+                        (point1.y - point2.y)**2 + 
+                        (point1.z - point2.z)**2)
         else:
-            return np.sqrt((point1['x'] - point2['x'])**2 + (point1['y'] - point2['y'])**2)
+            return np.sqrt((point1.x - point2.x)**2 + (point1.y - point2.y)**2)
 
     def calculate_vector(self, point1, point2):
         """
         Calculate the vector from point1 to point2.
         Args:
-            point1 (dict): The starting point with 'x', 'y', 'z' coordinates.
-            point2 (dict): The ending point with 'x', 'y', 'z' coordinates.
+            point1 (geometry_point): The starting point with 'x', 'y', 'z' coordinates.
+            point2 (geometry_point): The ending point with 'x', 'y', 'z' coordinates.
         Returns:
             np.array: The vector from point1 to point2.
         """
-        return np.array([point2['x'] - point1['x'], 
-                        point2['y'] - point1['y'], 
-                        point2['z'] - point1['z']])
+        return np.array([point2.x - point1.x, 
+                        point2.y - point1.y, 
+                        point2.z - point1.z])
 
     def calculate_dot_product(self, vector1, vector2):
         """
@@ -255,8 +260,9 @@ class BehaviorMotionPlanning(Node):
             lane_obj = self.find_lane_by_name(lane)
             waypoints = lane_obj['dense_waypoints']
             for waypoint in waypoints:
-                search_area.append(waypoint)
+                search_area.append(Point(x=waypoint['x'], y=waypoint['y'], z=waypoint['z']))
         # print("debug - search area as lanes", search_area_as_lanes, "size of search area: ", len(search_area))
+        return search_area, search_area_as_lanes
 
     def find_closest_waypoint_to_vehicle(self, vehicle_pose, search_area):
         # Finding the index of the closest point in search area
@@ -362,9 +368,9 @@ class BehaviorMotionPlanning(Node):
         rotated_vector = self.apply_quaternion_rotation(vehicle_orientation, vector)
 
         # Add the rotated vector to the vehicle's position
-        obj_x = vehicle_pose['x'] + rotated_vector.x
-        obj_y = vehicle_pose['y'] + rotated_vector.y
-        obj_z = vehicle_pose['z'] + rotated_vector.z
+        obj_x = vehicle_pose.x + rotated_vector.x
+        obj_y = vehicle_pose.y + rotated_vector.y
+        obj_z = vehicle_pose.z + rotated_vector.z
 
         # Create the absolute position
         object_absolute_pose = Point(x=obj_x, y=obj_y, z=obj_z)
@@ -378,8 +384,7 @@ class BehaviorMotionPlanning(Node):
         for i in range(len(objects_in_range)):
             print(f'Object {i}')
             for waypoint in waypoints:
-                object_pose = {'x': objects_absulute_positions[i].x, 'y': objects_absulute_positions[i].y, 'z': objects_absulute_positions[i].z}
-                dist = self.calculate_distance(object_pose, waypoint)
+                dist = self.calculate_distance(objects_absulute_positions, waypoint)
                 if dist <= self.densify_interval*1.2:
                     print("CC - DEBUG collison avoidance object dist to waypoint: ", dist)
                     objects_on_path.append({"object": objects_in_range[i], "waypoint": waypoint})
@@ -414,8 +419,8 @@ class BehaviorMotionPlanning(Node):
         # Extract components
         x1, y1 = object_pose.x, object_pose.y
         a1, b1 = object_forward_vector
-        x2, y2 = waypoint1['x'], waypoint1['y']
-        x3, y3 = waypoint2['x'], waypoint2['y']
+        x2, y2 = waypoint1.x, waypoint1.y
+        x3, y3 = waypoint2.x, waypoint2.y
 
         # Direction vector of Line 2 (waypoints)
         a2 = x3 - x2
@@ -441,24 +446,23 @@ class BehaviorMotionPlanning(Node):
         else:  # Neither line is vertical
             x = (y2 - y1 + m1 * x1 - m2 * x2) / (m1 - m2)
             y = m1 * (x - x1) + y1
-        return (x, y)
+        return Point(x=x, y=y, z=waypoint1.z)
 
     def dot_product(self, v1, v2):
         return v1[0] * v2[0] + v1[1] * v2[1]
 
-    def is_point_on_segment(self, object_pose, intersection, waypoint1, waypoint2, forward_vector):
+    def is_point_on_segment(self, object_pose, collison_point, waypoint1, waypoint2, forward_vector):
         # Unpack the intersection point and the waypoints
-        x, y = intersection
-        x1, y1 = waypoint1['x'], waypoint1['y']
-        x2, y2 = waypoint2['x'], waypoint2['y']
+        x1, y1 = waypoint1.x, waypoint1.y
+        x2, y2 = waypoint2.x, waypoint2.y
         x3, y3 = object_pose.x, object_pose.y
 
-        object_to_intersect_vector = [x-x3, y-y3]
-        # Check if the intersection point is within the bounds of the segment
-        if min(x1, x2) <= x <= max(x1, x2) and min(y1, y2) <= y <= max(y1, y2):
+        object_to_intersect_vector = [collison_point.x-x3, collison_point.y-y3]
+        # Check if the collison_point point is within the bounds of the segment
+        if min(x1, x2) <= collison_point.x <= max(x1, x2) and min(y1, y2) <= collison_point.y <= max(y1, y2):
             if self.dot_product(object_to_intersect_vector, forward_vector) >= 0:
-                return True  # Intersection point is on the segment
-        return False  # Intersection point is outside the segment
+                return True  # collison_point point is on the segment
+        return False  # collison_point point is outside the segment
         
     def get_forward_vector(self, quaternion):
         local_forward = np.array([1, 0, 0])
@@ -471,7 +475,7 @@ class BehaviorMotionPlanning(Node):
     def get_time_to_collison(self, current_pose, collision_point, speed):
         if speed == 0.0:
             return float('inf')  # Return infinity to indicate no collision
-        dist = self.calculate_distance({'x': collision_point.x, 'y': collision_point.y}, current_pose)
+        dist = self.calculate_distance(collision_point, current_pose)
         time_to_collision = dist / speed
         time_to_collision = time_to_collision * self.sim_clock_rate
         print(f"P - dist: {dist}, speed: {speed}, time: {time_to_collision}")
@@ -482,7 +486,7 @@ class BehaviorMotionPlanning(Node):
         current_vehicle_speed = self.velocity_report.longitudinal_velocity if self.velocity_report else 0.0   
         t_vehicle = self.get_time_to_collison(vehicle_pose, collison_point, self.turning_speed)
         # t_vehicle = self.get_time_to_collison(vehicle_pose, collison_point, current_vehicle_speed)
-        t_object = self.get_time_to_collison({'x': object_pose.x,'y': object_pose.y}, collison_point, object_speed)
+        t_object = self.get_time_to_collison(object_pose, collison_point, object_speed)
         time_difference = abs(t_vehicle - t_object)
         dist_to_waypoint = self.calculate_distance(corresponding_waypoint, vehicle_pose)
         print(f"D - time_difference {time_difference}, dist to waypoint {dist_to_waypoint} current_vehicle_speed {current_vehicle_speed}")
@@ -498,12 +502,12 @@ class BehaviorMotionPlanning(Node):
         print("CC - vehicle distance to waypoint: ", dist_to_waypoint)
         if dist_to_waypoint <= self.saftey_distance: # Stop the vehicle if distance to the object is less that safety distance
             self.get_logger().warning("P - INSTANT STOP!!")
-            return Point(x=vehicle_pose['x'], y=vehicle_pose['y'], z=vehicle_pose['z'])
+            return vehicle_pose
 
         stop_point_index = self.path.index(waypoint) - int(self.saftey_distance/self.densify_interval)
         print('CC - stop point index on path: ', stop_point_index)
         stop_point = self.path[stop_point_index]
-        return Point(x=stop_point['x'], y=stop_point['y'], z=stop_point['z'])
+        return Point(x=stop_point.x, y=stop_point.y, z=stop_point.z)
          
 
     def on_path_collision_avoidance(self, objects_ahead, current_closest_point_to_vehicle_index, vehicle_pose):
@@ -535,18 +539,12 @@ class BehaviorMotionPlanning(Node):
         predicted_stop_points = []
         for i in range(len(objects_in_range)):
             print(f"P - object {i}")
-            dist_to_veh = self.calculate_distance(vehicle_pose, {'x': objects_absulute_positions[i].x,'y': objects_absulute_positions[i].y})
+            dist_to_veh = self.calculate_distance(vehicle_pose, objects_absulute_positions)
             for j in range(1, len(waypoints) - 1):
-                # print(f"P - object {i}, type: {objects_in_range[i].label}, dist: {dist_to_veh} - Waypoint {j}, {j+1}")
                 forward_vector = self.get_forward_vector(objects_in_range[i].orientation)
                 collison_point = self.find_intersection(objects_absulute_positions[i], forward_vector, waypoints[j], waypoints[j+1])
                 if collison_point:
-                    # print(f"P - collision point founded")
                     if self.is_point_on_segment(objects_absulute_positions[i], collison_point, waypoints[j], waypoints[j+1], forward_vector):
-                        # print(f"P - collision point is on segment")
-                        collison_point = Point(x=collison_point[0], y=collison_point[1], z=waypoints[j]['z'])
-                        # print(f'P - CollisonPoint found on: {collison_point.x, collison_point.y}')
-                        # print(f'P - corresponding waypoint:  {waypoints[j]}')
                         if self.will_collide_on_path(objects_in_range[i].label, objects_in_range[i].velocity, objects_absulute_positions[i], vehicle_pose, collison_point, waypoints[j]):
                             self.get_logger().warning('P - Collide predicted!!!')
                             stop_point = self.get_stop_point_by_safety_distance(waypoints[j], vehicle_pose)
@@ -572,7 +570,7 @@ class BehaviorMotionPlanning(Node):
         def calculate_distance_to(point):
             return self.calculate_distance(
                 vehicle_pose, 
-                {'x': point.x, 'y': point.y, 'z': point.z}
+                point
             )
         
         minimum_distance = float("inf")
@@ -595,11 +593,7 @@ class BehaviorMotionPlanning(Node):
 
     def motion_planner(self, current_closest_point_to_vehicle_index):
         # Current vehicle position
-        vehicle_pose = {
-            'x': self.pose.pose.position.x,
-            'y': self.pose.pose.position.y,
-            'z': self.pose.pose.position.z
-        }
+        vehicle_pose = self.pose.pose.position
         
         # TODO: Distance to the destination 
 
@@ -657,7 +651,7 @@ class BehaviorMotionPlanning(Node):
         search_area, search_area_as_lanes = self.create_search_area()
         self.current_speed = self.velocity_report.longitudinal_velocity if self.velocity_report else 0.0
         self.update_observation_range(self.current_speed, self.current_speed < self.previous_speed_slidingWindow[0])
-        vehicle_pose = {'x': self.pose.pose.position.x, 'y': self.pose.pose.position.y, 'z': self.pose.pose.position.z}
+        vehicle_pose = self.pose.pose.position
 
         current_closest_point_to_vehicle_index = self.find_closest_waypoint_to_vehicle(vehicle_pose, search_area)
         stop_point = self.motion_planner(current_closest_point_to_vehicle_index)

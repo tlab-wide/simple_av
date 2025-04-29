@@ -1,6 +1,7 @@
 import rclpy
 from rclpy.node import Node
 import os
+import json
 import yaml
 from ament_index_python.packages import get_package_share_directory
 from geometry_msgs.msg import PoseStamped, Point
@@ -22,7 +23,7 @@ class PathCurveDetector:
 
     @staticmethod
     def direction_vector(p1, p2):
-        return (p2['x'] - p1['x'], p2['y'] - p1['y'], p2['z'] - p1['z'])
+        return (p2.x - p1.x, p2.y - p1.y, p2.z - p1.z)
 
     @staticmethod
     def vector_magnitude(v):
@@ -64,6 +65,17 @@ class PathCurveDetector:
 class BehaviorPathPlanner(Node):
     def __init__(self):
         super().__init__('behavior_path_planner_node')
+
+        # Load the map
+        self.map_data = self.load_map_data()
+        self.map_data = self.map_data["LaneLetsArray"]
+
+        self.graph = {lanelet['name']: {
+            'waypoints': lanelet['waypoints'],
+            'nextLanes': lanelet.get('nextLanes', []),
+            'prevLanes': lanelet.get('prevLanes', []),
+            'adjacentLanes': lanelet.get('adjacentLanes', []),
+        } for lanelet in self.map_data}
 
         # Load scenario configs
         self.scenario_config = self.config_file_loader("scenario_config.yaml")
@@ -133,6 +145,21 @@ class BehaviorPathPlanner(Node):
         #Shutting down
         self.node_shut = False
     
+
+    def load_map_data(self):
+        """
+        Load the map data from a JSON file.
+        Returns:
+            dict: The map data loaded from the JSON file.
+        """
+        package_share_directory = get_package_share_directory('simple_av')
+        json_file_path = os.path.join(package_share_directory, 'resource', 'Kashiwa.json')
+        # json_file_path = os.path.join(package_share_directory, 'resource', 'Shinjuku.json')
+        # Load and read the JSON file
+        with open(json_file_path, 'r') as json_file:
+            map_data = json.load(json_file)
+            return map_data
+    
     def config_file_loader(self, file_name):
         # Path to the YAML file
         package_share_directory = get_package_share_directory('simple_av')
@@ -161,30 +188,30 @@ class BehaviorPathPlanner(Node):
         """
         Calculate the Euclidean distance between two points.
         Args:
-            point1 (dict): The first point with 'x', 'y', 'z' coordinates.
-            point2 (dict): The second point with 'x', 'y', 'z' coordinates.
+            point1 (geometry_point): The first point with 'x', 'y', 'z' coordinates.
+            point2 (geometry_point): The second point with 'x', 'y', 'z' coordinates.
         Returns:
             float: The Euclidean distance between the two points.
         """
         if z:
-            return np.sqrt((point1['x'] - point2['x'])**2 + 
-                        (point1['y'] - point2['y'])**2 + 
-                        (point1['z'] - point2['z'])**2)
+            return np.sqrt((point1.x - point2.x)**2 + 
+                        (point1.y - point2.y)**2 + 
+                        (point1.z - point2.z)**2)
         else:
-            return np.sqrt((point1['x'] - point2['x'])**2 + (point1['y'] - point2['y'])**2)
+            return np.sqrt((point1.x - point2.x)**2 + (point1.y - point2.y)**2)
 
     def calculate_vector(self, point1, point2):
         """
         Calculate the vector from point1 to point2.
         Args:
-            point1 (dict): The starting point with 'x', 'y', 'z' coordinates.
-            point2 (dict): The ending point with 'x', 'y', 'z' coordinates.
+            point1 (geometry_point): The starting point with 'x', 'y', 'z' coordinates.
+            point2 (geometry_point): The ending point with 'x', 'y', 'z' coordinates.
         Returns:
             np.array: The vector from point1 to point2.
         """
-        return np.array([point2['x'] - point1['x'], 
-                        point2['y'] - point1['y'], 
-                        point2['z'] - point1['z']])
+        return np.array([point2.x - point1.x, 
+                        point2.y - point1.y, 
+                        point2.z - point1.z])
 
     def calculate_dot_product(self, vector1, vector2):
         """
@@ -230,7 +257,7 @@ class BehaviorPathPlanner(Node):
         """
         Get the next point for the vehicle to move towards.
         Args:
-            vehicle_pose (dict): The current pose of the vehicle.
+            vehicle_pose (geomtry point): The current pose of the vehicle.
             current_closest_point_index (int): The index of the current closest point in the path.
             search_area (list): The list of the points in the search area.
         Returns:
@@ -282,7 +309,7 @@ class BehaviorPathPlanner(Node):
                     # self.isCurveDetected = True
                     return True, self.curve_angle    
         if self.isCurveStarted and not self.isCurveFinished:
-            vehicle_pose = {'x': self.pose.pose.position.x, 'y': self.pose.pose.position.y, 'z': self.pose.pose.position.z}
+            vehicle_pose = self.pose.pose.position
             if self.calculate_distance(vehicle_pose, self.curve_finish_point) <= self.densify_interval * 2:
                 # self.get_logger().info("curve finished")
                 self.isCurveFinished = True
@@ -319,7 +346,7 @@ class BehaviorPathPlanner(Node):
             lane_obj = self.find_lane_by_name(lane)
             waypoints = lane_obj['dense_waypoints']
             for waypoint in waypoints:
-                search_area.append(waypoint)
+                search_area.append(Point(x=waypoint['x'], y=waypoint['y'], z=waypoint['z']))
         # print("debug - search area as lanes", search_area_as_lanes, "size of search area: ", len(search_area))
         return search_area, search_area_as_lanes
 
@@ -342,11 +369,10 @@ class BehaviorPathPlanner(Node):
         """
         Perform local path planning to determine the next point for the vehicle.
         """
-        if self.pose.pose.position.x == 0.0 and self.pose.pose.position.y == 0.0 and self.pose.pose.position.z == 0.0:
+        vehicle_pose = self.pose.pose.position
+        if vehicle_pose.x == 0.0 and vehicle_pose.y == 0.0 and vehicle_pose.z == 0.0:
             self.get_logger().warning("Vehicle Pose is not accessible")
-            return None, None, None, None, None
-        vehicle_pose = {'x': self.pose.pose.position.x, 'y': self.pose.pose.position.y, 'z': self.pose.pose.position.z}
-        
+            return None, None, None, None
         current_closest_point_to_vehicle_index = self.find_closest_waypoint_to_vehicle(vehicle_pose, search_area)
         look_ahead_point_index, look_ahead_point = self.find_lookahead_point(vehicle_pose, current_closest_point_to_vehicle_index, search_area)
         isTurnDetected = self.curve_handler(look_ahead_point, look_ahead_point_index)
@@ -360,7 +386,8 @@ class BehaviorPathPlanner(Node):
             
     def publish_path_planning_msgs(self, look_ahead_point, speed):
         lookahead_point = PlanningPathPlanningMsg()
-        lookahead_point.look_ahead_point = Point(x=look_ahead_point['x'], y=look_ahead_point['y'], z=look_ahead_point['z'])
+        # lookahead_point.look_ahead_point = Point(x=look_ahead_point['x'], y=look_ahead_point['y'], z=look_ahead_point['z'])
+        lookahead_point.look_ahead_point = look_ahead_point
         lookahead_point.speed_limit = speed
         self.planning_publisher.publish(lookahead_point)
     
@@ -378,7 +405,7 @@ class BehaviorPathPlanner(Node):
     def handle_mission_plan(self):
         self.get_logger().info("Finding Curves Along the Path ...")
         if self.path and self.path_as_lanes:
-            self.destination = Point(x=self.path[-1]['x'], y=self.path[-1]['y'], z=self.path[-1]['z'])
+            self.destination = self.path[-1]
             path_curve_detector = PathCurveDetector(self.path, angle_threshold=3) # initializing object from class
             self.curves = path_curve_detector.find_curves_in_path() # locating curves on the route/path
         if self.path and self.path_as_lanes and self.curves:
@@ -436,6 +463,7 @@ class BehaviorPathPlanner(Node):
         self.get_logger().info(
             f'planning\n'
             f'lookahead distance:  {self.lookahead_distance}\n'
+            f'lookahead point index:  {look_ahead_point_index}\n'
             f'speed: {speed}\n'
         )
 

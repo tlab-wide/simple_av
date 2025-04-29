@@ -68,13 +68,13 @@ class portal(Node):
             print("jump value: ", self.calculate_distance(self.current_pose, self.last_pose))
             self.get_logger().info("Jump Detected")
             self.isPortalReached = True
+            self.last_pose = self.current_pose
             self.initial_position = self.current_pose
             self.repeat_counter += 1
             print("counter: ", self.repeat_counter, " target: ", self.repeat_count)
             if self.repeat_counter == self.repeat_count:
                 print("Test finished")
                 self.finished = True
-        self.last_pose = self.current_pose
         self.publish_portal()
                 
 
