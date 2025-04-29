@@ -8,7 +8,7 @@ from autoware_auto_vehicle_msgs.msg import GearCommand
 from autoware_auto_control_msgs.msg import AckermannControlCommand, AckermannLateralCommand, LongitudinalCommand
 from autoware_auto_vehicle_msgs.msg import TurnIndicatorsCommand
 from rclpy.qos import QoSProfile, DurabilityPolicy, HistoryPolicy, ReliabilityPolicy
-from simple_av_msgs.msg import Planning_pathPlanningMsg, Planning_motionPlanningMsg
+from simple_av_msgs.msg import PlanningPathPlanningMsg, PlanningMotionPlanningMsg
 from simple_av_msgs.msg import SimMonitor
 import time
 import math
@@ -94,11 +94,11 @@ class VehicleControl(Node):
         self.subscriptionVelocityReport = self.create_subscription(VelocityReport, '/vehicle/status/velocity_status', self.velocity_report_callback, 10)
         self.velocity_report = VelocityReport()
 
-        self.subscriptionBehaviorPathPlanning = self.create_subscription(Planning_pathPlanningMsg, '/simple_av/planning/path_planning', self.path_planning_callback, 10)
-        self.lookAhead = Planning_pathPlanningMsg()
+        self.subscriptionBehaviorPathPlanning = self.create_subscription(PlanningPathPlanningMsg, '/simple_av/planning/path_planning', self.path_planning_callback, 10)
+        self.path_plan = PlanningPathPlanningMsg()
         
-        self.subscriptionBehaviorMotionPlanning = self.create_subscription(Planning_motionPlanningMsg, '/simple_av/planning/motion_planning', self.motion_planning_callback, 10)
-        self.motion_plan = Planning_motionPlanningMsg()
+        self.subscriptionBehaviorMotionPlanning = self.create_subscription(PlanningMotionPlanningMsg, '/simple_av/planning/motion_planning', self.motion_planning_callback, 10)
+        self.motion_plan = PlanningMotionPlanningMsg()
 
         self.subscriptionSimMonitor = self.create_subscription(SimMonitor, 'simple_av/sim_monitor', self.sim_monitor_callback, 100)
         self.sim_clock_rate = 0
@@ -163,7 +163,7 @@ class VehicleControl(Node):
         self.velocity_report = msg
 
     def path_planning_callback(self, msg):
-        self.lookAhead = msg
+        self.path_plan = msg
     
     def motion_planning_callback(self, msg):
         self.motion_plan = msg
@@ -176,7 +176,8 @@ class VehicleControl(Node):
 
     def control(self):
 
-        if not self.velocity_report and not self.lookAhead and not self.pose and not self.ground_truth:
+        if not self.velocity_report and not self.path_plan and not self.pose:
+            self.get_logger().error("No, velocity report or lookahead or pose data")
             return
         
         if self.finished:
@@ -192,8 +193,8 @@ class VehicleControl(Node):
         control_msg = AckermannControlCommand()
     
         control_msg.stamp = self.get_clock().now().to_msg()
-        control_msg.lateral = self.get_lateral_command(self.lookAhead.status.data)
-        control_msg.longitudinal = self.get_longitudinal_command(self.lookAhead.status.data)
+        control_msg.lateral = self.get_lateral_command()
+        control_msg.longitudinal = self.get_longitudinal_command()
 
         # Turn Indicator Light Control
         turn_indicator_msg = TurnIndicatorsCommand()
@@ -202,7 +203,7 @@ class VehicleControl(Node):
         # Gear Control
         gear_msg = GearCommand()
         gear_msg.stamp = self.get_clock().now().to_msg()
-        if self.lookAhead.status.data == "Park":
+        if self.motion_plan.status.data == "Park":
             print("park")
             gear_msg.command = GearCommand.PARK
         else:
@@ -215,14 +216,14 @@ class VehicleControl(Node):
 
 
     
-    def get_lateral_command(self, status):
+    def get_lateral_command(self):
         lateral_command = AckermannLateralCommand()
-        if status == "Park":
+        if self.motion_plan.status.data == "Park":
             print("debug PARK")
             lateral_command.steering_tire_angle = 0.0
             lateral_command.steering_tire_rotation_rate = 0.0
         else:
-            if self.pose and self.lookAhead and self.ground_truth:
+            if self.pose and self.path_plan:
                 steer = self.pure_pursuit_rear_axel()
                 lateral_command.steering_tire_angle = steer
                 lateral_command.steering_tire_rotation_rate = 0.1
@@ -231,19 +232,19 @@ class VehicleControl(Node):
                 lateral_command.steering_tire_rotation_rate = 0.0
         return lateral_command
 
-    def get_longitudinal_command(self, status):
+    def get_longitudinal_command(self):
 
         current_speed = self.velocity_report.longitudinal_velocity if self.velocity_report else 0.0
-        target_speed = self.lookAhead.speed_limit
+        target_speed = self.path_plan.speed_limit
 
-        if status == "Decelerate" or status == "Stop_red":
+        if self.motion_plan.status.data == "Decelerate" or self.motion_plan.status.data == "Stop_red":
             # TODO: LookAhead from PathPlanning node no longer publishes stop point, read it from the obstacle avoidance msg
-            distance_to_stop = self.calculate_distance(self.lookAhead.stop_point, self.pose.pose.position)
+            distance_to_stop = self.calculate_distance(self.motion_plan.stop_point, self.pose.pose.position)
             target_speed = self.calculate_target_speed_for_stop(distance_to_stop, current_speed)
-            if status == "Stop_red" and distance_to_stop <= 4.0:
+            if self.motion_plan.status.data == "Stop_red" and distance_to_stop <= 4.0:
                 self.get_logger().warning("Full stop!")
                 target_speed = 0.0
-            if status == "Decelerate" and distance_to_stop <= 2.0:
+            if self.motion_plan.status.data == "Decelerate" and distance_to_stop <= 2.0:
                 self.get_logger().warning("Full stop!")
                 target_speed = 0.0
 
@@ -258,20 +259,20 @@ class VehicleControl(Node):
         longitudinal_command.acceleration = accel
 
         # TODO: LookAhead from PathPlanning node no longer publishes stop point, read it from the obstacle avoidance msg
-        if status == "Decelerate" or status == "Stop_red":
+        if self.motion_plan.status.data == "Decelerate" or self.motion_plan.status.data == "Stop_red":
             self.get_logger().info(
             f'speed: {current_speed}\n'
             f'accel: {accel}\n'
             f'target speed: {target_speed}\n'
-            f'stop distance: {self.calculate_distance(self.lookAhead.stop_point, self.pose.pose.position)}\n'
-            f'status : {self.lookAhead.status.data}\n'
+            f'stop distance: {self.calculate_distance(self.motion_plan.status.data, self.pose.pose.position)}\n'
+            f'status : {self.motion_plan.status.data}\n'
         )
         else:
             self.get_logger().info(
                 f'speed: {current_speed}\n'
                 f'accel: {accel}\n'
                 f'target speed: {target_speed}\n'
-                f'status : {self.lookAhead.status.data}\n'
+                f'status : {self.motion_plan.status.data}\n'
             )
         return longitudinal_command
     
@@ -280,10 +281,10 @@ class VehicleControl(Node):
         # Using a nonlinear deceleration curve for smoother braking
         
         # Adjusted deceleration factor
-        target_speed = current_speed * (distance_to_stop / (self.lookAhead.speed_limit * 3.0))**1.0
+        target_speed = current_speed * (distance_to_stop / (self.path_plan.speed_limit * 3.0))**1.0
         
         # Clamp for realistic behavior
-        return min(self.lookAhead.speed_limit, max(2.0, target_speed))
+        return min(self.path_plan.speed_limit, max(2.0, target_speed))
 
     def filter(self, new_value, previous_value, gain):
         return gain * previous_value + (1 - gain) * new_value
@@ -295,8 +296,8 @@ class VehicleControl(Node):
         rear_axle_y = self.pose.pose.position.y - self.wheel_base * math.sin(yaw)
         
         # Calculate lookahead point relative to rear axle
-        lookahead_x = self.lookAhead.look_ahead_point.x - rear_axle_x
-        lookahead_y = self.lookAhead.look_ahead_point.y - rear_axle_y
+        lookahead_x = self.path_plan.look_ahead_point.x - rear_axle_x
+        lookahead_y = self.path_plan.look_ahead_point.y - rear_axle_y
 
         # Adjust lookahead distance for vehicle length
         effective_lookahead_distance = math.sqrt(lookahead_x ** 2 + lookahead_y ** 2) + self.front_overhang
@@ -321,10 +322,10 @@ class VehicleControl(Node):
         return steering_angle
 
     def pure_pursuit_steering_angle(self):
-        # print("coordinates: ",  self.lookAhead.look_ahead_point.x, self.lookAhead.look_ahead_point.y, self.lookAhead.look_ahead_point.z)
+        # print("coordinates: ",  self.path_plan.look_ahead_point.x, self.path_plan.look_ahead_point.y, self.path_plan.look_ahead_point.z)
     
-        lookahead_x = self.lookAhead.look_ahead_point.x - self.pose.pose.position.x
-        lookahead_y = self.lookAhead.look_ahead_point.y - self.pose.pose.position.y
+        lookahead_x = self.path_plan.look_ahead_point.x - self.pose.pose.position.x
+        lookahead_y = self.path_plan.look_ahead_point.y - self.pose.pose.position.y
 
         yaw = self.get_yaw_from_pose(self.pose.pose.orientation)
         print("degree: ", math.degrees(yaw))
