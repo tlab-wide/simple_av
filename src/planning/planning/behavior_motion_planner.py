@@ -305,6 +305,8 @@ class BehaviorMotionPlanning(Node):
     def manage_traffic_lights(self):
         v2i_traffic_signals_id = list(self.trafficSignal.v2i_traffic_signals_id)
         v2i_traffic_signals_colors = list(self.trafficSignal.v2i_traffic_signals_colors)
+        # print("Traffic light ID: ", v2i_traffic_signals_id)
+        # print("Traffic light ID: ", v2i_traffic_signals_colors)
 
         current_lane = self.route[self.current_lane_index]
         lane_obj = self.find_lane_by_name(current_lane)
@@ -380,13 +382,13 @@ class BehaviorMotionPlanning(Node):
         objects_on_path = []
         objects_absulute_positions = [self.get_object_absolute_position(self.pose.pose.orientation, vehicle_pose, obj.position) for obj in objects_in_range]
         waypoints = self.path[current_closest_point_to_vehicle_index:current_closest_point_to_vehicle_index + int(self.on_path_detection_range / self.densify_interval) + 1]
-        print("CC - waypoints size: ", len(waypoints))
+        # print("CC - waypoints size: ", len(waypoints))
         for i in range(len(objects_in_range)):
-            print(f'Object {i}')
+            # print(f'Object {i}')
             for waypoint in waypoints:
                 dist = self.calculate_distance(objects_absulute_positions, waypoint)
                 if dist <= self.densify_interval*1.2:
-                    print("CC - DEBUG collison avoidance object dist to waypoint: ", dist)
+                    # print("CC - DEBUG collison avoidance object dist to waypoint: ", dist)
                     objects_on_path.append({"object": objects_in_range[i], "waypoint": waypoint})
                     break
         
@@ -396,11 +398,11 @@ class BehaviorMotionPlanning(Node):
         
         # If only one object is on the path
         if len(objects_on_path) == 1:
-            print("One object on list")
+            # print("One object on list")
             return objects_on_path[0]
         
         # Find the closest object on the path
-        print("several object on list")
+        # print("several object on list")
         min_dist = float('inf')
         closest_object_info = None
         for object_on_path in objects_on_path:
@@ -478,34 +480,34 @@ class BehaviorMotionPlanning(Node):
         dist = self.calculate_distance(collision_point, current_pose)
         time_to_collision = dist / speed
         time_to_collision = time_to_collision * self.sim_clock_rate
-        print(f"P - dist: {dist}, speed: {speed}, time: {time_to_collision}")
+        # print(f"P - dist: {dist}, speed: {speed}, time: {time_to_collision}")
         return time_to_collision
 
     def will_collide_on_path(self, object_type, object_speed, object_pose, vehicle_pose, collison_point, corresponding_waypoint):
-        print("---------------------")
+        # print("---------------------")
         current_vehicle_speed = self.velocity_report.longitudinal_velocity if self.velocity_report else 0.0   
         t_vehicle = self.get_time_to_collison(vehicle_pose, collison_point, self.turning_speed)
         # t_vehicle = self.get_time_to_collison(vehicle_pose, collison_point, current_vehicle_speed)
         t_object = self.get_time_to_collison(object_pose, collison_point, object_speed)
         time_difference = abs(t_vehicle - t_object)
         dist_to_waypoint = self.calculate_distance(corresponding_waypoint, vehicle_pose)
-        print(f"D - time_difference {time_difference}, dist to waypoint {dist_to_waypoint} current_vehicle_speed {current_vehicle_speed}")
+        # print(f"D - time_difference {time_difference}, dist to waypoint {dist_to_waypoint} current_vehicle_speed {current_vehicle_speed}")
         if time_difference <= self.reaction_time_threshold:
             self.get_logger().warning(f"P - Vehciel mooving - Potential collision detected! Time difference: {time_difference:.2f} seconds.")
             return True
-        print(f"P - Safe to proceed. Time difference: {time_difference:.2f} seconds.")
+        # print(f"P - Safe to proceed. Time difference: {time_difference:.2f} seconds.")
         return False
     
     def get_stop_point_by_safety_distance(self, waypoint, vehicle_pose):
         # Helper function to calculate distances
         dist_to_waypoint = self.calculate_distance(waypoint, vehicle_pose)
-        print("CC - vehicle distance to waypoint: ", dist_to_waypoint)
+        # print("CC - vehicle distance to waypoint: ", dist_to_waypoint)
         if dist_to_waypoint <= self.saftey_distance: # Stop the vehicle if distance to the object is less that safety distance
             self.get_logger().warning("P - INSTANT STOP!!")
             return vehicle_pose
 
         stop_point_index = self.path.index(waypoint) - int(self.saftey_distance/self.densify_interval)
-        print('CC - stop point index on path: ', stop_point_index)
+        # print('CC - stop point index on path: ', stop_point_index)
         stop_point = self.path[stop_point_index]
         return Point(x=stop_point.x, y=stop_point.y, z=stop_point.z)
          
@@ -538,7 +540,7 @@ class BehaviorMotionPlanning(Node):
         
         predicted_stop_points = []
         for i in range(len(objects_in_range)):
-            print(f"P - object {i}")
+            # print(f"P - object {i}")
             dist_to_veh = self.calculate_distance(vehicle_pose, objects_absulute_positions)
             for j in range(1, len(waypoints) - 1):
                 forward_vector = self.get_forward_vector(objects_in_range[i].orientation)
@@ -585,9 +587,9 @@ class BehaviorMotionPlanning(Node):
                 closest_stop_point = stop_point
                 stop_point_type = type
         
-        print(f'CC - closest stop point: {closest_stop_point}')
-        print(f'CC - closest stop point type {stop_point_type}')
-        print(f'CC - distance to stop point: {minimum_distance}')
+        # print(f'CC - closest stop point: {closest_stop_point}')
+        # print(f'CC - closest stop point type {stop_point_type}')
+        # print(f'CC - distance to stop point: {minimum_distance}')
         return closest_stop_point, stop_point_type
 
 
@@ -614,7 +616,7 @@ class BehaviorMotionPlanning(Node):
 
         if stop_point_type == 'CollisonAvoidance' or stop_point_type == 'CollisonPrediction':
             if stop_point_type == 'CollisonAvoidance':
-                self.get_logger().warning('CC Collison Avoidance')
+                self.get_logger().warning('Collison Avoidance')
             else:
                 self.get_logger().warning('Prediction')
             self.status.data = 'Decelerate'
@@ -638,6 +640,9 @@ class BehaviorMotionPlanning(Node):
 
         if self.path and self.path_as_lanes:
             self.get_logger().info("Path has successfully initialized from Mission Planner")
+            self.route = self.path_as_lanes[:]
+            self.current_lane_index = 0
+            self.destination = self.path[-1]
         else:
             self.get_logger().warning("Path has not initialized from Mission Planner!!")
             return
@@ -659,9 +664,8 @@ class BehaviorMotionPlanning(Node):
         self.publish_motion_planning_msgs(stop_point) # publishing
         
         self.get_logger().info(
-            f'planning\n'
-            f'lookahead distance:  {self.lookahead_distance}\n'
-            f'is turn detected: {self.isTurnDetected}\n'
+            f'behavior motion planning\n'
+            f'distance to stop point: {self.calculate_distance(vehicle_pose, stop_point)}\n'
             f'status: {self.status.data}\n'
         )
         

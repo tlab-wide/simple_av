@@ -461,10 +461,11 @@ class BehaviorPathPlanner(Node):
         self.publish_path_planning_msgs(look_ahead_point, speed) # publishing
         
         self.get_logger().info(
-            f'planning\n'
+            f'behavior path planning\n'
             f'lookahead distance:  {self.lookahead_distance}\n'
             f'lookahead point index:  {look_ahead_point_index}\n'
             f'speed: {speed}\n'
+            f'is turn detected: {isTurnDetected}\n'
         )
 
 
