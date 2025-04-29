@@ -238,7 +238,8 @@ class VehicleControl(Node):
         target_speed = self.path_plan.speed_limit
 
         if self.motion_plan.status.data == "Decelerate" or self.motion_plan.status.data == "Stop_red":
-            # TODO: LookAhead from PathPlanning node no longer publishes stop point, read it from the obstacle avoidance msg
+            print("debug: ", self.motion_plan.stop_point, type(self.motion_plan.stop_point))
+            print("debug: ", self.pose.pose.position, type(self.pose.pose.position))
             distance_to_stop = self.calculate_distance(self.motion_plan.stop_point, self.pose.pose.position)
             target_speed = self.calculate_target_speed_for_stop(distance_to_stop, current_speed)
             if self.motion_plan.status.data == "Stop_red" and distance_to_stop <= 4.0:
@@ -264,7 +265,7 @@ class VehicleControl(Node):
             f'speed: {current_speed}\n'
             f'accel: {accel}\n'
             f'target speed: {target_speed}\n'
-            f'stop distance: {self.calculate_distance(self.motion_plan.status.data, self.pose.pose.position)}\n'
+            f'stop distance: {self.calculate_distance(self.motion_plan.stop_point, self.pose.pose.position)}\n'
             f'status : {self.motion_plan.status.data}\n'
         )
         else:
