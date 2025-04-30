@@ -91,7 +91,7 @@ class Perception(Node):
     
     def load_vehicle_config(self, vehicle_model):
         # Path to the YAML file
-        package_share_directory = get_package_share_directory('simple_av')
+        package_share_directory = get_package_share_directory('common')
         config_path = os.path.join(package_share_directory, "configs", "vehicle_config.yaml")
 
         # Load the configuration file
