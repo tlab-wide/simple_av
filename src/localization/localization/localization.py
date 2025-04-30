@@ -61,8 +61,8 @@ class Localization(Node):
 
     def load_map(self):
         # Get the path to the resource directory
-        package_share_directory = get_package_share_directory('simple_av')
-        json_file_path = os.path.join(package_share_directory, 'resource', 'Kashiwa.json')
+        package_share_directory = get_package_share_directory('common')
+        json_file_path = os.path.join(package_share_directory, 'maps', 'Kashiwa.json')
         # json_file_path = os.path.join(package_share_directory, 'resource', 'Shinjuku.json')
         # Load and read the JSON file
         with open(json_file_path, 'r') as json_file:

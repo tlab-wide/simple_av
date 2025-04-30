@@ -124,8 +124,8 @@ class VehicleControl(Node):
     
     def config_file_loader(self, file_name):
         # Path to the YAML file
-        package_share_directory = get_package_share_directory('simple_av')
-        config_path = os.path.join(package_share_directory, "resource", file_name)
+        package_share_directory = get_package_share_directory('common')
+        config_path = os.path.join(package_share_directory, "configs", file_name)
         # Load the configuration file
         with open(config_path, "r") as file:
             config = yaml.safe_load(file)
@@ -134,7 +134,7 @@ class VehicleControl(Node):
     def load_vehicle_config(self, vehicle_model):
         # Path to the YAML file
         package_share_directory = get_package_share_directory('simple_av')
-        config_path = os.path.join(package_share_directory, "resource", "vehicle_config.yaml")
+        config_path = os.path.join(package_share_directory, "configs", "vehicle_config.yaml")
 
         # Load the configuration file
         with open(config_path, "r") as file:
