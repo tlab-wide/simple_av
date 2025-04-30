@@ -22,7 +22,6 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'planning = planning.planning:main',
             'mission_planning = planning.mission_planning:main',
             'behavior_path_planner = planning.behavior_path_planner:main',
             'behavior_motion_planner = planning.behavior_motion_planner:main',
