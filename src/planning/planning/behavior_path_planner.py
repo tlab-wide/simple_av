@@ -417,18 +417,18 @@ class BehaviorPathPlanner(Node):
             self.isPathPlanned = True
 
     def lane_following(self):
-        self.get_logger().info("lane following start...")
         if not self.location and not self.pose:
             self.get_logger().warning("No location/pose input")
             return None
         
-        print("self.isPathPlanned: ", self.isPathPlanned)
         if not self.isPathPlanned:
             self.get_logger().info("Requesting Misson planning Service ...")
             self.request_mission_plan()
             rclpy.spin_once(self, timeout_sec=0.1)  # allow 0.1s to receive mission plan
             self.handle_mission_plan()
             self.get_logger().info("Start Local Path Planning...")
+            if self.path and self.path_as_lanes:
+                self.get_logger().info("Path has successfully initialized from Mission Planner")
             return
         
         if self.finished:
@@ -445,9 +445,7 @@ class BehaviorPathPlanner(Node):
             rclpy.spin_once(self, timeout_sec=0.1)  # allow 0.1s to receive mission plan
             self.handle_mission_plan()
         
-        if self.path and self.path_as_lanes:
-            self.get_logger().info("Path has successfully initialized from Mission Planner")
-        else:
+        if not self.path and not self.path_as_lanes:
             self.get_logger().warning("Path has not initialized from Mission Planner!!")
             return
             
@@ -456,6 +454,7 @@ class BehaviorPathPlanner(Node):
         if not look_ahead_point and not look_ahead_point_index:
             self.get_logger().warning("Lookahead point not set in local planning")
             return
+        self.lookahead_distance = speed * self.lookahead_distance_C + self.lookahead_distance_B # meters
 
         self.publish_curve_detection_msg(isTurnDetected)
         self.publish_path_planning_msgs(look_ahead_point, speed) # publishing

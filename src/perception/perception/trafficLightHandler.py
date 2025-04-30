@@ -103,9 +103,11 @@ class TrafficSignalHandler(Node):
         
         # Handle traffic signals
         v2i_traffic_signals_id, v2i_traffic_signals_colors = self.process_traffic_signals()
+        print(v2i_traffic_signals_id)
+        print(v2i_traffic_signals_colors)
         if 166849 in v2i_traffic_signals_id:
-            print(v2i_traffic_signals_id)
-            print(v2i_traffic_signals_colors)
+            print("intersection 1 traffic light")
+            
 
         # Create and publish traffic signals message
         traffic_signals_msg = TrafficSignalsArray()
