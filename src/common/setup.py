@@ -11,7 +11,7 @@ setup(
     data_files=[
         ('share/' + package_name, ['package.xml']),
         # Install all config files to: install/share/common/config/
-        (os.path.join('share', package_name, 'config'), glob('config/*.yaml')),
+        (os.path.join('share', package_name, 'configs'), glob('configs/*.yaml')),
         # Install all map files to: install/share/common/maps/
         (os.path.join('share', package_name, 'maps'), glob('maps/*.json')),
     ],
