@@ -1,0 +1,28 @@
+intersections:
+  intersection_1:
+    name: "intersection_1"
+    reference_point: 
+      x: 4250.0
+      y: 73455.0
+    threshold: 40.0
+  
+  intersection_2:
+    name: "intersection_2"
+    reference_point: 
+      x: 4504.0
+      y: 72940.0
+    threshold: 40.0
+  
+  intersection_3:
+    name: "intersection_3"
+    reference_point: 
+      x: -1.0
+      y: -1.0
+    threshold: 30.0
+  
+  intersection_4:
+    name: "intersection_4"
+    reference_point: 
+      x: -1.0
+      y: -1.0
+    threshold: 30.0
