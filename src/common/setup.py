@@ -10,8 +10,10 @@ setup(
     packages=find_packages(exclude=['test']),
     data_files=[
         ('share/' + package_name, ['package.xml']),
-        # Install all config files to: install/share/common/config/
+        # Install all config files to: install/share/common/configs/
         (os.path.join('share', package_name, 'configs'), glob('configs/*.yaml')),
+        # Install all zone files to: install/share/common/zones/
+        (os.path.join('share', package_name, 'zones'), glob('zones/*.yaml')),
         # Install all map files to: install/share/common/maps/
         (os.path.join('share', package_name, 'maps'), glob('maps/*.json')),
     ],
