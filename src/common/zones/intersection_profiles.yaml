@@ -1,0 +1,37 @@
+{
+  "intersection_1": {
+    "name": "intersection_1",
+    "reference_point": {
+      "x": 4523.1,
+      "y": 72938.7
+    },
+    "threshold": 10.0
+  },
+
+  "intersection_2": {
+    "name": "intersection_2",
+    "reference_point": {
+      "x": 4499.9,
+      "y": 72923.2
+    },
+    "threshold": 12.0
+  },
+
+  "intersection_3": {
+    "name": "intersection_3",
+    "reference_point": {
+      "x": 4550.8,
+      "y": 72970.1
+    },
+    "threshold": 11.5
+  },
+
+  "intersection_4": {
+    "name": "intersection_4",
+    "reference_point": {
+      "x": 4501.3,
+      "y": 72917.1
+    },
+    "threshold": 9.5
+  }
+}
