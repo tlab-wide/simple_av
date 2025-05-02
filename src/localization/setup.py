@@ -23,7 +23,7 @@ setup(
     entry_points={
         'console_scripts': [
             'localization = localization.localization:main',
-            'localization_intersection_detector = localization.intersection_detector:main',
+            'intersection_detector = localization.intersection_detector:main',
         ],
     },
 )

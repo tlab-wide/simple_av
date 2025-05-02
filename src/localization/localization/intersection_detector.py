@@ -10,7 +10,7 @@ from collections import deque
 
 class IntersectionStatusDetector(Node):
     def __init__(self):
-        super().__init__('intersection_status_detector_node')
+        super().__init__('intersection_detector_node')
 
         # Load intersection data
         self.intersection_profiles = self.load_intersections()
