@@ -76,10 +76,12 @@ nav:
     - Add Messages: Simple-AV/Awsim msg/index.md
     - Map (*.json): Simple-AV/JsonMap/index.md
     - Modules:
+      - Common: Simple-AV/Modules/Common/index.md
       - Localization: Simple-AV/Modules/Localization/index.md
       - Planning: Simple-AV/Modules/Planning/index.md
       - Perception: Simple-AV/Modules/Perception/index.md
       - Control: Simple-AV/Modules/Control/index.md
+      - System: Simple-AV/Modules/System/index.md
 
   - License: License/index.md
   - Contact: Contact/index.md
