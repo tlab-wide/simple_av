@@ -24,7 +24,9 @@ Furthermore, simulators allow developers to replicate complex driving scenarios,
 
 
 ## Architecture
-![](arch2.drawio.png)
+![Simple AV structure](Arch-V6.png)
+[Open Diagram in Full Screen](arch-V6-html.html){target=_blank}
+
 
 In terms of architecture, simple-AV adopts a modular approach. It is composed of several independent modules that interact through ROS2. This modular design allows users to choose and integrate various modules according to their specific needs and requirements. The software stack includes several key components, such as perception, localization, planning, and control modules. Here’s a brief overview of each module:
 
