@@ -11,7 +11,7 @@ from std_msgs.msg import String
 import math
 from collections import deque
 from simple_av_msgs.msg import TrafficSignalsArray, DetectedObjectsArray
-from simple_av_msgs.msg import PlanningInternalCurveDetectionMsg, PlanningInternalMissionPlanMsg, PlanningMotionPlanningMsg
+from simple_av_msgs.msg import PlanningInternalMsg, PlanningInternalMissionPlanMsg, PlanningMotionPlanningMsg
 from simple_av_msgs.msg import LocalizationMsg
 from simple_av_msgs.msg import SimMonitor, Portal
 import numpy as np
@@ -72,8 +72,9 @@ class BehaviorMotionPlanning(Node):
         self.subscriptionLocation = self.create_subscription(LocalizationMsg, 'simple_av/localization/location', self.location_callback, 10)
         self.location = LocalizationMsg()
 
-        self.subscriptionCurveDetection = self.create_subscription(PlanningInternalCurveDetectionMsg, 'simple_av/planning/curve_detection', self.curve_detection_callback, 10)
+        self.subscriptionCurveDetection = self.create_subscription(PlanningInternalMsg, 'simple_av/planning/internal_msg', self.internal_msg_callback, 10)
         self.isTurnDetected = False
+        self.isEndOfPath = False
 
         self.subscriptionPortal = self.create_subscription(Portal, 'simple_av/portal', self.portal_callback, 10)
         self.reset = False
@@ -160,8 +161,9 @@ class BehaviorMotionPlanning(Node):
         self.reset = msg.reset
         self.finished = msg.finished
 
-    def curve_detection_callback(self, msg):
+    def internal_msg_callback(self, msg):
         self.isTurnDetected = msg.is_curve_detected
+        self.isEndOfPath = msg.is_end_of_path
 
     def trafficSignal_callback(self, msg):
         self.trafficSignal = msg
@@ -321,7 +323,6 @@ class BehaviorMotionPlanning(Node):
                 self.traffic_light_state_lastState = 'Cruise_green'
                 return 'Cruise_green', None
             else:
-                self.get_logger().warning("Debug2: traffic light id is NOT on the list")
                 if self.traffic_light_state_lastState == 'Stop_red':
                     return 'Stop_red', self.traffic_light_stopPoint_lastState
                 return 'Cruise_green', None
@@ -582,6 +583,9 @@ class BehaviorMotionPlanning(Node):
     def motion_planner(self, current_closest_point_to_vehicle_index):
         # Current vehicle position
         vehicle_pose = self.pose.pose.position
+
+        # Distance to the destination
+        # distance_to_destination = self.calculate_distance(vehicle_pose, self.destination)
         
         # TODO: Distance to the destination 
 
@@ -604,14 +608,18 @@ class BehaviorMotionPlanning(Node):
 
         if stop_point_type == 'CollisonAvoidance' or stop_point_type == 'CollisonPrediction':
             if stop_point_type == 'CollisonAvoidance':
-                self.get_logger().warning('Collison Avoidance')
+                self.get_logger().info('Collison Avoidance')
             else:
-                self.get_logger().warning('Prediction')
+                self.get_logger().info('Prediction')
             self.status.data = 'Decelerate'
         
         if stop_point_type == 'TrafficLight':
-            self.get_logger().warning('TrafficLight')
+            self.get_logger().info('TrafficLight')
             self.status.data = trafficLightTask
+        
+        if self.isEndOfPath:
+            self.get_logger().info("Approaching destination, decelerating.")
+            self.status.data = 'Decelerate'
         
         return stop_point
             

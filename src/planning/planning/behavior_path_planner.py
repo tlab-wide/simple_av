@@ -10,7 +10,7 @@ from geometry_msgs.msg import PoseStamped, Point
 from std_msgs.msg import String
 import math
 from collections import deque
-from simple_av_msgs.msg import PlanningPathPlanningMsg, PlanningInternalCurveDetectionMsg, PlanningInternalMissionPlanMsg
+from simple_av_msgs.msg import PlanningPathPlanningMsg, PlanningInternalMsg, PlanningInternalMissionPlanMsg
 from simple_av_msgs.msg import LocalizationMsg
 from simple_av_msgs.msg import Portal
 import numpy as np
@@ -115,7 +115,7 @@ class BehaviorPathPlanner(Node):
 
         # Publish topics
         self.planning_publisher = self.create_publisher(PlanningPathPlanningMsg, 'simple_av/planning/path_planning', 10)
-        self.curve_detection_publisher = self.create_publisher(PlanningInternalCurveDetectionMsg, 'simple_av/planning/curve_detection', 10)
+        self.internal_msg_publisher = self.create_publisher(PlanningInternalMsg, 'simple_av/planning/internal_msg', 10)
 
         self.mission_planner_client = self.create_client(TriggerMissionPlan, '/planning/trigger_mission_plan')
         # Optional: check if service is ready
@@ -266,9 +266,11 @@ class BehaviorPathPlanner(Node):
             tuple: The updated closest point index and the next point.
         """
         search_area_indexes_on_path = (self.path.index(search_area[0]), self.path.index(search_area[-1]))
+        print("Debug3: search_area_indexes_on_path", search_area_indexes_on_path[0], search_area_indexes_on_path[1])
         if current_closest_point_index == len(self.path) - 1:
             return current_closest_point_index, self.path[current_closest_point_index]
         first_ahead_point_index = self.get_first_ahead_point(vehicle_pose, current_closest_point_index)
+        print("Debug3: first_ahead_point_index", first_ahead_point_index)
         
         # final point in path
         if first_ahead_point_index >= len(self.path):
@@ -280,11 +282,14 @@ class BehaviorPathPlanner(Node):
             if dist <= self.lookahead_distance + 4.0 and dist >= self.lookahead_distance:
                 return i, self.path[i]
         
-        self.get_logger().error("Look ahead point not found!")
-        # TODO: modify this part
-        if len(self.path) - first_ahead_point_index - 1 <= 10:
+        look_ahead_point_interval = int(self.lookahead_distance/self.densify_interval)
+        print("Debug3: lookahead not found in for loop")
+        if len(self.path) - first_ahead_point_index - 1 <= look_ahead_point_interval:
+            print("Debug3: close to destination ")
             return len(self.path) - 1, self.path[-1]
-        return first_ahead_point_index + 10, self.path[first_ahead_point_index + 10]
+
+        self.get_logger().error("Look ahead point not found!")
+        return first_ahead_point_index + look_ahead_point_interval, self.path[first_ahead_point_index + look_ahead_point_interval]
 
     def adjust_speed_to_curve(self, curve_angle):
         # return self.base_speed
@@ -295,8 +300,11 @@ class BehaviorPathPlanner(Node):
 
 
     def curve_detector(self, curves, look_ahead_point, look_ahead_point_index):
-        if look_ahead_point_index >= len(self.path) - 5 and look_ahead_point_index <= len(self.path):
+        lookahead_point_interval = int(self.lookahead_distance//self.densify_interval)
+        if look_ahead_point_index >= len(self.path) - lookahead_point_interval and look_ahead_point_index <= len(self.path):
             return False, 0.0
+        
+        print("debug5: isCurveStarted isCurveFinished ", self.isCurveStarted, self.isCurveFinished)
 
         if not self.isCurveStarted and not self.isCurveFinished:
             for curve in curves:
@@ -305,7 +313,12 @@ class BehaviorPathPlanner(Node):
                 if self.path[look_ahead_point_index - 1] == v or self.path[look_ahead_point_index] == v or self.path[look_ahead_point_index+1] == v:
                     # self.get_logger().info("curve started")
                     self.curve_angle = k
-                    self.curve_finish_point = self.path[look_ahead_point_index + int(self.lookahead_distance//self.densify_interval) + 6]
+                    try:
+                        self.curve_finish_point = self.path[look_ahead_point_index + lookahead_point_interval + 6]
+                    except IndexError:
+                        self.get_logger().warning("End of Path comes before curve finish point.")
+                        self.curve_finish_point = self.path[-1]
+                        continue
                     self.isCurveStarted = True
                     self.isCurveFinished = False
                     # self.isCurveDetected = True
@@ -332,20 +345,24 @@ class BehaviorPathPlanner(Node):
     
     # TODO: create search area based on waypoints not lanes
     def create_search_area(self):
+        print("Debug: in create search area")
         try:
             lane_index = self.route.index(self.location.closest_lane_names.data)
         except:
             # vehicle is out of path
-            # self.get_logger().warning("Vehicle is out of the Path")
+            self.get_logger().warning("Vehicle is out of the Path")
             lane_index = self.current_lane_index
+        print("Debug: lane index: ", lane_index)
         if lane_index in range(self.current_lane_index, self.current_lane_index + self.search_depth):
             self.current_lane_index = lane_index
+            print("Debug: current lane index: ", lane_index)
         search_area_as_lanes = self.path_as_lanes[self.current_lane_index: self.current_lane_index + self.search_depth]
-
+        print("Debug: search area size: ", len(search_area_as_lanes))
         # convert lanes in the search are into a list of waypoints
         search_area = []
         for lane in search_area_as_lanes:
             lane_obj = self.find_lane_by_name(lane)
+            print("Debug: lane: ", lane)
             waypoints = lane_obj['dense_waypoints']
             for waypoint in waypoints:
                 search_area.append(Point(x=waypoint['x'], y=waypoint['y'], z=waypoint['z']))
@@ -371,16 +388,20 @@ class BehaviorPathPlanner(Node):
         """
         Perform local path planning to determine the next point for the vehicle.
         """
+        print("Debug2: in path_planning ")
+
         vehicle_pose = self.pose.pose.position
         if vehicle_pose.x == 0.0 and vehicle_pose.y == 0.0 and vehicle_pose.z == 0.0:
             self.get_logger().warning("Vehicle Pose is not accessible")
             return None, None, None, None
         current_closest_point_to_vehicle_index = self.find_closest_waypoint_to_vehicle(vehicle_pose, search_area)
+        print("Debug2: current_closest_point_to_vehicle_index ", current_closest_point_to_vehicle_index)
         look_ahead_point_index, look_ahead_point = self.find_lookahead_point(vehicle_pose, current_closest_point_to_vehicle_index, search_area)
+        print("Debug2: look_ahead_point_index ", look_ahead_point_index)
         isTurnDetected = self.curve_handler(look_ahead_point, look_ahead_point_index)
         target_speed = self.update_target_speed(isTurnDetected)
         
-        # print("DEBUG - look ahead distance: ", self.lookahead_distance)
+        print("Debug2: look ahead distance: ", self.lookahead_distance)
         return look_ahead_point_index, look_ahead_point, isTurnDetected, target_speed
         
     def dot_product(self, v1, v2):
@@ -393,30 +414,38 @@ class BehaviorPathPlanner(Node):
         lookahead_point.speed_limit = speed
         self.planning_publisher.publish(lookahead_point)
     
-    def publish_curve_detection_msg(self, isTurnDetected):
-        curve_detection = PlanningInternalCurveDetectionMsg()
-        curve_detection.is_curve_detected = isTurnDetected
-        self.curve_detection_publisher.publish(curve_detection)
+    def publish_curve_internal_msg(self, isTurnDetected, isEndOfPath):
+        internal_msg = PlanningInternalMsg()
+        internal_msg.is_curve_detected = isTurnDetected
+        internal_msg.is_end_of_path = isEndOfPath
+        self.internal_msg_publisher.publish(internal_msg)
 
     def request_mission_plan(self):
         request = TriggerMissionPlan.Request()
         future = self.mission_planner_client.call_async(request)
-        self.get_logger().info('Requested mission plan from MissionPlanner.')
         return future
 
     def handle_mission_plan(self):
-        self.get_logger().info("Finding Curves Along the Path ...")
+
         if self.path and self.path_as_lanes:
             self.destination = self.path[-1]
+            self.get_logger().info("Finding Curves Along the Path ...")
             path_curve_detector = PathCurveDetector(self.path, angle_threshold=3) # initializing object from class
             self.curves = path_curve_detector.find_curves_in_path() # locating curves on the route/path
-        if self.path and self.path_as_lanes and self.curves:
-            self.get_logger().info("Curves found.")
-            print("path of lanes: ", self.path_as_lanes)
             # self.initial_lane = self.location.closest_lane_names.data
             self.route = self.path_as_lanes[:]
             self.current_lane_index = 0
             self.isPathPlanned = True
+            print("Debug: path of lanes: ", self.path_as_lanes)
+            print("Debug: lanes size: ", len(self.path_as_lanes))
+        if self.curves:
+            self.get_logger().info("Curves found.")
+
+    def end_of_path_detection(self, look_ahead_point_index, look_ahead_point):
+        if look_ahead_point.x == self.destination.x and look_ahead_point.y == self.destination.y:
+            print("DEBUG4: end of path detected")
+            return True
+        return False
 
     def lane_following(self):
         if not self.location and not self.pose:
@@ -426,7 +455,7 @@ class BehaviorPathPlanner(Node):
         if not self.isPathPlanned:
             self.get_logger().info("Requesting Misson planning Service ...")
             self.request_mission_plan()
-            rclpy.spin_once(self, timeout_sec=0.1)  # allow 0.1s to receive mission plan
+            rclpy.spin_once(self, timeout_sec=0.25)  # allow 0.25s to receive mission plan
             self.handle_mission_plan()
             self.get_logger().info("Start Local Path Planning...")
             if self.path and self.path_as_lanes:
@@ -444,7 +473,7 @@ class BehaviorPathPlanner(Node):
             self.isPathPlanned = False
             self.get_logger().info("Requesting Misson planning Service ...")
             self.request_mission_plan()
-            rclpy.spin_once(self, timeout_sec=0.1)  # allow 0.1s to receive mission plan
+            rclpy.spin_once(self, timeout_sec=0.125)  # allow 0.25s to receive mission plan
             self.handle_mission_plan()
         
         if not self.path and not self.path_as_lanes:
@@ -453,12 +482,13 @@ class BehaviorPathPlanner(Node):
             
         search_area, search_area_as_lanes = self.create_search_area()
         look_ahead_point_index, look_ahead_point, isTurnDetected, speed = self.path_planning(search_area)
+        isEndOfPath = self.end_of_path_detection(look_ahead_point_index, look_ahead_point)
         if not look_ahead_point and not look_ahead_point_index:
             self.get_logger().warning("Lookahead point not set in local planning")
             return
         self.lookahead_distance = speed * self.lookahead_distance_C + self.lookahead_distance_B # meters
 
-        self.publish_curve_detection_msg(isTurnDetected)
+        self.publish_curve_internal_msg(isTurnDetected, isEndOfPath)
         self.publish_path_planning_msgs(look_ahead_point, speed) # publishing
         
         self.get_logger().info(
