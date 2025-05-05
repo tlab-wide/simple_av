@@ -1,5 +1,5 @@
 Stable Version
-Version 2.0.0-beta
+Version 2.1.1
 
 new architecture of Modules
 Modules:
@@ -28,5 +28,6 @@ Modules:
     simple_av:
         - One Package to launch them All!
 
-Stable version.
-json map updated: modified waypoints for intersection 1 & 2
+Not Stable version.
+fixed bug:
+    End of the path. Now the vehicle stops correctly at the end of the path

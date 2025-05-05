@@ -300,8 +300,11 @@ class BehaviorPathPlanner(Node):
 
 
     def curve_detector(self, curves, look_ahead_point, look_ahead_point_index):
-        if look_ahead_point_index >= len(self.path) - 5 and look_ahead_point_index <= len(self.path):
+        lookahead_point_interval = int(self.lookahead_distance//self.densify_interval)
+        if look_ahead_point_index >= len(self.path) - lookahead_point_interval and look_ahead_point_index <= len(self.path):
             return False, 0.0
+        
+        print("debug5: isCurveStarted isCurveFinished ", self.isCurveStarted, self.isCurveFinished)
 
         if not self.isCurveStarted and not self.isCurveFinished:
             for curve in curves:
@@ -310,7 +313,12 @@ class BehaviorPathPlanner(Node):
                 if self.path[look_ahead_point_index - 1] == v or self.path[look_ahead_point_index] == v or self.path[look_ahead_point_index+1] == v:
                     # self.get_logger().info("curve started")
                     self.curve_angle = k
-                    self.curve_finish_point = self.path[look_ahead_point_index + int(self.lookahead_distance//self.densify_interval) + 6]
+                    try:
+                        self.curve_finish_point = self.path[look_ahead_point_index + lookahead_point_interval + 6]
+                    except IndexError:
+                        self.get_logger().warning("End of Path comes before curve finish point.")
+                        self.curve_finish_point = self.path[-1]
+                        continue
                     self.isCurveStarted = True
                     self.isCurveFinished = False
                     # self.isCurveDetected = True
