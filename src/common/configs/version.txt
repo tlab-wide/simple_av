@@ -1,5 +1,5 @@
 Stable Version
-Version 2.1.1
+Version 2.2.1-beta
 
 new architecture of Modules
 Modules:
@@ -29,5 +29,5 @@ Modules:
         - One Package to launch them All!
 
 Not Stable version.
-fixed bug:
-    End of the path. Now the vehicle stops correctly at the end of the path
+Lexus and Bus can cruise the Main route with traffic light and collision avoidance.
+needed some tuning in control commands
