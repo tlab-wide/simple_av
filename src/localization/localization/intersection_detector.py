@@ -26,7 +26,7 @@ class IntersectionStatusDetector(Node):
         )
         self.intersection_names = ["intersection_1", "intersection_2", "intersection_3", "intersection_4"]
         self.position_log = deque(maxlen=20)
-        self.status = None
+        self.status = 'None'
 
     def load_intersections(self):
         package_share_directory = get_package_share_directory('common')
@@ -50,7 +50,7 @@ class IntersectionStatusDetector(Node):
 
         closest = None
         for name, data in intersections.items():
-            # print(f"intersection name: {data['name']}")
+            intersection_name = data['name']
             intersection_referece_point = data['reference_point']
             # print(f"reference point x: {intersection_referece_point}")
             threshold = data['threshold']
@@ -58,13 +58,12 @@ class IntersectionStatusDetector(Node):
             distance = self.calculate_distance(vehicle_position, intersection_referece_point)
 
             if distance < threshold:
-                closest = (name, distance, intersection_referece_point, threshold)
+                closest = (intersection_name, distance, intersection_referece_point, threshold)
         
         print('closest: ', closest)
         intersection_status_msg = LocalizationIntersectionStatus()
         if closest:
             name, distance, intersection_referece_point, threshold = closest
-            
             distance_to_prev_pose = self.calculate_distance(self.position_log[0], intersection_referece_point)
             if distance < distance_to_prev_pose:
                 self.status = 'approaching'      
@@ -87,8 +86,8 @@ class IntersectionStatusDetector(Node):
             intersection_status_msg.status = self.status
             intersection_status_msg.distance_to_intersection = float(distance)
         else:
-            intersection_status_msg.intersection_name = 'none'
-            intersection_status_msg.status = 'none'
+            intersection_status_msg.intersection_name = ''
+            intersection_status_msg.status = ''
             intersection_status_msg.distance_to_intersection = float('inf')
 
         self.publisher.publish(intersection_status_msg)

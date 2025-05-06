@@ -2,7 +2,7 @@
 
 import rclpy
 from rclpy.node import Node
-from simple_av_msgs.msg import TrafficSignalsArray
+from simple_av_msgs.msg import TrafficSignalsArray, LocalizationIntersectionStatus
 from v2x_msgs.msg import CooperativeSignalsMessage
 from geometry_msgs.msg import PoseStamped
 from math import atan2, asin
@@ -26,23 +26,36 @@ class TrafficSignalHandler(Node):
 
         # Load av features configs
         self.av_features = self.config_file_loader("av_features.yaml")
-        self.use_RSU_for_trafficlight = self.av_features['traffic_light']['use_rsu']
-        self.use_RSU_for_object_detection = self.av_features['object_detection']['use_rsu']
-        self.RSU_delay_enable = self.av_features['RSU_delay']['enable']
-        self.RSU_delay_value = self.av_features['RSU_delay']['value']
+        self.enable_trafficlight = self.av_features['traffic_light']['enable']
+        self.enable_RSU_for_trafficlight = self.av_features['traffic_light']['use_rsu']
 
         
-        # Create subscriber for /v2x/traffic_signals topic
-        self.subscriptionTrafficLight = self.create_subscription(CooperativeSignalsMessage, '/v2x/traffic_signals', self.trafficSignal_callback, 10)
+        # Create subscriber for /v2x/traffic_signals_intersection<n> topics
+        self.subscriptionTrafficLight_intersection1 = self.create_subscription(CooperativeSignalsMessage, '/v2x/traffic_signals/intersection_1', self.trafficSignal_callback_intersection1, 10)
+        self.trafficSignal_intersection1 = CooperativeSignalsMessage()  # Initialize traffic signal for intersection number 1
+        
+        self.subscriptionTrafficLight_intersection2 = self.create_subscription(CooperativeSignalsMessage, '/v2x/traffic_signals/intersection_2', self.trafficSignal_callback_intersection2, 10)
+        self.trafficSignal_intersection2 = CooperativeSignalsMessage()  # Initialize traffic signal for intersection number 2
+        
+        self.subscriptionTrafficLight_intersection4 = self.create_subscription(CooperativeSignalsMessage, '/v2x/traffic_signals/intersection_4', self.trafficSignal_callback_intersection4, 10)
+        self.trafficSignal_intersection4 = CooperativeSignalsMessage()  # Initialize traffic signal for intersection number 4
+        
+        self.subscriptionTrafficLight_intersection5 = self.create_subscription(CooperativeSignalsMessage, '/v2x/traffic_signals/intersection_5', self.trafficSignal_callback_intersection5, 10)
+        self.trafficSignal_intersection5 = CooperativeSignalsMessage()  # Initialize traffic signal for intersection number 5
 
+        # Create subscriber for /sensing/gnss/pose topic
         self.subscriptionPose = self.create_subscription(PoseStamped, '/sensing/gnss/pose', self.pose_callback, 10)
+        
         # Create subscriber to simple_av/portal topic
         self.subscriptionPortal = self.create_subscription(Portal, 'simple_av/portal', self.portal_callback, 10)
         self.reset = False
         self.finished = False
-        
-        self.trafficSignal = CooperativeSignalsMessage()  # Initialize traffic signal
 
+        # Create subscriber to simple_av/localization/intersection_status topic
+        self.subscriptionIntersectionAwareness = self.create_subscription(LocalizationIntersectionStatus, 'simple_av/localization/intersection_status', self.intersectionAwareness_callback, 10)
+        self.intersection_awareness_intersection_name = None
+        self.intersection_awareness_status = None
+        
         # Initialize the publishers
         self.publisher_traffic_signals = self.create_publisher(TrafficSignalsArray, 'simple_av/perception/traffic_signals', 10)
 
@@ -58,6 +71,10 @@ class TrafficSignalHandler(Node):
             config = yaml.safe_load(file)
         return config
     
+    def intersectionAwareness_callback(self, msg):
+        self.intersection_awareness_intersection_name = msg.intersection_name
+        self.intersection_awareness_status = msg.status
+
     def portal_callback(self, msg):
         self.reset = msg.reset
         self.finished = msg.finished
@@ -65,37 +82,47 @@ class TrafficSignalHandler(Node):
     def pose_callback(self, msg):
         self.vehicle_pose = msg
 
-    def trafficSignal_callback(self, msg):
-        """Callback function to update the traffic signal data."""
-        self.trafficSignal = msg
+    def trafficSignal_callback_intersection1(self, msg):
+        self.trafficSignal_intersection1 = msg
     
+    def trafficSignal_callback_intersection2(self, msg):
+        self.trafficSignal_intersection2 = msg
+    
+    def trafficSignal_callback_intersection4(self, msg):
+        self.trafficSignal_intersection4 = msg
+    
+    def trafficSignal_callback_intersection5(self, msg):
+        self.trafficSignal_intersection5 = msg
 
     def process_traffic_signals(self):
         """
-        Processes traffic signals to extract signal IDs and colors for station_id = 2.
+        Processes traffic signals for the current intersection.
 
-        Creates two lists:
-        - v2i_traffic_signals_id: Contains traffic signal IDs for station_id = 2.
-        - v2i_traffic_signals_colors: Contains corresponding colors of traffic signals.
+        Returns:
+            - v2i_traffic_signals_id: List of traffic signal IDs.
+            - v2i_traffic_signals_colors: List of corresponding signal colors.
         """
-        # Check if the traffic signal data exists
-        if not hasattr(self, 'trafficSignal') or not self.trafficSignal:
-            print("No traffic signal data available.")
+
+        intersection_number = self.intersection_awareness_intersection_name  # e.g., '1'
+        print("debug: intersection number: ", intersection_number)
+        try:
+            trafficSignal = getattr(self, f"trafficSignal_intersection{intersection_number}")
+        except AttributeError:
+            self.get_logger().warning(f"No traffic signal data for intersection {intersection_number}")
             return [], []
 
-        # Initialize arrays for IDs and colors
         v2i_traffic_signals_id = []
         v2i_traffic_signals_colors = []
 
-        # Ensure the station_id matches 2
-        # Loop through traffic signals
-        # if self.trafficSignal.station_id == 1:
-        for traffic_signal in self.trafficSignal.traffic_signals.signals:
+        if not trafficSignal.traffic_signals:
+            print("debug: No data")
+            return [], []
+
+        for traffic_signal in trafficSignal.traffic_signals.signals:
+            v2i_traffic_signals_id.append(traffic_signal.traffic_signal_id)
             for element in traffic_signal.elements:
-                # Append traffic signal ID and color
-                # print(traffic_signal.traffic_signal_id, element.color)
-                v2i_traffic_signals_id.append(traffic_signal.traffic_signal_id)
                 v2i_traffic_signals_colors.append(element.color)
+
         return v2i_traffic_signals_id, v2i_traffic_signals_colors
 
     def trafficSignalDetection(self):
@@ -103,13 +130,14 @@ class TrafficSignalHandler(Node):
             self.node_shut = True
             return
         
+        v2i_traffic_signals_id = []
+        v2i_traffic_signals_colors = []
+
         # Handle traffic signals
-        v2i_traffic_signals_id, v2i_traffic_signals_colors = self.process_traffic_signals()
-        print(v2i_traffic_signals_id)
-        print(v2i_traffic_signals_colors)
-        if 166849 in v2i_traffic_signals_id:
-            print("intersection 1 traffic light")
-            
+        if self.enable_trafficlight and self.intersection_awareness_intersection_name is not None:
+            v2i_traffic_signals_id, v2i_traffic_signals_colors = self.process_traffic_signals()
+            print(v2i_traffic_signals_id)
+            print(v2i_traffic_signals_colors) 
 
         # Create and publish traffic signals message
         traffic_signals_msg = TrafficSignalsArray()

@@ -14,8 +14,3 @@ object_detection:
 collision_avoidance:
   direct_collision_avoidance: True # Enable or disable direct collision avoidance
   collision_prediction: True       # Enable or disable collision prediction
-
-
-RSU_delay:
-  enable: True  #
-  value: 0.5    #

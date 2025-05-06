@@ -3,7 +3,7 @@
 import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import Point, Quaternion, Vector3
-from simple_av_msgs.msg import DetectedObject, DetectedObjectsArray
+from simple_av_msgs.msg import DetectedObject, DetectedObjectsArray, LocalizationIntersectionStatus
 from autoware_auto_perception_msgs.msg import DetectedObjects
 from autoware_auto_perception_msgs.msg import PredictedObjects
 from geometry_msgs.msg import PoseStamped
@@ -33,26 +33,38 @@ class Perception(Node):
 
         # Load av features configs
         self.av_features = self.config_file_loader("av_features.yaml")
-        self.use_RSU_for_trafficlight = self.av_features['traffic_light']['use_rsu']
-        self.use_RSU_for_object_detection = self.av_features['object_detection']['use_rsu']
-        self.RSU_delay_enable = self.av_features['RSU_delay']['enable']
-        self.RSU_delay_value = self.av_features['RSU_delay']['value']
+        self.enable_object_detection = self.av_features['object_detection']['enable']
+        self.enable_RSU_for_object_detection = self.av_features['object_detection']['use_rsu']
 
         
-        # Create subscriber for /OBU/Sensing topic. This topic publishes the information of detected objects from the POV of the vehicle.
+        # Create subscriber for /OBU/Sensing topic. This topic publishes the information of detected objects from vehicle-mounted sensors.
         self.subscriptionSensor = self.create_subscription(DetectedObjects, '/OBU/Sensing', self.detectedObjects_callback, 10)
-        # Create subscriber for /v2x/cooperative2 topic. This topic publishes the information of detected objects from RSU.
+        self.detectedObjects = DetectedObjects()  # Initialize detected objects message
+
+        # Create subscriber for /v2x/predicted_object<n> topic. This topic publishes the information of detected objects from intersection-mounted RSU.
+        # n determines the number of the intersection
+        self.subscriptionRSU_intersection1 = self.create_subscription(PredictedObjects, '/v2x/predicted_object1', self.intersection1_RSU_detectedObjects_callback, 10)
+        self.intersection1_RSU_detectedObjects = PredictedObjects()
+        
         self.subscriptionRSU_intersection2 = self.create_subscription(PredictedObjects, '/v2x/predicted_object2', self.intersection2_RSU_detectedObjects_callback, 10)
-        self.subscriptionRSU_intersection1 = self.create_subscription(PredictedObjects, '/v2x/predicted_objects1', self.intersection1_RSU_detectedObjects_callback, 10)
+        self.intersection2_RSU_detectedObjects = PredictedObjects()
+
+        self.subscriptionRSU_intersection4 = self.create_subscription(PredictedObjects, '/v2x/predicted_object4', self.intersection4_RSU_detectedObjects_callback, 10)
+        self.intersection4_RSU_detectedObjects = PredictedObjects()
+        
+        
+        # Create subscriber for /sensing/gnss/pose topic
         self.subscriptionPose = self.create_subscription(PoseStamped, '/sensing/gnss/pose', self.pose_callback, 10)
+        
         # Create subscriber to simple_av/portal topic
         self.subscriptionPortal = self.create_subscription(Portal, 'simple_av/portal', self.portal_callback, 10)
         self.reset = False
         self.finished = False
         
-        self.detectedObjects = DetectedObjects()  # Initialize detected objects message
-        self.intersection2_RSU_detectedObjects = PredictedObjects()
-        self.intersection1_RSU_detectedObjects = PredictedObjects()
+        # Create subscriber to simple_av/localization/intersection_status topic
+        self.subscriptionIntersectionAwareness = self.create_subscription(LocalizationIntersectionStatus, 'simple_av/localization/intersection_status', self.intersectionAwareness_callback, 10)
+        self.intersection_awareness_intersection_name = None
+        self.intersection_awareness_status = None
 
         # Initialize the publishers
         self.publisher_detected_objects = self.create_publisher(DetectedObjectsArray, 'simple_av/perception/detected_objects', 10)
@@ -73,18 +85,21 @@ class Perception(Node):
         self.reset = msg.reset
         self.finished = msg.finished
 
-    
+    def intersectionAwareness_callback(self, msg):
+        self.intersection_awareness_intersection_name = msg.intersection_name
+        self.intersection_awareness_status = msg.status
+
     def detectedObjects_callback(self, msg):
-        """Callback function to update the pose data."""
         self.detectedObjects = msg
     
+    def intersection1_RSU_detectedObjects_callback(self, msg):
+        self.intersection1_RSU_detectedObjects = msg
+
     def intersection2_RSU_detectedObjects_callback(self, msg):
-        """Callback function to update the pose data."""
         self.intersection2_RSU_detectedObjects = msg
     
-    def intersection1_RSU_detectedObjects_callback(self, msg):
-        """Callback function to update the pose data."""
-        self.intersection1_RSU_detectedObjects = msg
+    def intersection4_RSU_detectedObjects_callback(self, msg):
+        self.intersection4_RSU_detectedObjects = msg
 
     def pose_callback(self, msg):
         self.vehicle_pose = msg
@@ -281,7 +296,7 @@ class Perception(Node):
 
         return detected_objects_list
 
-    def perception(self):
+    def objectDetection(self):
         if self.finished:
             self.node_shut = True
             return
@@ -291,11 +306,19 @@ class Perception(Node):
             self.vehicle_pose.pose.position.x == 0.0 and self.vehicle_pose.pose.position.y == 0.0 and self.vehicle_pose.pose.position.z == 0.0:
             self.get_logger().warning("Vehicle data is not available: No position nor orientation data")
             return
-
+        
+        if not self.enable_object_detection:
+            return
+        
         # Handle detected objects
         detected_objects_list = self.handle_detected_objects(self.detectedObjects, False) # Mounted-sensor data
-        if self.use_RSU_for_object_detection:
-            detected_objects_list.extend(self.handle_detected_objects(self.intersection1_RSU_detectedObjects, True)) # RSU data
+        if self.enable_RSU_for_object_detection and self.intersection_awareness_intersection_name is not None:
+            intersection_number = self.intersection_awareness_intersection_name  # e.g., '1'
+            try:
+                intersection_n_RSU_detectedObjects = getattr(self, f"intersection{intersection_number}_RSU_detectedObjects")
+                detected_objects_list.extend(self.handle_detected_objects(intersection_n_RSU_detectedObjects, True)) # RSU data
+            except AttributeError:
+                self.get_logger().warning(f"No RSU data for intersection {intersection_number}")
 
         # Create and publish detected objects message
         detected_objects_msg = DetectedObjectsArray()
@@ -321,7 +344,7 @@ def main(args=None):
     try:
         while rclpy.ok() and not node.node_shut:
             rclpy.spin_once(node, timeout_sec=0)  # Set timeout to 0 to avoid delay
-            node.perception()
+            node.objectDetection()
     finally:
         node.destroy_node()
         rclpy.shutdown()
