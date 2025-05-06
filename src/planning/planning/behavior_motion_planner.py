@@ -311,7 +311,7 @@ class BehaviorMotionPlanning(Node):
 
         current_lane = self.route[self.current_lane_index]
         lane_obj = self.find_lane_by_name(current_lane)
-        current_lane_traffic_light_id = lane_obj['trafficlightsWayIDs']
+        current_lane_traffic_light_id = lane_obj['trafficlightsRelationID']
         if current_lane_traffic_light_id: # this lane have a traffic light
             if current_lane_traffic_light_id[0] in v2i_traffic_signals_id: # traffic light id is on the list
                 color = v2i_traffic_signals_colors[v2i_traffic_signals_id.index(current_lane_traffic_light_id[0])]

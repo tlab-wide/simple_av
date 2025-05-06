@@ -8,5 +8,11 @@ def generate_launch_description():
             executable='localization',
             name='localization_node',
             output='screen'
+        ),
+        Node(
+            package='localization',
+            executable='intersection_detector',
+            name='intersection_detector_node',
+            output='screen'
         )
     ])
