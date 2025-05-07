@@ -7,7 +7,7 @@ The document presents the rules of branching adopted in the V2X-simulator and si
 |branch|explain|
 |:--|:--|
 |main|Stable branch. Contains all the latest releases.|
-|feature/***|Feature implementation branch created from `kashiwa`. <br>After implementation, it is merged into `kashiwa`.|
-|fix/***|bug fix implementation branch created from `kashiwa`. <br>After implementation, it is merged into `kashiwa`.|
-|doc/***|doc branch created from `kashiwa`. <br>After implementation, it is merged into `kashiwa`.|
+|feature/***|Feature implementation branch created from `main`. <br>After implementation, it is merged into `main`.|
+|fix/***|bug fix implementation branch created from `main`. <br>After implementation, it is merged into `main`.|
+|doc/***|doc branch created from `main`. <br>After implementation, it is merged into `main`.|
 |gh-pages|Documentation hosted on GitHub pages.|

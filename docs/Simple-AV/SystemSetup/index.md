@@ -26,7 +26,7 @@ You can use the provided scenes in [Awsim Scenes](../../GettingStarted/AwsimScen
 
 ![alt text](image.png)
 
-The picture below shows the Awsim environment after running the AWSIM.exe file
+The picture below shows the Awsim environment after running the AWSIM.exe file of Shinjuku
 
 ![alt text](image-2.png)
 
@@ -128,4 +128,4 @@ After sourcing the ROS2 you can get a topic list and see the all the topics that
 
 ![alt text](image-1.png)
 
-This means we have successfully setup our system and create a communication between Awsim on Windows and Ros2 on WSL. However, currently we are unable to access all of the topics and we must define message types of the topics. Please refer to [Building Messages](../../BuildingMessages/index.md) page to see the full documentation.
+This means we have successfully setup our system and create a communication between Awsim on Windows and Ros2 on WSL.

@@ -12,6 +12,8 @@ The Control Module in simple-AV is responsible for executing the planned traject
     - The Pure Pursuit algorithm is used to calculate the required steering angle to follow the path accurately.
     - It computes the curvature that will move the vehicle from its current position to a goal position, known as the look-ahead point.
 
+![pure pursuit](purepursuit.png)
+
 3. **Gear Control**:
     - The module controls the vehicle's gear, switching between 'Drive' and 'Park' based on the current status of the vehicle.
 

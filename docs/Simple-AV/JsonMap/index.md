@@ -14,6 +14,7 @@ Simple-AV uses the simplest form of map. This map which is a Json file, contains
             "prevLanes": [],
             "nextLanes": [],
             "trafficlightsWayIDs": [],
+            "trafficlightsRelationIDs": [],
             "stopLinePoseP1": [],
             "stopLinePoseP2": [],
             "densed_waypoints": [

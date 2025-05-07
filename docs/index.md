@@ -5,13 +5,18 @@ simple-AV is an open-source software stack for self-driving vehicles, built on t
 ## How it looks
 
 <video width="1920" controls autoplay muted loop>
-<source src="trailer.mp4" type="video/mp4">
+    <source src="trailer.mp4" type="video/mp4">
 </video>
 
 
-The primary purpose of simple_AV is to ease the simulation and development of self-driving technologies by providing a robust, flexible, and easy-to-understand platform. Simple_AV includes all of the necessary functions to drive an autonomous vehicles from localization and object detection to route planning and control. While integrating AWSIM with Autoware is an effective approach, it often introduces substantial overhead. simple-AV aims to provide a more efficient solution by simplifying this process. 
+The primary purpose of **simple-AV** is to ease the simulation and development of self-driving technologies by providing a robust, flexible, and easy-to-understand platform. **simple-AV** includes all of the necessary functions to drive an autonomous vehicle, from localization and object detection to route planning and control.
 
-This project focuses on ensuring seamless communication between AWSIM and the vehicle simulation tasks typically managed by Autoware, without the added complexity. By doing so, simple-AV offers a streamlined and effective method for autonomous vehicle simulation, handling all necessary tasks while minimizing setup and operational overhead.
+While **Autoware** is a comprehensive and powerful project that handles everything related to autonomous driving, it naturally comes with significant computational demands. Autonomous driving is a complex and safety-critical task, so Autoware's software is understandably large and intricate. Developing or adding features to Autoware can be challenging, requiring a deep understanding of its codebase and substantial hardware resources.
+
+**simple-AV** is designed as an alternative solution for simpler tasks and straightforward development. It is lightweight and efficient, making it ideal for scenarios like testing a specific scenario repeatedly or rapidly prototyping a new feature. Unlike Autoware, **simple-AV** is more accessible to developers due to its lower computational requirements and simplified architecture.
+
+While it is good practice to use and extend Autoware when possible, the complexity and hardware demands make it less suitable for quick experiments or lightweight applications. In contrast, **simple-AV** is an excellent option for developers who need a more manageable and adaptable platform, allowing them to modify and extend it as needed with minimal setup.
+
 
 #### Using AWSIM with simple-AV?
 
@@ -23,23 +28,25 @@ Furthermore, simulators allow developers to replicate complex driving scenarios,
     Introduction about how the connection between AWSIM and simple-AV works can be read [here](Simple-AV/CommunicatingWithAWSIM/index.md).
 
 
-## Architecture
-![Simple AV structure](Arch-V6.png)
-[Open Diagram in Full Screen](arch-V6-html.html){target=_blank}
+## Simple-AV: Modular Architecture
+![Simple AV structure](Arch-V7.png)
+[Open Diagram in Full Screen](arch-V7.html){target=_blank}
 
 
-In terms of architecture, simple-AV adopts a modular approach. It is composed of several independent modules that interact through ROS2. This modular design allows users to choose and integrate various modules according to their specific needs and requirements. The software stack includes several key components, such as perception, localization, planning, and control modules. Here’s a brief overview of each module:
+In terms of architecture, **simple-AV** adopts a modular approach. It is composed of several independent modules that interact through **ROS2**. This modular design allows users to choose and integrate various modules according to their specific needs and requirements. The software stack includes several key components, such as **Perception**, **Localization**, **Planning**, **Control**, **Common**, and **System** modules, as well as the **AWSIM** environment. 
 
-- <b>*Sensing*</b> -  Data from sensors: different sensors mounted on the autonomous vehicle such as *LiDARs*, *Pseudo Sensors* and *cameras*. It pre-processing received data in order to later extract relevant information about the surrounding environment through the *Perception* module. More details [here](Simple-AV/Modules/Perception/index.md).
+Here’s a brief overview of each module:
 
-- <b>*Pose*</b> - Acquires data from sensors like *GNSS* and *IMU*. These data then will be used in order to determine the vehicle location  by the *Localization* module. More details [here](Simple-AV/Modules/Localization/index.md).
+- **AWSIM** - Simple-AV uses **AWSIM** as its simulation environment to acquire data. This simulator provides sensor data from mounted sensors on the vehicle, such as *LiDARs*, *Cameras*, and *GNSS*. These data are then processed and utilized by other modules to perform perception, localization, planning, and control. More details [here](Simple-AV/AWSIM/index.md).
 
-- <b>*Perception*</b> - Uses the information from [*Pseudo Sensors*](https://tlab-wide.github.io/V2X_E2E_Simulator/Components/PseudoSensors/PseudoSensors/) mounted on vehicle to sense the surrounding environment. This sensor shares the information such as location, type and Bounding box of the object. Perception module then uses these information to detect other vehicles, pedestrians, lane detection, and traffic lights. More details [here](Simple-AV/Modules/Perception/index.md).
+- **Perception** - Uses data from AWSIM sensors and RSUs to detect surrounding objects, vehicles, pedestrians, and traffic signals. The Perception module then processes this data to determine the position, type, and status of objects and traffic lights. More details [here](Simple-AV/Modules/Perception/index.md).
 
-- <b>*Localization*</b> - performs a fusion of data from *Sensing* module like *GNSS*, *IMU*, and odometry sensors to estimate the vehicle's position and orientation accurately. More details [here](Simple-AV/Modules/Localization/index.md).
+- **Localization** - Uses the GNSS data provided by AWSIM to accurately determine the vehicle's position and orientation within the environment. It also uses map data to determine the closest lane and waypoint. Additionally, the **intersection_detector** node in this module identifies which intersection the vehicle is near, entering, or exiting. More details [here](Simple-AV/Modules/Localization/index.md).
 
-- <b>*Planning*</b> - generates a safe and feasible trajectory for the autonomous vehicle based on the information gathered from *Perception* and *Localization*. It also takes into account various factors from *Map* like traffic rules and road conditions. More details [here](Simple-AV/Modules/Path_planning/index.md).
+- **Planning** - Generates a safe and feasible trajectory for the autonomous vehicle based on the data gathered from the **Perception** and **Localization** modules. It also incorporates map data and traffic rules to create optimal paths. More details [here](Simple-AV/Modules/Path_planning/index.md).
 
-- <b>*Control*</b> - executes the planned trajectory by sending commands to the vehicle's actuators, such as steering, throttle, and braking. It ensures that the vehicle follows the desired trajectory while maintaining safety and stability. More details [here](Simple-AV/Modules/Control/index.md).
+- **Control** - Executes the planned trajectory by sending commands to the vehicle's actuators, such as steering, throttle, and braking. The control module ensures that the vehicle follows the desired trajectory while maintaining safety and stability. More details [here](Simple-AV/Modules/Control/index.md).
 
-- <b>*Map*</b> - Simple_AV uses a .json file creted by Awsim as map. This map is a representation of the environment in which the autonomous vehicle operates. It uses data Awsim `waypoints` to generate the map (`*.json`). The map contains information about road geometries, lanes, traffic lights, rules, and other relevant features. Map serves as a crucial reference for planning and decision-making processes. More details [here](Simple-AV/JsonMap/index.md).
+- **Common** - A shared resource module that stores configuration files, maps, and zone data used by other modules. The **[Maps](Simple-AV/JsonMap/index.md)** folder contains map data in JSON format, the **configs** folder contains various configuration files, and the **zones** folder holds metadata like intersection profiles. More details [here](Simple-AV/Modules/Common/index.md).
+
+- **System** - This module includes nodes that monitor the simulation environment and manage scenario repetitions. The **sim_monitor** node calculates the simulation delay rate, while the **portal** node detects when the vehicle teleports (passes through a portal) and signals other modules to reset their states. More details [here](Simple-AV/Modules/System/index.md).
