@@ -12,6 +12,7 @@ import math
 from sensor_msgs.msg import Imu
 from simple_av_msgs.msg import LocalizationMsg
 from simple_av_msgs.msg import Portal
+import yaml
 
 
 class Point:
@@ -33,8 +34,13 @@ class Point:
 class Localization(Node):
     def __init__(self):
         super().__init__('localization')
+
+        # Load scenario configs
+        self.scenario_config = self.config_file_loader("scenario_config.yaml")
+        self.vehicle_model = self.scenario_config['scenario']['vehicle_model']
+
         # Load the Json map
-        self.map_data = self.load_map()
+        self.map_data = self.load_map(self.vehicle_model)
         self.map_data = self.map_data["LaneLetsArray"]
 
         # Create subscriber to gnss/pos topic
@@ -59,10 +65,22 @@ class Localization(Node):
 
         self.node_shut = False
 
-    def load_map(self):
+    def config_file_loader(self, file_name):
+        # Path to the YAML file
+        package_share_directory = get_package_share_directory('common')
+        config_path = os.path.join(package_share_directory, "configs", file_name)
+        # Load the configuration file
+        with open(config_path, "r") as file:
+            config = yaml.safe_load(file)
+        return config
+
+    def load_map(self, vehicle_model):
         # Get the path to the resource directory
         package_share_directory = get_package_share_directory('common')
-        json_file_path = os.path.join(package_share_directory, 'maps', 'Kashiwa.json')
+        if vehicle_model == 'lexus':
+            json_file_path = os.path.join(package_share_directory, 'maps', 'Kashiwa-lexus.json')
+        else:
+            json_file_path = os.path.join(package_share_directory, 'maps', 'Kashiwa-bus.json')
         # json_file_path = os.path.join(package_share_directory, 'resource', 'Shinjuku.json')
         # Load and read the JSON file
         with open(json_file_path, 'r') as json_file:

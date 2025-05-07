@@ -23,8 +23,12 @@ class BehaviorMotionPlanning(Node):
     def __init__(self):
         super().__init__('behavior_motion_planner_node')
 
+        # Load scenario configs
+        self.scenario_config = self.config_file_loader("scenario_config.yaml")
+        self.vehicle_model = self.scenario_config['scenario']['vehicle_model']
+
         # Load the map
-        self.map_data = self.load_map_data()
+        self.map_data = self.load_map_data(self.vehicle_model)
         self.map_data = self.map_data["LaneLetsArray"]
 
         self.graph = {lanelet['name']: {
@@ -123,14 +127,17 @@ class BehaviorMotionPlanning(Node):
         #Shutting down
         self.node_shut = False
 
-    def load_map_data(self):
+    def load_map_data(self, vehicle_model):
         """
         Load the map data from a JSON file.
         Returns:
             dict: The map data loaded from the JSON file.
         """
         package_share_directory = get_package_share_directory('common')
-        json_file_path = os.path.join(package_share_directory, 'maps', 'Kashiwa.json')
+        if vehicle_model == 'lexus':
+            json_file_path = os.path.join(package_share_directory, 'maps', 'Kashiwa-lexus.json')
+        else:
+            json_file_path = os.path.join(package_share_directory, 'maps', 'Kashiwa-bus.json')
         # json_file_path = os.path.join(package_share_directory, 'resource', 'Shinjuku.json')
         # Load and read the JSON file
         with open(json_file_path, 'r') as json_file:
