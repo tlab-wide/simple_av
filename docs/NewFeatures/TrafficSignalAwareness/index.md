@@ -38,15 +38,14 @@ By integrating RSU data for traffic signal synchronization, we eliminate unneces
 
 ## Visual Example: T-Junction
 
-Below is a visual representation of a typical **T-junction** where RSU data is critical for efficient decision-making. 
+Below is a visual representation of a typical **T-junction** where RSU data is critical for efficient decision-making. First video below demonstrates the Ego vehicle's performance without awareness of the opposite traffic signal state, while the seconds video shows its performance when this awareness is enabled.
 
-The left video demonstrates the Ego vehicle's performance without awareness of the opposite traffic signal state, while the right video shows its performance when this awareness is enabled.
+<video width="1920" controls autoplay muted loop>
+    <source src="g2.mp4" type="video/mp4">
+</video>
 
-<div style="display: flex; gap: 10px;">
-    <video width="400" controls autoplay muted loop>
-        <source src="g1.mp4" type="video/mp4">
-    </video>
-    <video width="400" controls autoplay muted loop>
-        <source src="g2.mp4" type="video/mp4">
-    </video>
-</div>
+<video width="1920" controls autoplay muted loop>
+    <source src="g1.mp4" type="video/mp4">
+</video>
+
+

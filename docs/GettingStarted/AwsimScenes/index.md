@@ -32,6 +32,7 @@ The following media showcase some aspects of our environment design:
 <video width="1920" controls autoplay muted loop>
     <source src="3DdesignVideo.mp4" type="video/mp4">
 </video>
+
 ---
 
 ## High-Precision PCD Data
@@ -40,13 +41,7 @@ To ensure the accuracy of our digital twin, we have captured a highly detailed *
 
 The use of PCD data is crucial as it allows us to match the real-world topography and object placements with high fidelity. Below are some snapshots and videos from the PCD capture process:
 
-<div style="display: flex; gap: 10px;">
-    <img src="capturingPcd1.png" alt="Image 1" width="440"/>
-    <video width="300" controls autoplay muted loop>
-        <source src="capturingPcdVideo1.mp4" type="video/mp4">
-    </video>
-</div>
-
+![Setuped System for capturing PCD](capturingPcd1.png)
 
 <video width="1920" controls autoplay muted loop>
     <source src="capturingPcdVideo2.mp4" type="video/mp4">
