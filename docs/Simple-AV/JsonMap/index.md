@@ -1,5 +1,5 @@
 
-# Map
+# Waypoint Map
 Simple-AV uses the simplest form of map. This map which is a Json file, contains some crusial information about the environment which the autonomous vehicle operates in. Below you can see the format designed for this map file. The [Localization module](../Modules/Localization/index.md) uses this format to read the input map file. Also, the [Planning module](../Modules/Path_planning/index.md) uses this map for path planning purposes.
 
 ```python

@@ -119,7 +119,9 @@ AWSIM serves as the primary source of sensory input for Simple-AV. The data, suc
 
 We have developed another open-source project named **V2X_E2E**, which integrates with Simple-AV to extend the capabilities of AWSIM. For more information about how to use our latest version and how to modify the scenes, please visit [V2X_E2E Project Page]( ).
 
-If you do not wish to modify AWSIM scenes using Unity, you can use the pre-built versions of AWSIM provided. These versions come with pre-configured scenes and vehicle models (Lexus and Bus) for straightforward testing. [More information about the scenes](../AwsimScenes/index.md)
+If you do not wish to modify AWSIM scenes using Unity, you can use the pre-built versions of AWSIM provided. These versions come with pre-configured scenes and vehicle models (Lexus and Bus) for straightforward testing.
+
+The Scenes below are built for Windows environment. stay tuned for the ubuntu builds.
 
 - [AWSIM Built Version with Lexus](https://drive.google.com/drive/folders/1GCXG6S2MeOMjNjEbMUlYO2JOUidEjU7R?usp=drive_link)  
 - [AWSIM Built Version with Bus](https://drive.google.com/drive/folders/10Y8swA4Zfuh_U34EDGDr4i4As6Yidrfr?usp=drive_link)

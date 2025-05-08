@@ -66,13 +66,13 @@ nav:
   - Getting started:
     - Setting up the System: Simple-AV/SystemSetup/index.md
     - Quick Start Demo: GettingStarted/QuickStartDemo/index.md
-    - Awsim Scenes: GettingStarted/AwsimScenes/index.md
+    # - Awsim Scenes: GettingStarted/AwsimScenes/index.md
 
   - Project guide:
     - Git Branch: ProjectGuide/GitBranch/index.md
   
   - Simple-AV: 
-    - Map (*.json): Simple-AV/JsonMap/index.md
+    - Waypoint Map (*.json): Simple-AV/JsonMap/index.md
     - Modules:
       - Common: Simple-AV/Modules/Common/index.md
       - Localization: Simple-AV/Modules/Localization/index.md
@@ -85,7 +85,7 @@ nav:
     - Road Side Units (RSU): NewFeatures/RSU/index.md
     - Traffic Signal Fusion: NewFeatures/TrafficSignalAwareness/index.md
 
-  - License: License/index.md
-  - Contact: Contact/index.md
+  # - License: License/index.md
+  # - Contact: Contact/index.md
 
 

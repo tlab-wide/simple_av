@@ -1,6 +1,6 @@
 # Welcome to Simple AV project
 
-simple-AV is an open-source software stack for self-driving vehicles, built on the [Robot Operating System (ROS)](https://www.ros.org/). simple-AV is written using Python, designed to facilitate autonomous vehicle simulation by <b>directly connecting to AWSIM and replacing the [Autoware](https://autoware.org/) framework</b>. It was created to provide a comprehensive framework for developing and testing autonomous vehicle systems.
+simple-AV is an open-source software stack for self-driving vehicles, built on the [Robot Operating System (ROS)](https://www.ros.org/). simple-AV is written using Python, designed to facilitate autonomous vehicle simulation by <b>directly connecting to AWSIM and replacing the [Autoware](https://autoware.org/) framework</b>. It was created to provide a simple framework for developing and testing autonomous vehicle systems.
 
 ## How it looks
 
@@ -9,7 +9,7 @@ simple-AV is an open-source software stack for self-driving vehicles, built on t
 </video>
 
 
-The primary purpose of **simple-AV** is to ease the simulation and development of self-driving technologies by providing a robust, flexible, and easy-to-understand platform. **simple-AV** includes all of the necessary functions to drive an autonomous vehicle, from localization and object detection to route planning and control.
+The primary purpose of **simple-AV** is to ease the simulation and development of self-driving technologies by providing a simplified, and easy-to-understand platform. **simple-AV** includes the necessary functions to drive an autonomous vehicle.
 
 While **Autoware** is a comprehensive and powerful project that handles everything related to autonomous driving, it naturally comes with significant computational demands. Autonomous driving is a complex and safety-critical task, so Autoware's software is understandably large and intricate. Developing or adding features to Autoware can be challenging, requiring a deep understanding of its codebase and substantial hardware resources.
 
