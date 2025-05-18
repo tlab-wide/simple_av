@@ -19,6 +19,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/LocalizationIntersectionStatus.msg"
   "msg/PlanningPathPlanningMsg.msg"
   "msg/PlanningInternalMsg.msg"
+  "msg/PlanningWaypoint.msg"
   "msg/PlanningInternalMissionPlanMsg.msg"
   "msg/PlanningMotionPlanningMsg.msg"
   "msg/TrafficSignalsArray.msg"

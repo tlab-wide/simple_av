@@ -10,58 +10,12 @@ from geometry_msgs.msg import PoseStamped, Point
 from std_msgs.msg import String
 import math
 from collections import deque
-from simple_av_msgs.msg import PlanningPathPlanningMsg, PlanningInternalMsg, PlanningInternalMissionPlanMsg
+from simple_av_msgs.msg import PlanningPathPlanningMsg, PlanningInternalMsg, PlanningInternalMissionPlanMsg, PlanningWaypoint
 from simple_av_msgs.msg import LocalizationMsg
 from simple_av_msgs.msg import Portal
 import numpy as np
 from simple_av_msgs.srv import TriggerMissionPlan
 from rclpy.qos import QoSProfile, QoSHistoryPolicy, QoSReliabilityPolicy, QoSDurabilityPolicy
-
-class PathCurveDetector:
-    def __init__(self, points, angle_threshold=15):
-        self.points = points
-        self.angle_threshold = math.radians(angle_threshold)  # Convert threshold to radians
-        self.angle_max = math.radians(120.0)
-
-    @staticmethod
-    def direction_vector(p1, p2):
-        return (p2.x - p1.x, p2.y - p1.y, p2.z - p1.z)
-
-    @staticmethod
-    def vector_magnitude(v):
-        return math.sqrt(v[0]**2 + v[1]**2 + v[2]**2)
-
-    @staticmethod
-    def dot_product(v1, v2):
-        return v1[0]*v2[0] + v1[1]*v2[1] + v1[2]*v2[2]
-
-    @staticmethod
-    def angle_between_vectors(v1, v2):
-        dot_prod = PathCurveDetector.dot_product(v1, v2)
-        mag_v1 = PathCurveDetector.vector_magnitude(v1)
-        mag_v2 = PathCurveDetector.vector_magnitude(v2)
-        if mag_v1 == 0 or mag_v2 == 0:
-            return 0
-        cos_theta = dot_prod / (mag_v1 * mag_v2)
-        # Ensure the cosine value is within the valid range
-        cos_theta = min(1.0, max(-1.0, cos_theta))
-        return math.acos(cos_theta)
-
-    def find_curves_in_path(self):
-        curves = []
-        if len(self.points) < 3:
-            return curves
-
-        for i in range(1, len(self.points) - 1):
-            v1 = self.direction_vector(self.points[i-1], self.points[i])
-            v2 = self.direction_vector(self.points[i], self.points[i+1])
-            angle = self.angle_between_vectors(v1, v2)
-            if self.angle_threshold < angle < self.angle_max:
-                curve = {}
-                curve[angle] = self.points[i]
-                curves.append(curve)
-
-        return curves
 
 
 class BehaviorPathPlanner(Node):
@@ -160,7 +114,6 @@ class BehaviorPathPlanner(Node):
             json_file_path = os.path.join(package_share_directory, 'maps', 'Kashiwa-lexus.json')
         else:
             json_file_path = os.path.join(package_share_directory, 'maps', 'Kashiwa-bus.json')
-        # json_file_path = os.path.join(package_share_directory, 'resource', 'Shinjuku.json')
         # Load and read the JSON file
         with open(json_file_path, 'r') as json_file:
             map_data = json.load(json_file)

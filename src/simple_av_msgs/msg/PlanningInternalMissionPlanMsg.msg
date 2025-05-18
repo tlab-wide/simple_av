@@ -1,2 +1,2 @@
-geometry_msgs/Point[] path  #Waypoints
+PlanningWaypoint[] path
 string[] path_as_lanes #Lanes
