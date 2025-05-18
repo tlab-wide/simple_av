@@ -97,6 +97,7 @@ class BehaviorMotionPlanning(Node):
         self.mission_plan = PlanningInternalMissionPlanMsg()
         self.path_as_lanes = None  # List of lanes from start lane to destination
         self.path = None  # List of waypoints in order of path_as_lanes
+        self.path_of_waypoints = [] # List of waypoints in order of path_as_lanes
 
         # Publish topics
         self.planning_publisher = self.create_publisher(PlanningMotionPlanningMsg, 'simple_av/planning/motion_planning', 10)
@@ -238,19 +239,6 @@ class BehaviorMotionPlanning(Node):
             return None
         return self.map_data[lane_number - 1]
         
-    def get_first_ahead_point(self, vehicle_pose, current_closest_point_index):  
-        # Calculate direction vectors
-        direction_vector = self.calculate_vector(self.path[current_closest_point_index], self.path[current_closest_point_index + 1])
-        direction_vector_of_robot = self.calculate_vector(self.path[current_closest_point_index], vehicle_pose)   
-        first_ahead_point_index = 0
-
-        # Find the first point ahead of the vehicle
-        if self.calculate_dot_product(direction_vector, direction_vector_of_robot) >= 0: # Vehicle is ahead of the point
-            first_ahead_point_index = current_closest_point_index + 1
-        else: # Vehicle is Behind of the point
-            first_ahead_point_index = current_closest_point_index
-        return first_ahead_point_index
-        
     # TODO: create search area based on waypoints not lanes
     def create_search_area(self):
         try:
@@ -279,7 +267,7 @@ class BehaviorMotionPlanning(Node):
         for waypoint in search_area:
             distances_to_vehicle.append(self.calculate_distance(waypoint, vehicle_pose))
         closest_waypoint_to_vehicle = search_area[distances_to_vehicle.index(min(distances_to_vehicle))]
-        current_closest_point_to_vehicle = self.path.index(closest_waypoint_to_vehicle)
+        current_closest_point_to_vehicle = self.path_of_waypoints.index(closest_waypoint_to_vehicle)
         return current_closest_point_to_vehicle
 
     def update_observation_range(self, speed, is_speed_declining):
@@ -389,7 +377,7 @@ class BehaviorMotionPlanning(Node):
     def find_obstacle_on_path(self, objects_in_range, current_closest_point_to_vehicle_index, vehicle_pose):
         objects_on_path = []
         objects_absulute_positions = [self.get_object_absolute_position(self.pose.pose.orientation, vehicle_pose, obj.position) for obj in objects_in_range]
-        waypoints = self.path[current_closest_point_to_vehicle_index:current_closest_point_to_vehicle_index + int(self.on_path_detection_range / self.densify_interval) + 1]
+        waypoints = self.path_of_waypoints[current_closest_point_to_vehicle_index:current_closest_point_to_vehicle_index + int(self.on_path_detection_range / self.densify_interval) + 1]
         for i in range(len(objects_in_range)):
             for waypoint in waypoints:
                 dist = self.calculate_distance(objects_absulute_positions[i], waypoint)
@@ -508,8 +496,8 @@ class BehaviorMotionPlanning(Node):
             self.get_logger().warning("P - INSTANT STOP!!")
             return vehicle_pose
 
-        stop_point_index = self.path.index(waypoint) - int(self.saftey_distance/self.densify_interval)
-        stop_point = self.path[stop_point_index]
+        stop_point_index = self.path_of_waypoints.index(waypoint) - int(self.saftey_distance/self.densify_interval)
+        stop_point = self.path_of_waypoints[stop_point_index]
         return Point(x=stop_point.x, y=stop_point.y, z=stop_point.z)
          
 
@@ -532,7 +520,7 @@ class BehaviorMotionPlanning(Node):
             return None
         
         objects_absulute_positions = [self.get_object_absolute_position(self.pose.pose.orientation, vehicle_pose, obj.position) for obj in objects_in_range]
-        waypoints = self.path[current_closest_point_to_vehicle_index:current_closest_point_to_vehicle_index + int(self.reaction_range / self.densify_interval) + 1]
+        waypoints = self.path_of_waypoints[current_closest_point_to_vehicle_index:current_closest_point_to_vehicle_index + int(self.reaction_range / self.densify_interval) + 1]
         
         if self.use_RSU_for_trafficlight:
             if self.get_traffic_light_color_by_id(166893) == 1:
@@ -597,9 +585,7 @@ class BehaviorMotionPlanning(Node):
         # TODO: Distance to the destination 
 
         # Traffic light detection
-        print("Debug, befor manage traffic")
         trafficLightTask, traffic_light_stopPoint = self.manage_traffic_lights()
-        print("Debug, after manage traffic")
         # Collision avoidance
         objects_ahead = self.get_detected_objects_in_front()
         on_path_collision_avoidance_stopPoint = self.on_path_collision_avoidance(objects_ahead, current_closest_point_to_vehicle_index, vehicle_pose)
@@ -643,10 +629,13 @@ class BehaviorMotionPlanning(Node):
         
         if self.path and not self.isPathPlanned:
             self.get_logger().warning("Path has successfully initialized from Mission Planner")
-            self.isPathPlanned = True
+            self.destination = self.path[-1].waypoint
+            for i, waypoint in enumerate(self.path):
+                self.path_of_waypoints.append(waypoint.waypoint)
             self.route = self.path_as_lanes[:]
             self.current_lane_index = 0
-            self.destination = self.path[-1]
+
+            self.isPathPlanned = True
         
         if not self.path :
             self.get_logger().warning("Path has not initialized from Mission Planner!!")
@@ -664,6 +653,7 @@ class BehaviorMotionPlanning(Node):
             self.isPathPlanned = False
             self.route = self.path_as_lanes[:]
             self.current_lane_index = 0
+            return
 
         search_area, search_area_as_lanes = self.create_search_area()
         self.current_speed = self.velocity_report.longitudinal_velocity if self.velocity_report else 0.0
