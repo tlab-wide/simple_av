@@ -6,7 +6,7 @@ motion:
     turning_speed: 3.0 # Default speed on turns (m/s)
 
   lookahead:
-    coefficient: 1.75    # Scaling factor for lookahead distance
+    coefficient: 1.5    # Scaling factor for lookahead distance
     base: 2.0 # Multiplier based on vehicle speed
 
 behavior:

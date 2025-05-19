@@ -1,5 +1,5 @@
 Stable Version
-Version 2.2.1-beta
+Version 2.4.0-beta
 
 new architecture of Modules
 Modules:
@@ -28,6 +28,9 @@ Modules:
     simple_av:
         - One Package to launch them All!
 
-Not Stable version.
+Stable version.
 Lexus and Bus can cruise the Main route with traffic light and collision avoidance.
-needed some tuning in control commands
+Lookahead distance, lookahead point calculations and finding are modified. Mission Planner Also calculate curve of each point and
+publishe this new waypoint profile with {'waypoint': geometryu_point(x,y,z), 'curve':curve}.
+in behavior_path_planning these curve data is being used to calculate speed and then a low-pass filter on the speeds make them more
+smooth.

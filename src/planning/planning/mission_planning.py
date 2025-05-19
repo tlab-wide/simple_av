@@ -9,10 +9,64 @@ from ament_index_python.packages import get_package_share_directory
 from geometry_msgs.msg import PoseStamped, Point
 from std_msgs.msg import String
 from collections import deque
-from simple_av_msgs.msg import LocalizationMsg, Portal, PlanningInternalMissionPlanMsg
+from simple_av_msgs.msg import LocalizationMsg, Portal, PlanningInternalMissionPlanMsg, PlanningWaypoint
 from simple_av_msgs.srv import TriggerMissionPlan
 import numpy as np
 from rclpy.qos import QoSProfile, QoSHistoryPolicy, QoSReliabilityPolicy, QoSDurabilityPolicy
+import math
+
+class CurveDetector2D:
+    def __init__(self, points):
+        self.points = points
+
+    @staticmethod
+    def direction_vector(p1, p2):
+        """Calculate the direction vector between two 2D points."""
+        return (p2['x'] - p1['x'], p2['y'] - p1['y'])
+
+    @staticmethod
+    def vector_magnitude(v):
+        """Calculate the magnitude of a 2D vector."""
+        return math.sqrt(v[0]**2 + v[1]**2)
+
+    @staticmethod
+    def dot_product(v1, v2):
+        """Calculate the dot product of two 2D vectors."""
+        return v1[0] * v2[0] + v1[1] * v2[1]
+
+    @staticmethod
+    def angle_between_vectors(v1, v2):
+        """Calculate the angle between two 2D vectors."""
+        dot_prod = CurveDetector2D.dot_product(v1, v2)
+        mag_v1 = CurveDetector2D.vector_magnitude(v1)
+        mag_v2 = CurveDetector2D.vector_magnitude(v2)
+        if mag_v1 == 0 or mag_v2 == 0:
+            return 0
+        cos_theta = dot_prod / (mag_v1 * mag_v2)
+        # Ensure the cosine value is within the valid range
+        cos_theta = min(1.0, max(-1.0, cos_theta))
+        return math.acos(cos_theta)
+
+    def detect_curves(self, curve_calc_dist=6):
+        """Detect curves based on the change in direction between points."""
+        curves = []
+        if len(self.points) < 2 * curve_calc_dist:
+            return curves
+
+        for i in range(curve_calc_dist):
+            curves.append(0.0)
+
+        for i in range(curve_calc_dist, len(self.points) - curve_calc_dist):
+            v1 = self.direction_vector(self.points[i - curve_calc_dist], self.points[i])
+            v2 = self.direction_vector(self.points[i], self.points[i + curve_calc_dist])
+            curve = self.angle_between_vectors(v1, v2)
+            curves.append(curve)
+        
+        for i in range(len(self.points) - curve_calc_dist, len(self.points)):
+            curves.append(0.0)
+
+        return curves
+
 
 class MissionPlanner(Node):
     def __init__(self):
@@ -55,6 +109,7 @@ class MissionPlanner(Node):
         self.isPathPlanned = False  # Flag to check if the path has been planned
         self.path_as_lanes = []  # List of lanes from start lane to destination
         self.path = []  # List of waypoints in order of path_as_lanes
+        self.curves = []
         self.initial_lane = None
         self.search_depth = 5
 
@@ -173,24 +228,23 @@ class MissionPlanner(Node):
             self.bfs(self.start_lanelet, self.dest_lanelet) # Creates the path
             if self.path and self.path_as_lanes:
                 self.isPathPlanned = True
+                curve_detector = CurveDetector2D(self.path)
+                self.curves = curve_detector.detect_curves()
         else:
             self.get_logger().warning("No Location data")
             
     def publisher(self):
         mission_msg = PlanningInternalMissionPlanMsg()
 
-        # Converting Dictionary type to list of Point
         point_list = []
-        for wp in self.path:
-            point = Point()
-            point.x = wp['x']
-            point.y = wp['y']
-            point.z = wp['z']
-            point_list.append(point)
-        mission_msg.path = point_list
+        for i, wp in enumerate(self.path):
+            point = Point(x=wp['x'], y=wp['y'], z=wp['z'])
+            waypoint_profile = PlanningWaypoint(waypoint=point, curve=self.curves[i])
+            point_list.append(waypoint_profile)
 
          # path_as_lanes is list of strings already
         mission_msg.path_as_lanes = self.path_as_lanes
+        mission_msg.path = point_list
         self.mission_plan_publisher.publish(mission_msg)
 
     def handle_mission_plan_request(self, request, response):
