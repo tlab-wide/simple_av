@@ -612,7 +612,7 @@ class BehaviorMotionPlanning(Node):
         
         if self.isEndOfPath:
             self.get_logger().info("Approaching destination, decelerating.")
-            self.status.data = 'Decelerate'
+            self.status.data = 'Park'
         
         return stop_point
             

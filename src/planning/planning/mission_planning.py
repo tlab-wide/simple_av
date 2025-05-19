@@ -47,7 +47,7 @@ class CurveDetector2D:
         cos_theta = min(1.0, max(-1.0, cos_theta))
         return math.acos(cos_theta)
 
-    def detect_curves(self, curve_calc_dist=4):
+    def detect_curves(self, curve_calc_dist=6):
         """Detect curves based on the change in direction between points."""
         curves = []
         if len(self.points) < 2 * curve_calc_dist:

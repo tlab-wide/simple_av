@@ -290,7 +290,7 @@ class BehaviorPathPlanner(Node):
         future = self.mission_planner_client.call_async(request)
         return future
     
-    def adjust_speed_to_curve(self, curvature, max_speed=11.0, k=2.0):
+    def adjust_speed_to_curve(self, curvature, max_speed=11.0, k=1.0):
         # If curvature is zero, return the max speed (straight path)
         if curvature == 0:
             return max_speed
@@ -306,9 +306,20 @@ class BehaviorPathPlanner(Node):
             speeds.append(speed)
         
         updated_speeds = []
-        for i in range(len(speeds) - 1):
+        for i in range(len(speeds) - 6):
             new_speed = min(speeds[i], math.sqrt((speeds[i+1]) ** 2 + 2 * accel))
+            filtered_speed = new_speed + 0.6 * (abs(speeds[i+1] - new_speed))
+            updated_speeds.append(max(filtered_speed, 2.5))
+
+        j = 1
+        for i in range(len(speeds) - 6, len(speeds) - 1):
+            new_speed = 11.0 - j * float(11.0/6)
+            if new_speed < 0:
+                new_speed = 0
             updated_speeds.append(new_speed)
+            j += 1
+            
+        updated_speeds.append(0.0)
 
         return updated_speeds
 
@@ -327,9 +338,11 @@ class BehaviorPathPlanner(Node):
             print("Debug: path of lanes: ", self.path_as_lanes)
             print("Debug: lanes size: ", len(self.path_as_lanes))
 
-    def end_of_path_detection(self, look_ahead_point):
-        if look_ahead_point.x == self.destination.x and look_ahead_point.y == self.destination.y:
-            print("DEBUG4: end of path detected")
+    def end_of_path_detection(self, current_closest_point_to_vehicle_index):
+        current_pose = self.path_of_waypoints[current_closest_point_to_vehicle_index]
+        
+        distance = self.calculate_distance(current_pose, self.destination)
+        if distance <= 2.0:
             return True
         return False
 
@@ -374,7 +387,7 @@ class BehaviorPathPlanner(Node):
         search_area, search_area_as_lanes = self.create_search_area()
         current_closest_point_to_vehicle_index = self.find_closest_waypoint_to_vehicle(vehicle_pose, search_area)
         look_ahead_point_index, look_ahead_point = self.find_lookahead_point(current_closest_point_to_vehicle_index)
-        isEndOfPath = self.end_of_path_detection(look_ahead_point)
+        isEndOfPath = self.end_of_path_detection(current_closest_point_to_vehicle_index)
         if not look_ahead_point and not look_ahead_point_index:
             self.get_logger().warning("Lookahead point not set in local planning")
             return
