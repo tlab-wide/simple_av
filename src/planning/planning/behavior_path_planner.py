@@ -217,10 +217,12 @@ class BehaviorPathPlanner(Node):
     def find_lookahead_point(self, current_closest_point_index): 
 
         path_size = len(self.path)
+        print("DEBUG: path size: ", path_size)
         lookahead_point_index = self.get_lookahead_distance_as_index() + current_closest_point_index
-        if lookahead_point_index >= path_size:
+        print("DEBUG: lookahead_point_index: ", lookahead_point_index)
+        if lookahead_point_index >= path_size - 2:
             print("Debug3: close to destination ")
-            lookahead_point_index = path_size - 1
+            lookahead_point_index = path_size - 2
         if lookahead_point_index < self.prev_lookahead_index:
             lookahead_point_index = self.prev_lookahead_index
         else:
