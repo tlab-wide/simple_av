@@ -71,18 +71,23 @@ ros_ws/
 └── src/
     ├── docs/
     ├── mkdocs.yml
-    ├── V2X_messages/
-    ├── simple_av_msgs/
-    └── simple_av/
-        ├── package.xml
-        ├── resource/
-        ├── setup.cfg
-        ├── launch/
-        │   └── simple_av_launch.py
-        └── simple_av/
-            ├── control.py
-            ├── localization.py
-            └── planning.py
+    ├── README.md
+    └── src/
+      ├── V2X_messages/
+      ├── simple_av_msgs/
+      ├── common/
+      ├── system/
+      ├── control/
+      ├── localization/
+      ├── planning/
+      ├── perception/
+      └── simple_av/
+          ├── package.xml
+          ├── resource/
+          ├── setup.cfg
+          ├── setup.py
+          └── launch/
+              └── launch_all.py
 ```
 
 ### Step 4: Source the Workspace
@@ -98,15 +103,21 @@ You can run the project by either running the launch file or by manually startin
 
 Run the launch file:
 ```bash
-ros2 launch simple_av simple_av_launch.py
+ros2 launch simple_av launch_all.py
 ```
 
-Or, run the nodes manually:
+Or, run the nodes manually in the following order:
 ```bash
-ros2 run simple_av localization
-ros2 run simple_av perception
-ros2 run simple_av planning
-ros2 run simple_av control
+ros2 run localization localization
+ros2 run localization intersection_detector
+ros2 run system portal
+ros2 run system sim_monitor
+ros2 run perception traffic_light_handler
+ros2 run perception object_detection_handler
+ros2 run planning mission_planning
+ros2 run planning behavior_path_planning
+ros2 run planning behavior_motion_planning
+ros2 run control control
 ```
 
 ## Documentation 
