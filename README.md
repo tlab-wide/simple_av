@@ -54,6 +54,12 @@ cd ~/ros_ws/src
 git clone https://github.com/hoosh-ir/simple_av.git
 ```
 
+### Step 3: install dependencies:
+```bash
+cd ~/ros_ws/src/simple_av
+pip install -r requirements.txt
+```
+
 ### Step 3: Build the Workspace
 
 After cloning the repository, build the workspace using colcon:
@@ -114,10 +120,10 @@ ros2 run system portal
 ros2 run system sim_monitor
 ros2 run perception traffic_light_handler
 ros2 run perception object_detection_handler
-ros2 run planning mission_planning
-ros2 run planning behavior_path_planning
-ros2 run planning behavior_motion_planning
-ros2 run control control
+ros2 run planning mission_planner
+ros2 run planning behavior_path_planner
+ros2 run planning behavior_motion_planner
+ros2 run control controller
 ```
 
 ## Documentation 
