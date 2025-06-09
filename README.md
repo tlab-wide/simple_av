@@ -60,7 +60,7 @@ cd ~/ros_ws/src/simple_av
 pip install -r requirements.txt
 ```
 
-### Step 3: Build the Workspace
+### Step 4: Build the Workspace
 
 After cloning the repository, build the workspace using colcon:
 ```bash
@@ -96,14 +96,14 @@ ros_ws/
               └── launch_all.py
 ```
 
-### Step 4: Source the Workspace
+### Step 5: Source the Workspace
 
 Finally, source the workspace to make the ROS packages available:
 ```bash
 source ~/ros_ws/install/setup.bash
 ```
 
-### Step 5: Running the project
+### Step 6: Running the project
 
 You can run the project by either running the launch file or by manually starting each node in sequence.
 
