@@ -120,7 +120,7 @@ ros2 run system portal
 ros2 run system sim_monitor
 ros2 run perception traffic_light_handler
 ros2 run perception object_detection_handler
-ros2 run planning mission_planner
+ros2 run planning mission_planning
 ros2 run planning behavior_path_planner
 ros2 run planning behavior_motion_planner
 ros2 run control controller
