@@ -4,29 +4,16 @@ project(autoware_perception_msgs)
 find_package(ament_cmake_auto REQUIRED)
 ament_auto_find_build_dependencies()
 
-find_package(ament_cmake REQUIRED)
-find_package(rosidl_default_generators REQUIRED)
-
 rosidl_generate_interfaces(${PROJECT_NAME}
-  "msg/DetectedObject.msg"
-  "msg/DetectedObjectKinematics.msg"
-  "msg/DetectedObjects.msg"
   "msg/ObjectClassification.msg"
   "msg/PredictedObject.msg"
   "msg/PredictedObjectKinematics.msg"
   "msg/PredictedObjects.msg"
   "msg/PredictedPath.msg"
   "msg/Shape.msg"
-  "msg/TrackedObject.msg"
-  "msg/TrackedObjectKinematics.msg"
-  "msg/TrackedObjects.msg"
-  "msg/TrafficLightElement.msg"
-  "msg/TrafficLightGroup.msg"
-  "msg/TrafficLightGroupArray.msg"
   "msg/TrafficSignalElement.msg"
   "msg/TrafficSignal.msg"
   "msg/TrafficSignalArray.msg"
-  "msg/PredictedTrafficLightState.msg"
 
   DEPENDENCIES
     std_msgs
@@ -34,7 +21,5 @@ rosidl_generate_interfaces(${PROJECT_NAME}
     builtin_interfaces
     unique_identifier_msgs
 )
-
-ament_export_dependencies(rosidl_default_runtime)
 
 ament_auto_package()
