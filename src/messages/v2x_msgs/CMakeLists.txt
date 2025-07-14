@@ -7,7 +7,6 @@ endif()
 
 find_package(ament_cmake REQUIRED)
 find_package(geometry_msgs REQUIRED)
-find_package(autoware_auto_perception_msgs REQUIRED)
 find_package(autoware_perception_msgs REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 
@@ -16,7 +15,6 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/CooperativeSignalsMessage.msg"
   DEPENDENCIES
     "geometry_msgs"
-    "autoware_auto_perception_msgs"
     "autoware_perception_msgs"
 )
 

@@ -4,8 +4,8 @@ import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import Point, Quaternion, Vector3
 from simple_av_msgs.msg import DetectedObject, DetectedObjectsArray, LocalizationIntersectionStatus
-from autoware_auto_perception_msgs.msg import DetectedObjects
-from autoware_auto_perception_msgs.msg import PredictedObjects
+from autoware_perception_msgs.msg import DetectedObjects
+from autoware_perception_msgs.msg import PredictedObjects
 from geometry_msgs.msg import PoseStamped
 from math import atan2, asin
 import math

@@ -6,6 +6,9 @@ ament_auto_find_build_dependencies()
 
 rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/ObjectClassification.msg"
+  "msg/DetectedObject.msg"
+  "msg/DetectedObjectKinematics.msg"
+  "msg/DetectedObjects.msg"
   "msg/PredictedObject.msg"
   "msg/PredictedObjectKinematics.msg"
   "msg/PredictedObjects.msg"
