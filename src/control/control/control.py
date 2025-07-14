@@ -3,10 +3,10 @@
 import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import PoseStamped, Point
-from autoware_auto_vehicle_msgs.msg import VelocityReport
-from autoware_auto_vehicle_msgs.msg import GearCommand
-from autoware_auto_control_msgs.msg import AckermannControlCommand, AckermannLateralCommand, LongitudinalCommand
-from autoware_auto_vehicle_msgs.msg import TurnIndicatorsCommand
+
+from autoware_vehicle_msgs.msg import GearCommand, VelocityReport
+from autoware_control_msgs.msg import Control, Lateral, Longitudinal
+
 from rclpy.qos import QoSProfile, DurabilityPolicy, HistoryPolicy, ReliabilityPolicy
 from simple_av_msgs.msg import PlanningPathPlanningMsg, PlanningMotionPlanningMsg
 from simple_av_msgs.msg import SimMonitor
@@ -114,9 +114,11 @@ class VehicleControl(Node):
             depth=10,
             durability=DurabilityPolicy.TRANSIENT_LOCAL
         )
-        self.control_publisher = self.create_publisher(AckermannControlCommand, '/control/command/control_cmd', qos_profile)
+        
+        # self.control_publisher = self.create_publisher(AckermannControlCommand, '/control/command/control_cmd', qos_profile)
+        self.control_publisher = self.create_publisher(Control, '/control/command/control_cmd', qos_profile)
         self.gear_publisher = self.create_publisher(GearCommand, '/control/command/gear_cmd', qos_profile)
-        self.turn_indicator_publisher = self.create_publisher(TurnIndicatorsCommand, '/control/command/turn_indicators_cmd', qos_profile)
+        # self.turn_indicator_publisher = self.create_publisher(TurnIndicatorsCommand, '/control/command/turn_indicators_cmd', qos_profile)
 
         self.pid_controller = PIDController(p_gain=2.4, i_gain=25.0, d_gain=1.5)
 
@@ -190,15 +192,15 @@ class VehicleControl(Node):
             return
 
         # Steer and Velocity Control
-        control_msg = AckermannControlCommand()
+        control_msg = Control()
     
         control_msg.stamp = self.get_clock().now().to_msg()
         control_msg.lateral = self.get_lateral_command()
         control_msg.longitudinal = self.get_longitudinal_command()
 
         # Turn Indicator Light Control
-        turn_indicator_msg = TurnIndicatorsCommand()
-        turn_indicator_msg.stamp = self.get_clock().now().to_msg()
+        # turn_indicator_msg = TurnIndicatorsCommand()
+        # turn_indicator_msg.stamp = self.get_clock().now().to_msg()
         
         # Gear Control
         gear_msg = GearCommand()
@@ -217,7 +219,7 @@ class VehicleControl(Node):
 
     
     def get_lateral_command(self):
-        lateral_command = AckermannLateralCommand()
+        lateral_command = Lateral()
         if self.motion_plan.status.data == "Park":
             print("debug PARK")
             lateral_command.steering_tire_angle = 0.0
@@ -227,9 +229,11 @@ class VehicleControl(Node):
                 steer = self.pure_pursuit_rear_axel()
                 lateral_command.steering_tire_angle = steer
                 lateral_command.steering_tire_rotation_rate = 0.1
+                lateral_command.is_defined_steering_tire_rotation_rate = True
             else:
                 lateral_command.steering_tire_angle = 0.0
                 lateral_command.steering_tire_rotation_rate = 0.0
+                lateral_command.is_defined_steering_tire_rotation_rate = True
         return lateral_command
 
     def get_longitudinal_command(self):
@@ -255,9 +259,12 @@ class VehicleControl(Node):
         if accel < self.maximum_braking_accel:
             accel = self.maximum_braking_accel
 
-        longitudinal_command = LongitudinalCommand()
-        longitudinal_command.speed = self.velocity_report.longitudinal_velocity
+        longitudinal_command = Longitudinal()
+        longitudinal_command.velocity = self.velocity_report.longitudinal_velocity
         longitudinal_command.acceleration = accel
+        longitudinal_command.is_defined_acceleration = True
+        longitudinal_command.jerk = 0.0
+        longitudinal_command.is_defined_jerk = False
 
         # TODO: LookAhead from PathPlanning node no longer publishes stop point, read it from the obstacle avoidance msg
         if self.motion_plan.status.data == "Decelerate" or self.motion_plan.status.data == "Stop_red":

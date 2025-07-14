@@ -16,7 +16,7 @@ from simple_av_msgs.msg import LocalizationMsg
 from simple_av_msgs.msg import SimMonitor, Portal
 import numpy as np
 from scipy.spatial.transform import Rotation as R
-from autoware_auto_vehicle_msgs.msg import VelocityReport
+from autoware_vehicle_msgs.msg import VelocityReport
 from rclpy.qos import QoSProfile, QoSHistoryPolicy, QoSReliabilityPolicy, QoSDurabilityPolicy
 
 class BehaviorMotionPlanning(Node):
