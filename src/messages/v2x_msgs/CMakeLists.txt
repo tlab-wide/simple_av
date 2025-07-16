@@ -11,8 +11,8 @@ find_package(autoware_perception_msgs REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
-  "msg/CooperativeObjectsMessage.msg"
-  "msg/CooperativeSignalsMessage.msg"
+  "msg/V2XPerception.msg"
+  "msg/V2XSignals.msg"
   DEPENDENCIES
     "geometry_msgs"
     "autoware_perception_msgs"

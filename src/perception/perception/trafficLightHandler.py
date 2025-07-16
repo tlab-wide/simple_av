@@ -3,7 +3,7 @@
 import rclpy
 from rclpy.node import Node
 from simple_av_msgs.msg import TrafficSignalsArray, LocalizationIntersectionStatus
-from v2x_msgs.msg import CooperativeSignalsMessage
+from v2x_msgs.msg import V2XSignals
 from geometry_msgs.msg import PoseStamped
 from math import atan2, asin
 import yaml
@@ -31,17 +31,17 @@ class TrafficSignalHandler(Node):
 
         
         # Create subscriber for /v2x/traffic_signals_intersection<n> topics
-        self.subscriptionTrafficLight_intersection1 = self.create_subscription(CooperativeSignalsMessage, '/v2x/traffic_signals/intersection_1', self.trafficSignal_callback_intersection1, 10)
-        self.trafficSignal_intersection1 = CooperativeSignalsMessage()  # Initialize traffic signal for intersection number 1
+        self.subscriptionTrafficLight_intersection1 = self.create_subscription(V2XSignals, '/v2x/traffic_signals/intersection_1', self.trafficSignal_callback_intersection1, 10)
+        self.trafficSignal_intersection1 = V2XSignals()  # Initialize traffic signal for intersection number 1
         
-        self.subscriptionTrafficLight_intersection2 = self.create_subscription(CooperativeSignalsMessage, '/v2x/traffic_signals/intersection_2', self.trafficSignal_callback_intersection2, 10)
-        self.trafficSignal_intersection2 = CooperativeSignalsMessage()  # Initialize traffic signal for intersection number 2
+        self.subscriptionTrafficLight_intersection2 = self.create_subscription(V2XSignals, '/v2x/traffic_signals/intersection_2', self.trafficSignal_callback_intersection2, 10)
+        self.trafficSignal_intersection2 = V2XSignals()  # Initialize traffic signal for intersection number 2
         
-        self.subscriptionTrafficLight_intersection4 = self.create_subscription(CooperativeSignalsMessage, '/v2x/traffic_signals/intersection_4', self.trafficSignal_callback_intersection4, 10)
-        self.trafficSignal_intersection4 = CooperativeSignalsMessage()  # Initialize traffic signal for intersection number 4
+        self.subscriptionTrafficLight_intersection4 = self.create_subscription(V2XSignals, '/v2x/traffic_signals/intersection_4', self.trafficSignal_callback_intersection4, 10)
+        self.trafficSignal_intersection4 = V2XSignals()  # Initialize traffic signal for intersection number 4
         
-        self.subscriptionTrafficLight_intersection5 = self.create_subscription(CooperativeSignalsMessage, '/v2x/traffic_signals/intersection_5', self.trafficSignal_callback_intersection5, 10)
-        self.trafficSignal_intersection5 = CooperativeSignalsMessage()  # Initialize traffic signal for intersection number 5
+        self.subscriptionTrafficLight_intersection5 = self.create_subscription(V2XSignals, '/v2x/traffic_signals/intersection_5', self.trafficSignal_callback_intersection5, 10)
+        self.trafficSignal_intersection5 = V2XSignals()  # Initialize traffic signal for intersection number 5
 
         # Create subscriber for /sensing/gnss/pose topic
         self.subscriptionPose = self.create_subscription(PoseStamped, '/sensing/gnss/pose', self.pose_callback, 10)
