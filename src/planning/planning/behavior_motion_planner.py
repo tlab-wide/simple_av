@@ -590,7 +590,7 @@ class BehaviorMotionPlanning(Node):
         objects_ahead = self.get_detected_objects_in_front()
         on_path_collision_avoidance_stopPoint = self.on_path_collision_avoidance(objects_ahead, current_closest_point_to_vehicle_index, vehicle_pose)
         predicted_collisons_stopPoints = self.collison_prediction(objects_ahead, current_closest_point_to_vehicle_index, vehicle_pose)
-        
+        print("DEBUG: ", predicted_collisons_stopPoints)
         stop_point, stop_point_type = self.find_closest_stop_point(traffic_light_stopPoint, on_path_collision_avoidance_stopPoint, predicted_collisons_stopPoints, self.destination, vehicle_pose)
         
         self.status.data = 'Cruise'
