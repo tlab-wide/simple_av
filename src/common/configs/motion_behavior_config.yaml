@@ -2,7 +2,7 @@ motion:
   max_turning_angle: 35.0  # Maximum allowable turning angle (degrees)
   
   speed_limits:
-    base: 11.0     # Default base speed (m/s)
+    base: 20.0     # Default base speed (m/s)
     turning_speed: 3.0 # Default speed on turns (m/s)
 
   lookahead:
@@ -11,7 +11,7 @@ motion:
 
 behavior:
   safety_distance: 16.0  # Minimum stopping distance behind an object (meters)
-  reaction_time_threshold: 4.0  # Time delay before reacting to an event (seconds)
+  reaction_time_threshold: 8.0  # Time delay before reacting to an event (seconds)
   range_low_pass_gain: 0.90
 
   on_path_detection_range: # Detection range for Objects on the path

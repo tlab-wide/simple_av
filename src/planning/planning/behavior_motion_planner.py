@@ -376,11 +376,11 @@ class BehaviorMotionPlanning(Node):
     
     def find_obstacle_on_path(self, objects_in_range, current_closest_point_to_vehicle_index, vehicle_pose):
         objects_on_path = []
-        objects_absulute_positions = [self.get_object_absolute_position(self.pose.pose.orientation, vehicle_pose, obj.position) for obj in objects_in_range]
+        objects_absolute_positions = [self.get_object_absolute_position(self.pose.pose.orientation, vehicle_pose, obj.position) for obj in objects_in_range]
         waypoints = self.path_of_waypoints[current_closest_point_to_vehicle_index:current_closest_point_to_vehicle_index + int(self.on_path_detection_range / self.densify_interval) + 1]
         for i in range(len(objects_in_range)):
             for waypoint in waypoints:
-                dist = self.calculate_distance(objects_absulute_positions[i], waypoint)
+                dist = self.calculate_distance(objects_absolute_positions[i], waypoint)
                 if dist <= self.densify_interval*1.2:
                     objects_on_path.append({"object": objects_in_range[i], "waypoint": waypoint})
                     break
@@ -445,6 +445,7 @@ class BehaviorMotionPlanning(Node):
         return v1[0] * v2[0] + v1[1] * v2[1]
 
     def is_point_on_segment(self, object_pose, collison_point, waypoint1, waypoint2, forward_vector):
+        # print("CP is_point_on_segment method")
         # Unpack the intersection point and the waypoints
         x1, y1 = waypoint1.x, waypoint1.y
         x2, y2 = waypoint2.x, waypoint2.y
@@ -475,25 +476,24 @@ class BehaviorMotionPlanning(Node):
         return time_to_collision
 
     def will_collide_on_path(self, object_type, object_speed, object_pose, vehicle_pose, collison_point, corresponding_waypoint):
-        # print("---------------------")
         current_vehicle_speed = self.velocity_report.longitudinal_velocity if self.velocity_report else 0.0   
         t_vehicle = self.get_time_to_collison(vehicle_pose, collison_point, self.turning_speed)
         # t_vehicle = self.get_time_to_collison(vehicle_pose, collison_point, current_vehicle_speed)
         t_object = self.get_time_to_collison(object_pose, collison_point, object_speed)
+
         time_difference = abs(t_vehicle - t_object)
         dist_to_waypoint = self.calculate_distance(corresponding_waypoint, vehicle_pose)
-        # print(f"D - time_difference {time_difference}, dist to waypoint {dist_to_waypoint} current_vehicle_speed {current_vehicle_speed}")
         if time_difference <= self.reaction_time_threshold:
-            self.get_logger().warning(f"P - Vehciel mooving - Potential collision detected! Time difference: {time_difference:.2f} seconds.")
+            self.get_logger().warning(f"CP - Vehciel mooving - Potential collision detected! Time difference: {time_difference:.2f} seconds.")
             return True
-        # print(f"P - Safe to proceed. Time difference: {time_difference:.2f} seconds.")
+        print(f"CP - Safe to proceed. Time difference: {time_difference:.2f} seconds.")
         return False
     
     def get_stop_point_by_safety_distance(self, waypoint, vehicle_pose):
         # Helper function to calculate distances
         dist_to_waypoint = self.calculate_distance(waypoint, vehicle_pose)
         if dist_to_waypoint <= self.saftey_distance: # Stop the vehicle if distance to the object is less that safety distance
-            self.get_logger().warning("P - INSTANT STOP!!")
+            self.get_logger().warning("CP - INSTANT STOP!!")
             return vehicle_pose
 
         stop_point_index = self.path_of_waypoints.index(waypoint) - int(self.saftey_distance/self.densify_interval)
@@ -502,7 +502,6 @@ class BehaviorMotionPlanning(Node):
          
 
     def on_path_collision_avoidance(self, objects_ahead, current_closest_point_to_vehicle_index, vehicle_pose):
-        print("CC - on path detection range: ", self.on_path_detection_range)
         objects_in_range = self.get_objects_in_range(objects_ahead, self.on_path_detection_range)
         if not objects_in_range:
             return None
@@ -515,29 +514,29 @@ class BehaviorMotionPlanning(Node):
         return self.get_stop_point_by_safety_distance(closest_object_info['waypoint'], vehicle_pose)
     
     def collison_prediction(self, objects_ahead, current_closest_point_to_vehicle_index, vehicle_pose):
+        print("---------------- CP: in CP method -------------")
         objects_in_range = self.get_objects_in_range(objects_ahead, self.detection_range)
         if not objects_in_range:
             return None
-        
-        objects_absulute_positions = [self.get_object_absolute_position(self.pose.pose.orientation, vehicle_pose, obj.position) for obj in objects_in_range]
+        objects_absolute_positions = [self.get_object_absolute_position(self.pose.pose.orientation, vehicle_pose, obj.position) for obj in objects_in_range]
         waypoints = self.path_of_waypoints[current_closest_point_to_vehicle_index:current_closest_point_to_vehicle_index + int(self.reaction_range / self.densify_interval) + 1]
-        
         if self.use_RSU_for_trafficlight:
             if self.get_traffic_light_color_by_id(166893) == 1:
                 return []
-        
+        # print("CP predict collision")
         predicted_stop_points = []
         for i in range(len(objects_in_range)):
             for j in range(1, len(waypoints) - 1):
                 forward_vector = self.get_forward_vector(objects_in_range[i].orientation)
-                collison_point = self.find_intersection(objects_absulute_positions[i], forward_vector, waypoints[j], waypoints[j+1])
+                collison_point = self.find_intersection(objects_absolute_positions[i], forward_vector, waypoints[j], waypoints[j+1])
                 if collison_point:
-                    if self.is_point_on_segment(objects_absulute_positions[i], collison_point, waypoints[j], waypoints[j+1], forward_vector):
-                        if self.will_collide_on_path(objects_in_range[i].label, objects_in_range[i].velocity, objects_absulute_positions[i], vehicle_pose, collison_point, waypoints[j]):
+                    if self.is_point_on_segment(objects_absolute_positions[i], collison_point, waypoints[j], waypoints[j+1], forward_vector):
+                        if self.will_collide_on_path(objects_in_range[i].label, objects_in_range[i].velocity, objects_absolute_positions[i], vehicle_pose, collison_point, waypoints[j]):
                             self.get_logger().warning('P - Collide predicted!!!')
                             stop_point = self.get_stop_point_by_safety_distance(waypoints[j], vehicle_pose)
                             predicted_stop_points.append(stop_point)
                             break
+        print("---------------------------------------------------")
         return predicted_stop_points
     
     def find_closest_stop_point(self, traffic_light_stopPoint, on_path_collision_avoidance_stopPoint, predicted_collisons_stopPoints, destination_stopPoint, vehicle_pose):
@@ -590,9 +589,7 @@ class BehaviorMotionPlanning(Node):
         objects_ahead = self.get_detected_objects_in_front()
         on_path_collision_avoidance_stopPoint = self.on_path_collision_avoidance(objects_ahead, current_closest_point_to_vehicle_index, vehicle_pose)
         predicted_collisons_stopPoints = self.collison_prediction(objects_ahead, current_closest_point_to_vehicle_index, vehicle_pose)
-        print("DEBUG: ", predicted_collisons_stopPoints)
         stop_point, stop_point_type = self.find_closest_stop_point(traffic_light_stopPoint, on_path_collision_avoidance_stopPoint, predicted_collisons_stopPoints, self.destination, vehicle_pose)
-        
         self.status.data = 'Cruise'
 
         if self.isTurnDetected:
