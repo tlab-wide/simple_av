@@ -477,16 +477,15 @@ class BehaviorMotionPlanning(Node):
 
     def will_collide_on_path(self, object_type, object_speed, object_pose, vehicle_pose, collison_point, corresponding_waypoint):
         current_vehicle_speed = self.velocity_report.longitudinal_velocity if self.velocity_report else 0.0   
-        t_vehicle = self.get_time_to_collison(vehicle_pose, collison_point, self.turning_speed)
-        # t_vehicle = self.get_time_to_collison(vehicle_pose, collison_point, current_vehicle_speed)
+        current_vehicle_speed = current_vehicle_speed if current_vehicle_speed > self.turning_speed else self.turning_speed
+        t_vehicle = self.get_time_to_collison(vehicle_pose, collison_point, current_vehicle_speed)
+
         t_object = self.get_time_to_collison(object_pose, collison_point, object_speed)
 
-        time_difference = abs(t_vehicle - t_object)
-        dist_to_waypoint = self.calculate_distance(corresponding_waypoint, vehicle_pose)
-        if time_difference <= self.reaction_time_threshold:
-            self.get_logger().warning(f"CP - Vehciel mooving - Potential collision detected! Time difference: {time_difference:.2f} seconds.")
+        if abs(t_vehicle - t_object) <= self.reaction_time_threshold:
+            self.get_logger().warning(f"CP - Vehciel mooving - Potential collision detected! Time difference: {abs(t_vehicle - t_object):.2f} seconds.")
             return True
-        print(f"CP - Safe to proceed. Time difference: {time_difference:.2f} seconds.")
+        print(f"CP - Safe to proceed. Time difference: {abs(t_vehicle - t_object):.2f} seconds.")
         return False
     
     def get_stop_point_by_safety_distance(self, waypoint, vehicle_pose):

@@ -29,9 +29,8 @@ Modules:
         - One Package to launch them All!
 
 Unstable version
-The current v2x and autoware msgs are not up to date with the newst version of Awsim which we migrated into. 
-Msgs need to get updated and modified.
-the autoware rviz plugins are all copied and modified in this project. This allow us to visual what we want on top of the autoware 
-RViz plugins. 
-The basis of visualization is ok but this version does not visual anything yet. we need to update the msgs first and then modify 
-existing topics and add some new ones for visualization.
+The currnet autoware_msgs are up to date with the latest msgs.
+Collision avoidance, on path collision avoidance are working correctly.
+Traffic lights are working on intersections #1, #2, #4 and #5.
+Safety distance for collision prediction and on path collision avoidance yet to get seperated.
+visualization is cut from this version.
