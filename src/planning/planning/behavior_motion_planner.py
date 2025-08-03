@@ -48,17 +48,23 @@ class BehaviorMotionPlanning(Node):
         self.base_speed = self.motion_behavior_config['motion']['speed_limits']['base'] # m/s
         self.turning_speed = self.motion_behavior_config['motion']['speed_limits']['turning_speed'] # m/s
 
-        self.saftey_distance = self.motion_behavior_config['behavior']['safety_distance'] #meters
-        self.reaction_time_threshold = self.motion_behavior_config['behavior']['reaction_time_threshold'] #meters
         self.range_low_pass_gain = self.motion_behavior_config['behavior']['range_low_pass_gain'] #meters
+        
+        self.collision_prediction_saftey_distance = self.motion_behavior_config['behavior']['collision_avoidance']['prediction']['safety_distance'] #meters
+        self.saftey_distance = self.motion_behavior_config['behavior']['collision_avoidance']['on_path']['safety_distance'] #meters
+        self.on_path_avoidance_saftey_distance = self.motion_behavior_config['behavior']['collision_avoidance']['on_path']['safety_distance'] #meters
 
-        self.on_path_detection_range_C = self.motion_behavior_config['behavior']['on_path_detection_range']['coefficient']
-        self.on_path_detection_range_B = self.motion_behavior_config['behavior']['on_path_detection_range']['base']
+        self.reaction_time_threshold = self.motion_behavior_config['behavior']['collision_avoidance']['prediction']['reaction_time_threshold'] #meters
+        
+        self.prediction_reaction_range_C = self.motion_behavior_config['behavior']['collision_avoidance']['prediction']['reaction_range']['coefficient']#meters
+        self.prediction_reaction_range_B = self.motion_behavior_config['behavior']['collision_avoidance']['prediction']['reaction_range']['base']#meters
+        self.prediction_detection_range_C = self.motion_behavior_config['behavior']['collision_avoidance']['prediction']['detection_range']['coefficient']#meters
+        self.prediction_detection_range_B = self.motion_behavior_config['behavior']['collision_avoidance']['prediction']['detection_range']['base']#meters
+        
+        
+        self.on_path_detection_range_C = self.motion_behavior_config['behavior']['collision_avoidance']['on_path']['detection_range']['coefficient']#meters
+        self.on_path_detection_range_B = self.motion_behavior_config['behavior']['collision_avoidance']['on_path']['detection_range']['base']#meters
 
-        self.prediction_reaction_range_C = self.motion_behavior_config['behavior']['prediction_reaction_range']['coefficient']
-        self.prediction_reaction_range_B = self.motion_behavior_config['behavior']['prediction_reaction_range']['base']
-        self.prediction_detection_range_C = self.motion_behavior_config['behavior']['prediction_detection_range']['coefficient']
-        self.prediction_detection_range_B = self.motion_behavior_config['behavior']['prediction_detection_range']['base']
 
         # Subscribe topics
         self.subscriptionVelocityReport = self.create_subscription(VelocityReport, '/vehicle/status/velocity_status', self.velocity_report_callback, 10)
@@ -488,14 +494,15 @@ class BehaviorMotionPlanning(Node):
         print(f"CP - Safe to proceed. Time difference: {abs(t_vehicle - t_object):.2f} seconds.")
         return False
     
-    def get_stop_point_by_safety_distance(self, waypoint, vehicle_pose):
+    def get_stop_point_by_safety_distance(self, waypoint, vehicle_pose, collision_avoidance_type):
         # Helper function to calculate distances
+        saftey_distance = self.motion_behavior_config['behavior']['collision_avoidance'][collision_avoidance_type]['safety_distance'] #meters
         dist_to_waypoint = self.calculate_distance(waypoint, vehicle_pose)
-        if dist_to_waypoint <= self.saftey_distance: # Stop the vehicle if distance to the object is less that safety distance
+        if dist_to_waypoint <= saftey_distance: # Stop the vehicle if distance to the object is less that safety distance
             self.get_logger().warning("CP - INSTANT STOP!!")
             return vehicle_pose
 
-        stop_point_index = self.path_of_waypoints.index(waypoint) - int(self.saftey_distance/self.densify_interval)
+        stop_point_index = self.path_of_waypoints.index(waypoint) - int(saftey_distance/self.densify_interval)
         stop_point = self.path_of_waypoints[stop_point_index]
         return Point(x=stop_point.x, y=stop_point.y, z=stop_point.z)
          
@@ -510,7 +517,7 @@ class BehaviorMotionPlanning(Node):
             self.get_logger().info("No Immediate danger")
             return None
         self.get_logger().info("Imediate threat. Objects ahead in danger zone")
-        return self.get_stop_point_by_safety_distance(closest_object_info['waypoint'], vehicle_pose)
+        return self.get_stop_point_by_safety_distance(closest_object_info['waypoint'], vehicle_pose, 'on_path')
     
     def collison_prediction(self, objects_ahead, current_closest_point_to_vehicle_index, vehicle_pose):
         print("---------------- CP: in CP method -------------")
@@ -532,7 +539,7 @@ class BehaviorMotionPlanning(Node):
                     if self.is_point_on_segment(objects_absolute_positions[i], collison_point, waypoints[j], waypoints[j+1], forward_vector):
                         if self.will_collide_on_path(objects_in_range[i].label, objects_in_range[i].velocity, objects_absolute_positions[i], vehicle_pose, collison_point, waypoints[j]):
                             self.get_logger().warning('P - Collide predicted!!!')
-                            stop_point = self.get_stop_point_by_safety_distance(waypoints[j], vehicle_pose)
+                            stop_point = self.get_stop_point_by_safety_distance(waypoints[j], vehicle_pose, 'prediction')
                             predicted_stop_points.append(stop_point)
                             break
         print("---------------------------------------------------")
