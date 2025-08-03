@@ -104,7 +104,7 @@ class TrafficSignalHandler(Node):
         """
 
         intersection_number = self.intersection_awareness_intersection_name  # e.g., '1'
-        print("debug: intersection number: ", intersection_number)
+        # print("debug: intersection number: ", intersection_number)
         try:
             trafficSignal = getattr(self, f"trafficSignal_intersection{intersection_number}")
         except AttributeError:
@@ -136,8 +136,8 @@ class TrafficSignalHandler(Node):
         # Handle traffic signals
         if self.enable_trafficlight and self.intersection_awareness_intersection_name is not None:
             v2i_traffic_signals_id, v2i_traffic_signals_colors = self.process_traffic_signals()
-            print(v2i_traffic_signals_id)
-            print(v2i_traffic_signals_colors) 
+            # print(v2i_traffic_signals_id)
+            # print(v2i_traffic_signals_colors) 
 
         # Create and publish traffic signals message
         traffic_signals_msg = TrafficSignalsArray()

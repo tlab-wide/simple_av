@@ -307,8 +307,6 @@ class BehaviorMotionPlanning(Node):
     def manage_traffic_lights(self):
         v2i_traffic_signals_id = list(self.trafficSignal.v2i_traffic_signals_id)
         v2i_traffic_signals_colors = list(self.trafficSignal.v2i_traffic_signals_colors)
-        # print("Traffic light ID: ", v2i_traffic_signals_id)
-        # print("Traffic light ID: ", v2i_traffic_signals_colors)
 
         current_lane = self.route[self.current_lane_index]
         lane_obj = self.find_lane_by_name(current_lane)
@@ -342,7 +340,6 @@ class BehaviorMotionPlanning(Node):
             object_direction = obj.relative_direction.data
             if object_direction == 'above' or object_direction == 'NW' or object_direction == 'NE':
                 objects_ahead.append(obj)
-        print("Number of Detected Objects in front: ", len(objects_ahead))
         return objects_ahead
         
     def get_objects_in_range(self, objects_ahead, filter_dist):
@@ -353,7 +350,6 @@ class BehaviorMotionPlanning(Node):
         for obj in objects_ahead:
             if obj.distance <= filter_dist: objects_in_range.append(obj)
 
-        print("Number of Detected Objects in detection radious: ", len(objects_in_range))
         return objects_in_range
     
     def apply_quaternion_rotation(self, quaternion, vector):
@@ -451,7 +447,6 @@ class BehaviorMotionPlanning(Node):
         return v1[0] * v2[0] + v1[1] * v2[1]
 
     def is_point_on_segment(self, object_pose, collison_point, waypoint1, waypoint2, forward_vector):
-        # print("CP is_point_on_segment method")
         # Unpack the intersection point and the waypoints
         x1, y1 = waypoint1.x, waypoint1.y
         x2, y2 = waypoint2.x, waypoint2.y
@@ -478,7 +473,6 @@ class BehaviorMotionPlanning(Node):
         dist = self.calculate_distance(collision_point, current_pose)
         time_to_collision = dist / speed
         time_to_collision = time_to_collision * self.sim_clock_rate
-        # print(f"P - dist: {dist}, speed: {speed}, time: {time_to_collision}")
         return time_to_collision
 
     def will_collide_on_path(self, object_type, object_speed, object_pose, vehicle_pose, collison_point, corresponding_waypoint):
@@ -491,7 +485,6 @@ class BehaviorMotionPlanning(Node):
         if abs(t_vehicle - t_object) <= self.reaction_time_threshold:
             self.get_logger().warning(f"CP - Vehciel mooving - Potential collision detected! Time difference: {abs(t_vehicle - t_object):.2f} seconds.")
             return True
-        print(f"CP - Safe to proceed. Time difference: {abs(t_vehicle - t_object):.2f} seconds.")
         return False
     
     def get_stop_point_by_safety_distance(self, waypoint, vehicle_pose, collision_avoidance_type):
@@ -520,7 +513,6 @@ class BehaviorMotionPlanning(Node):
         return self.get_stop_point_by_safety_distance(closest_object_info['waypoint'], vehicle_pose, 'on_path')
     
     def collison_prediction(self, objects_ahead, current_closest_point_to_vehicle_index, vehicle_pose):
-        print("---------------- CP: in CP method -------------")
         objects_in_range = self.get_objects_in_range(objects_ahead, self.detection_range)
         if not objects_in_range:
             return None
@@ -529,7 +521,6 @@ class BehaviorMotionPlanning(Node):
         if self.use_RSU_for_trafficlight:
             if self.get_traffic_light_color_by_id(166893) == 1:
                 return []
-        # print("CP predict collision")
         predicted_stop_points = []
         for i in range(len(objects_in_range)):
             for j in range(1, len(waypoints) - 1):
@@ -542,7 +533,6 @@ class BehaviorMotionPlanning(Node):
                             stop_point = self.get_stop_point_by_safety_distance(waypoints[j], vehicle_pose, 'prediction')
                             predicted_stop_points.append(stop_point)
                             break
-        print("---------------------------------------------------")
         return predicted_stop_points
     
     def find_closest_stop_point(self, traffic_light_stopPoint, on_path_collision_avoidance_stopPoint, predicted_collisons_stopPoints, destination_stopPoint, vehicle_pose):
