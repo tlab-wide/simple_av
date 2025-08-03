@@ -16,7 +16,7 @@ from simple_av_msgs.msg import LocalizationMsg
 from simple_av_msgs.msg import SimMonitor, Portal
 import numpy as np
 from scipy.spatial.transform import Rotation as R
-from autoware_auto_vehicle_msgs.msg import VelocityReport
+from autoware_vehicle_msgs.msg import VelocityReport
 from rclpy.qos import QoSProfile, QoSHistoryPolicy, QoSReliabilityPolicy, QoSDurabilityPolicy
 
 class BehaviorMotionPlanning(Node):
@@ -48,17 +48,23 @@ class BehaviorMotionPlanning(Node):
         self.base_speed = self.motion_behavior_config['motion']['speed_limits']['base'] # m/s
         self.turning_speed = self.motion_behavior_config['motion']['speed_limits']['turning_speed'] # m/s
 
-        self.saftey_distance = self.motion_behavior_config['behavior']['safety_distance'] #meters
-        self.reaction_time_threshold = self.motion_behavior_config['behavior']['reaction_time_threshold'] #meters
         self.range_low_pass_gain = self.motion_behavior_config['behavior']['range_low_pass_gain'] #meters
+        
+        self.collision_prediction_saftey_distance = self.motion_behavior_config['behavior']['collision_avoidance']['prediction']['safety_distance'] #meters
+        self.saftey_distance = self.motion_behavior_config['behavior']['collision_avoidance']['on_path']['safety_distance'] #meters
+        self.on_path_avoidance_saftey_distance = self.motion_behavior_config['behavior']['collision_avoidance']['on_path']['safety_distance'] #meters
 
-        self.on_path_detection_range_C = self.motion_behavior_config['behavior']['on_path_detection_range']['coefficient']
-        self.on_path_detection_range_B = self.motion_behavior_config['behavior']['on_path_detection_range']['base']
+        self.reaction_time_threshold = self.motion_behavior_config['behavior']['collision_avoidance']['prediction']['reaction_time_threshold'] #meters
+        
+        self.prediction_reaction_range_C = self.motion_behavior_config['behavior']['collision_avoidance']['prediction']['reaction_range']['coefficient']#meters
+        self.prediction_reaction_range_B = self.motion_behavior_config['behavior']['collision_avoidance']['prediction']['reaction_range']['base']#meters
+        self.prediction_detection_range_C = self.motion_behavior_config['behavior']['collision_avoidance']['prediction']['detection_range']['coefficient']#meters
+        self.prediction_detection_range_B = self.motion_behavior_config['behavior']['collision_avoidance']['prediction']['detection_range']['base']#meters
+        
+        
+        self.on_path_detection_range_C = self.motion_behavior_config['behavior']['collision_avoidance']['on_path']['detection_range']['coefficient']#meters
+        self.on_path_detection_range_B = self.motion_behavior_config['behavior']['collision_avoidance']['on_path']['detection_range']['base']#meters
 
-        self.prediction_reaction_range_C = self.motion_behavior_config['behavior']['prediction_reaction_range']['coefficient']
-        self.prediction_reaction_range_B = self.motion_behavior_config['behavior']['prediction_reaction_range']['base']
-        self.prediction_detection_range_C = self.motion_behavior_config['behavior']['prediction_detection_range']['coefficient']
-        self.prediction_detection_range_B = self.motion_behavior_config['behavior']['prediction_detection_range']['base']
 
         # Subscribe topics
         self.subscriptionVelocityReport = self.create_subscription(VelocityReport, '/vehicle/status/velocity_status', self.velocity_report_callback, 10)
@@ -301,8 +307,6 @@ class BehaviorMotionPlanning(Node):
     def manage_traffic_lights(self):
         v2i_traffic_signals_id = list(self.trafficSignal.v2i_traffic_signals_id)
         v2i_traffic_signals_colors = list(self.trafficSignal.v2i_traffic_signals_colors)
-        # print("Traffic light ID: ", v2i_traffic_signals_id)
-        # print("Traffic light ID: ", v2i_traffic_signals_colors)
 
         current_lane = self.route[self.current_lane_index]
         lane_obj = self.find_lane_by_name(current_lane)
@@ -336,7 +340,6 @@ class BehaviorMotionPlanning(Node):
             object_direction = obj.relative_direction.data
             if object_direction == 'above' or object_direction == 'NW' or object_direction == 'NE':
                 objects_ahead.append(obj)
-        print("Number of Detected Objects in front: ", len(objects_ahead))
         return objects_ahead
         
     def get_objects_in_range(self, objects_ahead, filter_dist):
@@ -347,7 +350,6 @@ class BehaviorMotionPlanning(Node):
         for obj in objects_ahead:
             if obj.distance <= filter_dist: objects_in_range.append(obj)
 
-        print("Number of Detected Objects in detection radious: ", len(objects_in_range))
         return objects_in_range
     
     def apply_quaternion_rotation(self, quaternion, vector):
@@ -376,11 +378,11 @@ class BehaviorMotionPlanning(Node):
     
     def find_obstacle_on_path(self, objects_in_range, current_closest_point_to_vehicle_index, vehicle_pose):
         objects_on_path = []
-        objects_absulute_positions = [self.get_object_absolute_position(self.pose.pose.orientation, vehicle_pose, obj.position) for obj in objects_in_range]
+        objects_absolute_positions = [self.get_object_absolute_position(self.pose.pose.orientation, vehicle_pose, obj.position) for obj in objects_in_range]
         waypoints = self.path_of_waypoints[current_closest_point_to_vehicle_index:current_closest_point_to_vehicle_index + int(self.on_path_detection_range / self.densify_interval) + 1]
         for i in range(len(objects_in_range)):
             for waypoint in waypoints:
-                dist = self.calculate_distance(objects_absulute_positions[i], waypoint)
+                dist = self.calculate_distance(objects_absolute_positions[i], waypoint)
                 if dist <= self.densify_interval*1.2:
                     objects_on_path.append({"object": objects_in_range[i], "waypoint": waypoint})
                     break
@@ -471,38 +473,34 @@ class BehaviorMotionPlanning(Node):
         dist = self.calculate_distance(collision_point, current_pose)
         time_to_collision = dist / speed
         time_to_collision = time_to_collision * self.sim_clock_rate
-        # print(f"P - dist: {dist}, speed: {speed}, time: {time_to_collision}")
         return time_to_collision
 
     def will_collide_on_path(self, object_type, object_speed, object_pose, vehicle_pose, collison_point, corresponding_waypoint):
-        # print("---------------------")
         current_vehicle_speed = self.velocity_report.longitudinal_velocity if self.velocity_report else 0.0   
-        t_vehicle = self.get_time_to_collison(vehicle_pose, collison_point, self.turning_speed)
-        # t_vehicle = self.get_time_to_collison(vehicle_pose, collison_point, current_vehicle_speed)
+        current_vehicle_speed = current_vehicle_speed if current_vehicle_speed > self.turning_speed else self.turning_speed
+        t_vehicle = self.get_time_to_collison(vehicle_pose, collison_point, current_vehicle_speed)
+
         t_object = self.get_time_to_collison(object_pose, collison_point, object_speed)
-        time_difference = abs(t_vehicle - t_object)
-        dist_to_waypoint = self.calculate_distance(corresponding_waypoint, vehicle_pose)
-        # print(f"D - time_difference {time_difference}, dist to waypoint {dist_to_waypoint} current_vehicle_speed {current_vehicle_speed}")
-        if time_difference <= self.reaction_time_threshold:
-            self.get_logger().warning(f"P - Vehciel mooving - Potential collision detected! Time difference: {time_difference:.2f} seconds.")
+
+        if abs(t_vehicle - t_object) <= self.reaction_time_threshold:
+            self.get_logger().warning(f"CP - Vehciel mooving - Potential collision detected! Time difference: {abs(t_vehicle - t_object):.2f} seconds.")
             return True
-        # print(f"P - Safe to proceed. Time difference: {time_difference:.2f} seconds.")
         return False
     
-    def get_stop_point_by_safety_distance(self, waypoint, vehicle_pose):
+    def get_stop_point_by_safety_distance(self, waypoint, vehicle_pose, collision_avoidance_type):
         # Helper function to calculate distances
+        saftey_distance = self.motion_behavior_config['behavior']['collision_avoidance'][collision_avoidance_type]['safety_distance'] #meters
         dist_to_waypoint = self.calculate_distance(waypoint, vehicle_pose)
-        if dist_to_waypoint <= self.saftey_distance: # Stop the vehicle if distance to the object is less that safety distance
-            self.get_logger().warning("P - INSTANT STOP!!")
+        if dist_to_waypoint <= saftey_distance: # Stop the vehicle if distance to the object is less that safety distance
+            self.get_logger().warning("CP - INSTANT STOP!!")
             return vehicle_pose
 
-        stop_point_index = self.path_of_waypoints.index(waypoint) - int(self.saftey_distance/self.densify_interval)
+        stop_point_index = self.path_of_waypoints.index(waypoint) - int(saftey_distance/self.densify_interval)
         stop_point = self.path_of_waypoints[stop_point_index]
         return Point(x=stop_point.x, y=stop_point.y, z=stop_point.z)
          
 
     def on_path_collision_avoidance(self, objects_ahead, current_closest_point_to_vehicle_index, vehicle_pose):
-        print("CC - on path detection range: ", self.on_path_detection_range)
         objects_in_range = self.get_objects_in_range(objects_ahead, self.on_path_detection_range)
         if not objects_in_range:
             return None
@@ -512,30 +510,27 @@ class BehaviorMotionPlanning(Node):
             self.get_logger().info("No Immediate danger")
             return None
         self.get_logger().info("Imediate threat. Objects ahead in danger zone")
-        return self.get_stop_point_by_safety_distance(closest_object_info['waypoint'], vehicle_pose)
+        return self.get_stop_point_by_safety_distance(closest_object_info['waypoint'], vehicle_pose, 'on_path')
     
     def collison_prediction(self, objects_ahead, current_closest_point_to_vehicle_index, vehicle_pose):
         objects_in_range = self.get_objects_in_range(objects_ahead, self.detection_range)
         if not objects_in_range:
             return None
-        
-        objects_absulute_positions = [self.get_object_absolute_position(self.pose.pose.orientation, vehicle_pose, obj.position) for obj in objects_in_range]
+        objects_absolute_positions = [self.get_object_absolute_position(self.pose.pose.orientation, vehicle_pose, obj.position) for obj in objects_in_range]
         waypoints = self.path_of_waypoints[current_closest_point_to_vehicle_index:current_closest_point_to_vehicle_index + int(self.reaction_range / self.densify_interval) + 1]
-        
         if self.use_RSU_for_trafficlight:
             if self.get_traffic_light_color_by_id(166893) == 1:
                 return []
-        
         predicted_stop_points = []
         for i in range(len(objects_in_range)):
             for j in range(1, len(waypoints) - 1):
                 forward_vector = self.get_forward_vector(objects_in_range[i].orientation)
-                collison_point = self.find_intersection(objects_absulute_positions[i], forward_vector, waypoints[j], waypoints[j+1])
+                collison_point = self.find_intersection(objects_absolute_positions[i], forward_vector, waypoints[j], waypoints[j+1])
                 if collison_point:
-                    if self.is_point_on_segment(objects_absulute_positions[i], collison_point, waypoints[j], waypoints[j+1], forward_vector):
-                        if self.will_collide_on_path(objects_in_range[i].label, objects_in_range[i].velocity, objects_absulute_positions[i], vehicle_pose, collison_point, waypoints[j]):
+                    if self.is_point_on_segment(objects_absolute_positions[i], collison_point, waypoints[j], waypoints[j+1], forward_vector):
+                        if self.will_collide_on_path(objects_in_range[i].label, objects_in_range[i].velocity, objects_absolute_positions[i], vehicle_pose, collison_point, waypoints[j]):
                             self.get_logger().warning('P - Collide predicted!!!')
-                            stop_point = self.get_stop_point_by_safety_distance(waypoints[j], vehicle_pose)
+                            stop_point = self.get_stop_point_by_safety_distance(waypoints[j], vehicle_pose, 'prediction')
                             predicted_stop_points.append(stop_point)
                             break
         return predicted_stop_points
@@ -590,9 +585,7 @@ class BehaviorMotionPlanning(Node):
         objects_ahead = self.get_detected_objects_in_front()
         on_path_collision_avoidance_stopPoint = self.on_path_collision_avoidance(objects_ahead, current_closest_point_to_vehicle_index, vehicle_pose)
         predicted_collisons_stopPoints = self.collison_prediction(objects_ahead, current_closest_point_to_vehicle_index, vehicle_pose)
-        
         stop_point, stop_point_type = self.find_closest_stop_point(traffic_light_stopPoint, on_path_collision_avoidance_stopPoint, predicted_collisons_stopPoints, self.destination, vehicle_pose)
-        
         self.status.data = 'Cruise'
 
         if self.isTurnDetected:

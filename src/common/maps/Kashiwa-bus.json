@@ -156928,8 +156928,12 @@
                 "lanelet331",
                 "lanelet1303"
             ],
-            "trafficlightsWayIDs": [],
-            "trafficlightsRelationID": [],
+            "trafficlightsWayIDs": [
+                166888
+            ],
+            "trafficlightsRelationID": [
+                166893
+            ],
             "stopLinePoseP1": [],
             "stopLinePoseP2": [],
             "dense_waypoints": [

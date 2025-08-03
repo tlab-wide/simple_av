@@ -4,8 +4,8 @@ import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import Point, Quaternion, Vector3
 from simple_av_msgs.msg import DetectedObject, DetectedObjectsArray, LocalizationIntersectionStatus
-from autoware_auto_perception_msgs.msg import DetectedObjects
-from autoware_auto_perception_msgs.msg import PredictedObjects
+from autoware_perception_msgs.msg import DetectedObjects
+from autoware_perception_msgs.msg import PredictedObjects
 from geometry_msgs.msg import PoseStamped
 from math import atan2, asin
 import math
@@ -312,6 +312,7 @@ class Perception(Node):
         
         # Handle detected objects
         detected_objects_list = self.handle_detected_objects(self.detectedObjects, False) # Mounted-sensor data
+        number_of_detected_by_mounted_sensor = len(detected_objects_list)
         if self.enable_RSU_for_object_detection and self.intersection_awareness_intersection_name is not None:
             intersection_number = self.intersection_awareness_intersection_name  # e.g., '1'
             try:
@@ -319,24 +320,23 @@ class Perception(Node):
                 detected_objects_list.extend(self.handle_detected_objects(intersection_n_RSU_detectedObjects, True)) # RSU data
             except AttributeError:
                 self.get_logger().warning(f"No RSU data for intersection {intersection_number}")
-
         # Create and publish detected objects message
         detected_objects_msg = DetectedObjectsArray()
         detected_objects_msg.objects = detected_objects_list
         self.publisher_detected_objects.publish(detected_objects_msg)
 
-        print("number of objects: ", len(detected_objects_msg.objects))
-        for obj in detected_objects_msg.objects:
-            if obj.label != 8:
-                print("is RSU:", obj.is_from_rsu)
-                print("vehicle type:", obj.label)
-                print("Direction from vehicle POV: ", obj.relative_direction.data)
-                print("Object relative Position from Vehicle: ", obj.position.x, obj.position.y)
-                print("Object Orientation: ", obj.orientation.x, obj.orientation.y, obj.orientation.z, obj.orientation.w)
-                print("Object speed: ", obj.velocity)
-                print("DEBUG - min dist: ", obj.distance) 
-                print("object shape size: ", obj.shape)
-                print("---------------------")
+        # print("number of objects: ", len(detected_objects_msg.objects))
+        # for obj in detected_objects_msg.objects:
+        #     if obj.label != 8:
+        #         print("is RSU:", obj.is_from_rsu)
+        #         print("vehicle type:", obj.label)
+        #         print("Direction from vehicle POV: ", obj.relative_direction.data)
+        #         print("Object relative Position from Vehicle: ", obj.position.x, obj.position.y)
+        #         print("Object Orientation: ", obj.orientation.x, obj.orientation.y, obj.orientation.z, obj.orientation.w)
+        #         print("Object speed: ", obj.velocity)
+        #         print("DEBUG - min dist: ", obj.distance) 
+        #         print("object shape size: ", obj.shape)
+        #         print("---------------------")
 
 def main(args=None):
     rclpy.init(args=args)

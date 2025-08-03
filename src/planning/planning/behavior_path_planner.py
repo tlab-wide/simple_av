@@ -217,11 +217,8 @@ class BehaviorPathPlanner(Node):
     def find_lookahead_point(self, current_closest_point_index): 
 
         path_size = len(self.path)
-        print("DEBUG: path size: ", path_size)
         lookahead_point_index = self.get_lookahead_distance_as_index() + current_closest_point_index
-        print("DEBUG: lookahead_point_index: ", lookahead_point_index)
         if lookahead_point_index >= path_size - 2:
-            print("Debug3: close to destination ")
             lookahead_point_index = path_size - 2
         if lookahead_point_index < self.prev_lookahead_index:
             lookahead_point_index = self.prev_lookahead_index
@@ -239,7 +236,6 @@ class BehaviorPathPlanner(Node):
     
     # TODO: create search area based on waypoints not lanes
     def create_search_area(self):
-        print("Debug: in create search area")
         try:
             lane_index = self.route.index(self.location.closest_lane_names.data)
         except:
@@ -253,11 +249,9 @@ class BehaviorPathPlanner(Node):
         search_area = []
         for lane in search_area_as_lanes:
             lane_obj = self.find_lane_by_name(lane)
-            # print("Debug: lane: ", lane)
             waypoints = lane_obj['dense_waypoints']
             for waypoint in waypoints:
                 search_area.append(Point(x=waypoint['x'], y=waypoint['y'], z=waypoint['z']))
-        # print("debug - search area as lanes", search_area_as_lanes, "size of search area: ", len(search_area))
         return search_area, search_area_as_lanes
 
     def find_closest_waypoint_to_vehicle(self, vehicle_pose, search_area):
@@ -335,8 +329,6 @@ class BehaviorPathPlanner(Node):
             self.route = self.path_as_lanes[:]
             self.current_lane_index = 0
             self.isPathPlanned = True
-            print("Debug: path of lanes: ", self.path_as_lanes)
-            print("Debug: lanes size: ", len(self.path_as_lanes))
 
     def end_of_path_detection(self, current_closest_point_to_vehicle_index):
         current_pose = self.path_of_waypoints[current_closest_point_to_vehicle_index]

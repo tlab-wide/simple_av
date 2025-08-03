@@ -1,4 +1,0 @@
-uint64 station_id
-uint64 sensor_type
-geometry_msgs/PoseStamped station_pose
-autoware_auto_perception_msgs/PredictedObjects predicted_objects
