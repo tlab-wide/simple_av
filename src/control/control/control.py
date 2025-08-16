@@ -19,6 +19,7 @@ import os
 from ament_index_python.packages import get_package_share_directory
 from simple_av_msgs.msg import Portal
 from rclpy.parameter import Parameter
+import time
 
 
 class PIDController:
@@ -190,6 +191,9 @@ class VehicleControl(Node):
             gear_msg.command = GearCommand.PARK
             self.gear_publisher.publish(gear_msg)  
             return
+        
+        # if self.reset:
+        #     time.sleep(0.2)
 
         # Steer and Velocity Control
         control_msg = Control()
@@ -220,7 +224,7 @@ class VehicleControl(Node):
     
     def get_lateral_command(self):
         lateral_command = Lateral()
-        if self.motion_plan.status.data == "Park":
+        if self.motion_plan.status.data == "Park" and self.reset:
             print("debug PARK")
             lateral_command.steering_tire_angle = 0.0
             lateral_command.steering_tire_rotation_rate = 0.0
@@ -241,7 +245,7 @@ class VehicleControl(Node):
         current_speed = self.velocity_report.longitudinal_velocity if self.velocity_report else 0.0
         target_speed = self.path_plan.speed_limit
 
-        if self.motion_plan.status.data == "Decelerate" or self.motion_plan.status.data == "Stop_red":
+        if self.motion_plan.status.data == "Decelerate" or self.motion_plan.status.data == "Stop_red" or self.reset:
             print("debug: ", self.motion_plan.stop_point, type(self.motion_plan.stop_point))
             print("debug: ", self.pose.pose.position, type(self.pose.pose.position))
             distance_to_stop = self.calculate_distance(self.motion_plan.stop_point, self.pose.pose.position)
@@ -249,7 +253,10 @@ class VehicleControl(Node):
             if self.motion_plan.status.data == "Stop_red" and distance_to_stop <= 4.0:
                 self.get_logger().warning("Full stop!")
                 target_speed = 0.0
-            if self.motion_plan.status.data == "Decelerate" and distance_to_stop <= 4.0:
+            if self.motion_plan.status.data == "Decelerate" and distance_to_stop <= 2.0:
+                self.get_logger().warning("Full stop!")
+                target_speed = 0.0
+            if self.reset:
                 self.get_logger().warning("Full stop!")
                 target_speed = 0.0
 

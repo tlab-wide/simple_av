@@ -362,6 +362,7 @@ class BehaviorPathPlanner(Node):
         if self.reset:
             self.get_logger().warning("RESET")
             self.isPathPlanned = False
+            self.prev_lookahead_index = 0
             self.get_logger().info("Requesting Misson planning Service ...")
             self.request_mission_plan()
             rclpy.spin_once(self, timeout_sec=0.125)  # allow 0.25s to receive mission plan
@@ -374,7 +375,7 @@ class BehaviorPathPlanner(Node):
         vehicle_pose = self.pose.pose.position
         if vehicle_pose.x == 0.0 and vehicle_pose.y == 0.0 and vehicle_pose.z == 0.0:
             self.get_logger().warning("Vehicle Pose is not accessible")
-            return None, None, None, None
+            return
             
         search_area, search_area_as_lanes = self.create_search_area()
         current_closest_point_to_vehicle_index = self.find_closest_waypoint_to_vehicle(vehicle_pose, search_area)
