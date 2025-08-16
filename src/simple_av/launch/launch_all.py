@@ -10,19 +10,19 @@ from ament_index_python.packages import get_package_share_directory
 
 def generate_launch_description():
 
-    # rviz_config_path = os.path.join(
-    #     get_package_share_directory('simple_av'),
-    #     'rviz',
-    #     'autoware.rviz'
-    # )
+    rviz_config_path = os.path.join(
+        get_package_share_directory('simple_av'),
+        'rviz',
+        'autoware.rviz'
+    )
 
     return LaunchDescription([
         # Declare the RViz argument
-        # DeclareLaunchArgument(
-        #     'with_rviz',
-        #     default_value='true',
-        #     description='Whether to launch RViz'
-        # ),
+        DeclareLaunchArgument(
+            'with_rviz',
+            default_value='true',
+            description='Whether to launch RViz'
+        ),
 
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(
@@ -50,13 +50,14 @@ def generate_launch_description():
             )
         ),
         # Add more as needed
+        
         # RViz2 Node
-        # Node(
-        #     package='rviz2',
-        #     executable='rviz2',
-        #     name='rviz2',
-        #     output='screen',
-        #     arguments=['-d', rviz_config_path],
-        #     condition=IfCondition(LaunchConfiguration('with_rviz'))
-        # ),
+        Node(
+            package='rviz2',
+            executable='rviz2',
+            name='rviz2',
+            output='screen',
+            arguments=['-d', rviz_config_path],
+            condition=IfCondition(LaunchConfiguration('with_rviz'))
+        ),
     ])
