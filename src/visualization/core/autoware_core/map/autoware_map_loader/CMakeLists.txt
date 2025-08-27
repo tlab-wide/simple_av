@@ -5,6 +5,7 @@ find_package(autoware_cmake REQUIRED)
 autoware_package()
 
 find_package(PCL REQUIRED COMPONENTS common io filters)
+find_package(autoware_geography_utils REQUIRED)
 
 ament_auto_add_library(pointcloud_map_loader_node SHARED
   src/pointcloud_map_loader/pointcloud_map_loader_node.cpp

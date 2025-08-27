@@ -17,6 +17,9 @@ setup(
         # Install all map files to: install/share/common/maps/
         (os.path.join('share', package_name, 'maps'), glob('maps/*.json')),
     ],
+    entry_points={
+        'console_scripts': [],
+    },
     install_requires=['setuptools'],
     zip_safe=True,
     maintainer='hamid_ubuntu',
