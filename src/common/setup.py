@@ -16,6 +16,8 @@ setup(
         (os.path.join('share', package_name, 'zones'), glob('zones/*.yaml')),
         # Install all map files to: install/share/common/maps/
         (os.path.join('share', package_name, 'maps'), glob('maps/*.json')),
+        (os.path.join('share', package_name, 'maps'), glob('maps/*.osm')),
+
     ],
     entry_points={
         'console_scripts': [],
