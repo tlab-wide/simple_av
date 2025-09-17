@@ -87,6 +87,7 @@ ros_ws/
       ├── localization/
       ├── planning/
       ├── perception/
+      ├── visualization/
       └── simple_av/
           ├── package.xml
           ├── resource/
