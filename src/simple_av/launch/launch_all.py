@@ -11,11 +11,11 @@ from ament_index_python.packages import get_package_share_directory
 
 def generate_launch_description():
 
-    # rviz_config_path = os.path.join(
-    #     get_package_share_directory('simple_av'),
-    #     'rviz',
-    #     'autoware.rviz'
-    # )
+    rviz_config_path = os.path.join(
+        get_package_share_directory('simple_av'),
+        'rviz',
+        'autoware.rviz'
+    )
 
     # map_path = os.path.join(
     #     get_package_share_directory('common'),
@@ -27,11 +27,11 @@ def generate_launch_description():
 
     return LaunchDescription([
         # Declare the RViz argument
-        # DeclareLaunchArgument(
-        #     'with_rviz',
-        #     default_value='true',
-        #     description='Whether to launch RViz'
-        # ),
+        DeclareLaunchArgument(
+            'with_rviz',
+            default_value='true',
+            description='Whether to launch RViz'
+        ),
 
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(
@@ -57,9 +57,18 @@ def generate_launch_description():
             PythonLaunchDescriptionSource(
                 os.path.join(get_package_share_directory('control'), 'launch', 'control_launcher.py')
             )
-        )
+        ),
 
-        # Lanelet2 Map Loader
+        # 👉 Lanelet2 Map Publisher
+        Node(
+            package='simple_av',
+            executable='lanelet_map_publisher',
+            name='lanelet_map_publisher',
+            output='screen'
+        ),
+
+
+        # # Lanelet2 Map Loader
         # Node(
         #     package='autoware_map_loader',
         #     executable='autoware_lanelet2_map_loader',
@@ -89,13 +98,13 @@ def generate_launch_description():
         #     ]
         # ),
 
-        # # RViz2 Node
-        # Node(
-        #     package='rviz2',
-        #     executable='rviz2',
-        #     name='rviz2',
-        #     output='screen',
-        #     arguments=['-d', rviz_config_path],
-        #     condition=IfCondition(LaunchConfiguration('with_rviz'))
-        # ),
+        # RViz2 Node
+        Node(
+            package='rviz2',
+            executable='rviz2',
+            name='rviz2',
+            output='screen',
+            arguments=['-d', rviz_config_path],
+            condition=IfCondition(LaunchConfiguration('with_rviz'))
+        ),
     ])
