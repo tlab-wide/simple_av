@@ -1,5 +1,5 @@
 Stable Version
-Version 2.6.7 - beta
+Version 2.7.7 
 
 new architecture of Modules
 Modules:
@@ -27,10 +27,3 @@ Modules:
         - stores maps and config files and generally all the common files that the modules may use
     simple_av:
         - One Package to launch them All!
-
-Unstable version
-The currnet autoware_msgs are up to date with the latest msgs.
-Collision avoidance, on path collision avoidance are working correctly.
-Traffic lights are working on intersections #1, #2, #4 and #5.
-Safety distance for collision prediction and on path collision avoidance are seperated.
-visualization is cut from this version.

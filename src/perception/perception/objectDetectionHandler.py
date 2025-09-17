@@ -18,6 +18,7 @@ import numpy as np
 from transformations import euler_from_quaternion
 from simple_av_msgs.msg import Portal
 
+
 class Perception(Node):
     def __init__(self):
         super().__init__('ObjectDetetionHandler')
@@ -43,13 +44,13 @@ class Perception(Node):
 
         # Create subscriber for /v2x/predicted_object<n> topic. This topic publishes the information of detected objects from intersection-mounted RSU.
         # n determines the number of the intersection
-        self.subscriptionRSU_intersection1 = self.create_subscription(PredictedObjects, '/v2x/predicted_object1', self.intersection1_RSU_detectedObjects_callback, 10)
+        self.subscriptionRSU_intersection1 = self.create_subscription(PredictedObjects, '/v2x/rsu1/predicted_object', self.intersection1_RSU_detectedObjects_callback, 10)
         self.intersection1_RSU_detectedObjects = PredictedObjects()
         
-        self.subscriptionRSU_intersection2 = self.create_subscription(PredictedObjects, '/v2x/predicted_object2', self.intersection2_RSU_detectedObjects_callback, 10)
+        self.subscriptionRSU_intersection2 = self.create_subscription(PredictedObjects, '/v2x/rsu2/predicted_object', self.intersection2_RSU_detectedObjects_callback, 10)
         self.intersection2_RSU_detectedObjects = PredictedObjects()
 
-        self.subscriptionRSU_intersection4 = self.create_subscription(PredictedObjects, '/v2x/predicted_object4', self.intersection4_RSU_detectedObjects_callback, 10)
+        self.subscriptionRSU_intersection4 = self.create_subscription(PredictedObjects, '/v2x/rsu4/predicted_object', self.intersection4_RSU_detectedObjects_callback, 10)
         self.intersection4_RSU_detectedObjects = PredictedObjects()
         
         

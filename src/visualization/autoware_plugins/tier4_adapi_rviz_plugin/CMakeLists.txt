@@ -1,0 +1,36 @@
+cmake_minimum_required(VERSION 3.14)
+project(tier4_adapi_rviz_plugin)
+
+find_package(autoware_cmake REQUIRED)
+autoware_package()
+
+find_package(Qt5 REQUIRED Core Widgets)
+set(QT_LIBRARIES Qt5::Widgets)
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_INCLUDE_CURRENT_DIR ON)
+
+find_package(autoware_adapi_specs REQUIRED)
+find_package(autoware_component_interface_utils REQUIRED)
+find_package(tier4_system_msgs REQUIRED)
+
+ament_auto_add_library(${PROJECT_NAME} SHARED
+  src/route_tool.cpp
+  src/route_panel.cpp
+  src/operation_mode_debug_panel.cpp
+  src/door_panel.cpp
+)
+
+ament_target_dependencies(${PROJECT_NAME}
+  autoware_adapi_specs
+  autoware_adapi_v1_msgs
+  autoware_component_interface_utils
+  tier4_system_msgs
+)
+
+target_link_libraries(${PROJECT_NAME}
+  ${QT_LIBRARIES}
+)
+
+pluginlib_export_plugin_description_file(rviz_common plugins/plugin_description.xml)
+
+ament_auto_package(INSTALL_TO_SHARE icons)
