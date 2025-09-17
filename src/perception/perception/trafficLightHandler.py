@@ -31,16 +31,16 @@ class TrafficSignalHandler(Node):
 
         
         # Create subscriber for /v2x/traffic_signals_intersection<n> topics
-        self.subscriptionTrafficLight_intersection1 = self.create_subscription(V2XSignals, '/v2x/traffic_signals/intersection_1', self.trafficSignal_callback_intersection1, 10)
+        self.subscriptionTrafficLight_intersection1 = self.create_subscription(V2XSignals, '/v2x/rsu1/traffic_signals', self.trafficSignal_callback_intersection1, 10)
         self.trafficSignal_intersection1 = V2XSignals()  # Initialize traffic signal for intersection number 1
         
-        self.subscriptionTrafficLight_intersection2 = self.create_subscription(V2XSignals, '/v2x/traffic_signals/intersection_2', self.trafficSignal_callback_intersection2, 10)
+        self.subscriptionTrafficLight_intersection2 = self.create_subscription(V2XSignals, '/v2x/rsu2/traffic_signals', self.trafficSignal_callback_intersection2, 10)
         self.trafficSignal_intersection2 = V2XSignals()  # Initialize traffic signal for intersection number 2
         
-        self.subscriptionTrafficLight_intersection4 = self.create_subscription(V2XSignals, '/v2x/traffic_signals/intersection_4', self.trafficSignal_callback_intersection4, 10)
+        self.subscriptionTrafficLight_intersection4 = self.create_subscription(V2XSignals, '/v2x/rsu4/traffic_signals', self.trafficSignal_callback_intersection4, 10)
         self.trafficSignal_intersection4 = V2XSignals()  # Initialize traffic signal for intersection number 4
         
-        self.subscriptionTrafficLight_intersection5 = self.create_subscription(V2XSignals, '/v2x/traffic_signals/intersection_5', self.trafficSignal_callback_intersection5, 10)
+        self.subscriptionTrafficLight_intersection5 = self.create_subscription(V2XSignals, '/v2x/rsu5/traffic_signals', self.trafficSignal_callback_intersection5, 10)
         self.trafficSignal_intersection5 = V2XSignals()  # Initialize traffic signal for intersection number 5
 
         # Create subscriber for /sensing/gnss/pose topic
