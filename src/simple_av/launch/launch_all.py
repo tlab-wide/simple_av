@@ -11,25 +11,27 @@ from ament_index_python.packages import get_package_share_directory
 
 def generate_launch_description():
 
-    rviz_config_path = os.path.join(
-        get_package_share_directory('simple_av'),
-        'rviz',
-        'autoware.rviz'
-    )
+    # rviz_config_path = os.path.join(
+    #     get_package_share_directory('simple_av'),
+    #     'rviz',
+    #     'autoware.rviz'
+    # )
 
-    map_path = os.path.join(
-        get_package_share_directory('common'),
-        'maps',
-        'Kashiwa.osm'
-    )
+    # map_path = os.path.join(
+    #     get_package_share_directory('common'),
+    #     'maps',
+    #     '2km_test.osm'
+    # )
+    
+    # print("Map path:", map_path)
 
     return LaunchDescription([
         # Declare the RViz argument
-        DeclareLaunchArgument(
-            'with_rviz',
-            default_value='true',
-            description='Whether to launch RViz'
-        ),
+        # DeclareLaunchArgument(
+        #     'with_rviz',
+        #     default_value='true',
+        #     description='Whether to launch RViz'
+        # ),
 
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(
@@ -55,36 +57,45 @@ def generate_launch_description():
             PythonLaunchDescriptionSource(
                 os.path.join(get_package_share_directory('control'), 'launch', 'control_launcher.py')
             )
-        ),
+        )
 
         # Lanelet2 Map Loader
-        Node(
-            package='autoware_map_loader',
-            executable='autoware_lanelet2_map_loader',
-            name='lanelet2_map_loader',
-            parameters=[{
-                'lanelet2_map_path': map_path,
-                'allow_unsupported_version': True,
-                'center_line_resolution': 0.5,
-                'use_waypoints': True,  # or false if you don’t want waypoint generation
-                'use_streaming': False
-            }]
-        ),
+        # Node(
+        #     package='autoware_map_loader',
+        #     executable='autoware_lanelet2_map_loader',
+        #     name='lanelet2_map_loader',
+        #     output='screen',
+        #     parameters=[{
+        #         'lanelet2_map_path': map_path,
+        #         'allow_unsupported_version': True,
+        #         'center_line_resolution': 0.5,
+        #         'use_waypoints': False,  # or false if you don’t want waypoint generation
+        #         'use_streaming': False
+        #     }],
+        #     remappings=[
+        #         ('output/lanelet2_map', 'vector_map')  # match visualizer
+        #     ]
+        # ),
 
-        # Lanelet2 Map Visualizer
-        Node(
-            package='autoware_lanelet2_map_visualizer',
-            executable='autoware_lanelet2_map_visualizer',
-            name='lanelet2_map_visualizer'
-        ),
+        # # Lanelet2 Map Visualizer
+        # Node(
+        #     package='autoware_lanelet2_map_visualizer',
+        #     executable='autoware_lanelet2_map_visualizer',
+        #     name='lanelet2_map_visualizer',
+        #     output='screen',
+        #     remappings=[
+        #         ('input/lanelet2_map', 'vector_map'),
+        #         ('output/lanelet2_map_marker', 'vector_map_marker')
+        #     ]
+        # ),
 
-        # RViz2 Node
-        Node(
-            package='rviz2',
-            executable='rviz2',
-            name='rviz2',
-            output='screen',
-            arguments=['-d', rviz_config_path],
-            condition=IfCondition(LaunchConfiguration('with_rviz'))
-        ),
+        # # RViz2 Node
+        # Node(
+        #     package='rviz2',
+        #     executable='rviz2',
+        #     name='rviz2',
+        #     output='screen',
+        #     arguments=['-d', rviz_config_path],
+        #     condition=IfCondition(LaunchConfiguration('with_rviz'))
+        # ),
     ])

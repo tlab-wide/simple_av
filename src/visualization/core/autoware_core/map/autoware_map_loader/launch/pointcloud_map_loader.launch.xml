@@ -1,5 +1,5 @@
 <launch>
-  <arg name="pointcloud_map_path"/>
+  <arg name="pointcloud_map_path" default="/home/hamidreza/Desktop/ros_ws/src/simple_av/src/common/maps/map.pcd"/>
   <arg name="pointcloud_map_metadata_path"/>
   <arg name="pointcloud_map_loader_param_path" default="$(find-pkg-share autoware_map_loader)/config/pointcloud_map_loader.param.yaml"/>
 
