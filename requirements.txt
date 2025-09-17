@@ -1,7 +1,1 @@
-sudo apt update
 transformations>=2025.1.1
-sudo apt install ros-humble-lanelet2 ros-humble-lanelet2-extension
-sudo apt install ros-humble-lanelet2 ros-humble-lanelet2-projection ros-humble-lanelet2-routing ros-humble-lanelet2-traffic-rules ros-humble-lanelet2-maps
-sudo apt install ros-humble-geographic-msgs
-sudo apt install librange-v3-dev
-sudo apt install libtinyxml2-dev ros-humble-tinyxml2-vendor
