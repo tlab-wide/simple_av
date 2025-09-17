@@ -127,6 +127,19 @@ ros2 run planning behavior_motion_planner
 ros2 run control controller
 ```
 
+### Step 7: Configuration files
+
+- <b>scenario_config</b>: you can change the destination or vehcile model in this file. Vehicle model can be lexus or bus, depends on the scene and the vehicle model on the scene. Changing the vehicle_model to lexus/bus will change the json map that the simple_av uses.
+
+- <b>vehicle_config</b>: Two vehicle model has added to this file, bus and lexus RX450H. this file contains vehicles info like dimensions, weight and speed limits. If you want to use another vehicle model you can add its info here.
+
+- <b>motion_behavior_config</b>: In this file the motion and behavioral configs such as threshold time for collision prediction, safety distance and speed limits are set.
+
+- <b>av_features</b>: On/Off features like traffic light detection and object detection
+
+
+
+
 ## Documentation 
 Full documentation for the project, including architecture details, usage instructions, and API references, can be found [documentation](https://hoosh-ir.github.io/simple_av/).
 
