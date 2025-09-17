@@ -57,6 +57,8 @@ git clone https://github.com/hoosh-ir/simple_av.git
 ### Step 3: install dependencies:
 ```bash
 cd ~/ros_ws/src/simple_av
+chmod +x ros_dependencies.sh
+./ros_dependencies.sh
 pip install -r requirements.txt
 ```
 
