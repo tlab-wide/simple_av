@@ -1,12 +1,13 @@
+is this corrrect?
 import os
-import xml.etree.ElementTree as ET
-
 import rclpy
 from rclpy.node import Node
 from visualization_msgs.msg import Marker, MarkerArray
 from builtin_interfaces.msg import Duration
-from geometry_msgs.msg import Point
 from ament_index_python.packages import get_package_share_directory
+import lanelet2
+import lanelet2.io
+import lanelet2.projection
 
 
 class LaneletMapPublisher(Node):
@@ -15,7 +16,7 @@ class LaneletMapPublisher(Node):
 
         # Resolve the map path
         common_share = get_package_share_directory('common')
-        map_path = os.path.join(common_share, 'maps', 'test.osm')
+        map_path = os.path.join(common_share, 'maps', 'lanelet2_map.osm')
         self.get_logger().info(f"Loading Lanelet2 map from: {map_path}")
 
         # Publisher (latched-like QoS)
@@ -26,35 +27,21 @@ class LaneletMapPublisher(Node):
         )
         self.pub = self.create_publisher(MarkerArray, 'lanelet_map_markers', qos)
 
-        # Load the OSM XML
-        self.tree = ET.parse(map_path)
-        self.root = self.tree.getroot()
+        lat_origin = 35.733  # approx center of your map
+        lon_origin = 139.934
 
-        # Build node dictionary: id -> (x, y, z)
-        self.nodes = {}
-        for node in self.root.findall('node'):
-            node_id = node.attrib['id']
-            local_x = float(node.find("tag[@k='local_x']").attrib['v'])
-            local_y = float(node.find("tag[@k='local_y']").attrib['v'])
-            ele_tag = node.find("tag[@k='ele']")
-            z = float(ele_tag.attrib['v']) if ele_tag is not None else 0.0
-            self.nodes[node_id] = (local_x, local_y, z)
 
-        # Build lanelets
-        self.lanelets = []
-        for lanelet in self.root.findall('lanelet'):
-            left_nodes = [self.nodes[nd.attrib['ref']] for nd in lanelet.find('left').findall('nd')]
-            right_nodes = [self.nodes[nd.attrib['ref']] for nd in lanelet.find('right').findall('nd')]
-            self.lanelets.append({'left': left_nodes, 'right': right_nodes})
+        # Load lanelet map
+        projector = lanelet2.projection.UtmProjector(lanelet2.io.Origin(lat_origin, lon_origin))
+        self.map = lanelet2.io.load(map_path, projector)
 
-        # Publish marker array
         self.publish_map()
 
     def publish_map(self):
         marker_array = MarkerArray()
         marker_id = 0
 
-        for lanelet in self.lanelets:
+        for lanelet in self.map.laneletLayer:
             # Left boundary
             left_marker = Marker()
             left_marker.header.frame_id = "map"
@@ -64,11 +51,11 @@ class LaneletMapPublisher(Node):
             marker_id += 1
             left_marker.type = Marker.LINE_STRIP
             left_marker.action = Marker.ADD
-            left_marker.scale.x = 0.2
+            left_marker.scale.x = 0.5
             left_marker.color.r = 1.0
             left_marker.color.a = 1.0
-            left_marker.lifetime = Duration(sec=0)
-            left_marker.points = [self.point_to_ros(p) for p in lanelet['left']]
+            left_marker.lifetime = Duration()  # zero duration → forever
+            left_marker.points = [self.point_to_ros(p) for p in lanelet.leftBound]
             marker_array.markers.append(left_marker)
 
             # Right boundary
@@ -80,20 +67,22 @@ class LaneletMapPublisher(Node):
             marker_id += 1
             right_marker.type = Marker.LINE_STRIP
             right_marker.action = Marker.ADD
-            right_marker.scale.x = 0.2
+            right_marker.scale.x = 0.5
             right_marker.color.g = 1.0
             right_marker.color.a = 1.0
             right_marker.lifetime = Duration(sec=0)
-            right_marker.points = [self.point_to_ros(p) for p in lanelet['right']]
+            right_marker.points = [self.point_to_ros(p) for p in lanelet.rightBound]
             marker_array.markers.append(right_marker)
 
         self.pub.publish(marker_array)
-        self.get_logger().info("Published Lanelet2 map markers using local_x/local_y coordinates.")
+        self.get_logger().info("Published Lanelet2 map markers once.")
 
-    @staticmethod
-    def point_to_ros(p):
+    def point_to_ros(self, p):
+        from geometry_msgs.msg import Point
         pt = Point()
-        pt.x, pt.y, pt.z = p
+        pt.x = p.x
+        pt.y = p.y
+        pt.z = p.z
         return pt
 
 
@@ -107,6 +96,7 @@ def main(args=None):
 
     node.destroy_node()
     rclpy.shutdown()
+
 
 
 if __name__ == '__main__':
