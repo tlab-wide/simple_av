@@ -1,14 +1,12 @@
-is this corrrect?
-import os
+#!/usr/bin/env python3
 import rclpy
 from rclpy.node import Node
 from visualization_msgs.msg import Marker, MarkerArray
+import xml.etree.ElementTree as ET
+import os
 from builtin_interfaces.msg import Duration
+from geometry_msgs.msg import Point
 from ament_index_python.packages import get_package_share_directory
-import lanelet2
-import lanelet2.io
-import lanelet2.projection
-
 
 class LaneletMapPublisher(Node):
     def __init__(self):
@@ -16,74 +14,96 @@ class LaneletMapPublisher(Node):
 
         # Resolve the map path
         common_share = get_package_share_directory('common')
-        map_path = os.path.join(common_share, 'maps', 'lanelet2_map.osm')
-        self.get_logger().info(f"Loading Lanelet2 map from: {map_path}")
+        map_path = os.path.join(common_share, 'maps', 'test.osm')
+        
+        if not os.path.exists(map_path):
+            self.get_logger().error(f"Lanelet map not found: {map_path}")
+            return
 
-        # Publisher (latched-like QoS)
+        # Parse XML map
+        self.nodes_dict = {}
+        self.ways = []
+        self._parse_map(map_path)
+
+        # Publisher
         qos = rclpy.qos.QoSProfile(
             depth=1,
             durability=rclpy.qos.QoSDurabilityPolicy.TRANSIENT_LOCAL,
             reliability=rclpy.qos.QoSReliabilityPolicy.RELIABLE
         )
-        self.pub = self.create_publisher(MarkerArray, 'lanelet_map_markers', qos)
+        self.publisher = self.create_publisher(MarkerArray, 'lanelet_map_markers', qos)
+        self.timer = self.create_timer(1.0, self.timer_callback)
 
-        lat_origin = 35.733  # approx center of your map
-        lon_origin = 139.934
+        self.get_logger().info(f"Loaded lanelet map from: {map_path}")
+        self.get_logger().info(f"Parsed {len(self.nodes_dict)} nodes and {len(self.ways)} ways.")
+
+    def _parse_map(self, map_path: str):
+        """Parse nodes and ways from Lanelet OSM file."""
+        tree = ET.parse(map_path)
+        root = tree.getroot()
+
+        # Parse nodes (<node> with <tag k="local_x" v="..."/>)
+        for node in root.findall('node'):
+            node_id = node.attrib['id']
+            x, y = None, None
+
+            # Look for tags
+            for tag in node.findall('tag'):
+                if tag.attrib['k'] == 'local_x':
+                    x = float(tag.attrib['v'])
+                elif tag.attrib['k'] == 'local_y':
+                    y = float(tag.attrib['v'])
+
+            # Fallback if no local_x/local_y found
+            if x is None or y is None:
+                x = float(node.attrib.get('lon'))
+                y = float(node.attrib.get('lat'))
+
+            print("debug,", node_id, x, y)
+            self.nodes_dict[node_id] = (x, y)
+
+        # Parse ways (<way id> <nd ref=...>...</way>)
+        for way in root.findall('way'):
+            refs = [nd.attrib['ref'] for nd in way.findall('nd')]
+            self.ways.append(refs)
 
 
-        # Load lanelet map
-        projector = lanelet2.projection.UtmProjector(lanelet2.io.Origin(lat_origin, lon_origin))
-        self.map = lanelet2.io.load(map_path, projector)
+    def create_marker(self, way_refs, way_id):
+        """Create a Marker LINE_STRIP for a way."""
+        marker = Marker()
+        marker.header.frame_id = "map"
+        marker.header.stamp = self.get_clock().now().to_msg()
+        marker.ns = "lanelet_map"
+        marker.id = way_id
+        marker.type = Marker.LINE_STRIP
+        marker.action = Marker.ADD
+        marker.scale.x = 0.2  # line thickness
+        marker.color.r = 0.0
+        marker.color.g = 0.0
+        marker.color.b = 1.0
+        marker.color.a = 1.0
 
-        self.publish_map()
+        # Convert node refs into geometry
+        for ref in way_refs:
+            if ref in self.nodes_dict:
+                x, y = self.nodes_dict[ref]
+                pt = Point()
+                pt.x = x
+                pt.y = y
+                pt.z = 0.0
+                marker.points.append(pt)
+            else:
+                self.get_logger().warn(f"Missing node reference {ref} in way {way_id}")
 
-    def publish_map(self):
+        return marker
+
+
+    def timer_callback(self):
         marker_array = MarkerArray()
-        marker_id = 0
-
-        for lanelet in self.map.laneletLayer:
-            # Left boundary
-            left_marker = Marker()
-            left_marker.header.frame_id = "map"
-            left_marker.header.stamp = self.get_clock().now().to_msg()
-            left_marker.ns = "lanelet_left"
-            left_marker.id = marker_id
-            marker_id += 1
-            left_marker.type = Marker.LINE_STRIP
-            left_marker.action = Marker.ADD
-            left_marker.scale.x = 0.5
-            left_marker.color.r = 1.0
-            left_marker.color.a = 1.0
-            left_marker.lifetime = Duration()  # zero duration → forever
-            left_marker.points = [self.point_to_ros(p) for p in lanelet.leftBound]
-            marker_array.markers.append(left_marker)
-
-            # Right boundary
-            right_marker = Marker()
-            right_marker.header.frame_id = "map"
-            right_marker.header.stamp = self.get_clock().now().to_msg()
-            right_marker.ns = "lanelet_right"
-            right_marker.id = marker_id
-            marker_id += 1
-            right_marker.type = Marker.LINE_STRIP
-            right_marker.action = Marker.ADD
-            right_marker.scale.x = 0.5
-            right_marker.color.g = 1.0
-            right_marker.color.a = 1.0
-            right_marker.lifetime = Duration(sec=0)
-            right_marker.points = [self.point_to_ros(p) for p in lanelet.rightBound]
-            marker_array.markers.append(right_marker)
-
-        self.pub.publish(marker_array)
-        self.get_logger().info("Published Lanelet2 map markers once.")
-
-    def point_to_ros(self, p):
-        from geometry_msgs.msg import Point
-        pt = Point()
-        pt.x = p.x
-        pt.y = p.y
-        pt.z = p.z
-        return pt
+        for i, way_refs in enumerate(self.ways):
+            marker = self.create_marker(way_refs, i)
+            marker_array.markers.append(marker)
+        self.publisher.publish(marker_array)
 
 
 def main(args=None):
@@ -92,11 +112,10 @@ def main(args=None):
 
     # Spin a few times to ensure RViz receives the latched message
     for _ in range(5):
-        rclpy.spin_once(node, timeout_sec=0.1)
+        rclpy.spin_once(node, timeout_sec=0.2)
 
     node.destroy_node()
     rclpy.shutdown()
-
 
 
 if __name__ == '__main__':
