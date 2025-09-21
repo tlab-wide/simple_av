@@ -77,11 +77,11 @@ class LaneletMapPublisher(Node):
         marker.id = way_id
         marker.type = Marker.LINE_STRIP
         marker.action = Marker.ADD
-        marker.scale.x = 0.2  # line thickness
-        marker.color.r = 0.0
-        marker.color.g = 0.0
+        marker.scale.x = 0.3  # line thickness
+        marker.color.r = 1.0
+        marker.color.g = 1.0
         marker.color.b = 1.0
-        marker.color.a = 1.0
+        marker.color.a = 8.0
 
         # Convert node refs into geometry
         for ref in way_refs:
@@ -111,8 +111,7 @@ def main(args=None):
     node = LaneletMapPublisher()
 
     # Spin a few times to ensure RViz receives the latched message
-    for _ in range(20):
-        rclpy.spin_once(node, timeout_sec=0.5)
+    rclpy.spin_once(node, timeout_sec=5.0)
 
     node.destroy_node()
     rclpy.shutdown()
