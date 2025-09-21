@@ -59,7 +59,7 @@ class LaneletMapPublisher(Node):
                 x = float(node.attrib.get('lon'))
                 y = float(node.attrib.get('lat'))
 
-            print("debug,", node_id, x, y)
+            # print("debug,", node_id, x, y)
             self.nodes_dict[node_id] = (x, y)
 
         # Parse ways (<way id> <nd ref=...>...</way>)
@@ -111,8 +111,8 @@ def main(args=None):
     node = LaneletMapPublisher()
 
     # Spin a few times to ensure RViz receives the latched message
-    for _ in range(5):
-        rclpy.spin_once(node, timeout_sec=0.2)
+    for _ in range(20):
+        rclpy.spin_once(node, timeout_sec=0.5)
 
     node.destroy_node()
     rclpy.shutdown()
