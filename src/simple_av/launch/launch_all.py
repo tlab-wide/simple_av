@@ -14,7 +14,7 @@ def generate_launch_description():
     rviz_config_path = os.path.join(
         get_package_share_directory('simple_av'),
         'rviz',
-        'simple_av2.rviz'
+        'simple_av3.rviz'
     )
 
     # map_path = os.path.join(
@@ -64,6 +64,14 @@ def generate_launch_description():
             package='simple_av',
             executable='lanelet_map_publisher',
             name='lanelet_map_publisher',
+            output='screen'
+        ),
+
+        # 👉 path monitor node
+        Node(
+            package='simple_av',
+            executable='monitor',
+            name='monitor',
             output='screen'
         ),
 

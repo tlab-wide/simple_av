@@ -30,9 +30,13 @@ class GNSSPathPublisher(Node):
 def main(args=None):
     rclpy.init(args=args)
     node = GNSSPathPublisher()
-    rclpy.spin(node)
-    node.destroy_node()
-    rclpy.shutdown()
+    try:
+        rclpy.spin(node)  # <-- keep node alive, RViz can subscribe anytime
+    except KeyboardInterrupt:
+        pass
+    finally:
+        node.destroy_node()
+        rclpy.shutdown()
 
 
 if __name__ == '__main__':

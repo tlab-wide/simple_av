@@ -109,9 +109,8 @@ class LaneletMapPublisher(Node):
 def main(args=None):
     rclpy.init(args=args)
     node = LaneletMapPublisher()
-
-    # Spin a few times to ensure RViz receives the latched message
-    rclpy.spin_once(node, timeout_sec=5.0)
+    
+    rclpy.spin_once(node, timeout_sec=10.0)
 
     node.destroy_node()
     rclpy.shutdown()
