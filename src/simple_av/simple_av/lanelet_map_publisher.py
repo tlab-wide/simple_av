@@ -110,7 +110,8 @@ def main(args=None):
     rclpy.init(args=args)
     node = LaneletMapPublisher()
     
-    rclpy.spin_once(node, timeout_sec=10.0)
+    for i in range(2):
+        rclpy.spin_once(node, timeout_sec=10.0)
 
     node.destroy_node()
     rclpy.shutdown()
