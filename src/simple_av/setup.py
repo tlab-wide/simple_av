@@ -25,6 +25,7 @@ setup(
     entry_points={
         'console_scripts': [
             'monitor = simple_av.monitor:main',
+            'lanelet_map_publisher = simple_av.lanelet_map_publisher:main',
         ],
     },
 )
