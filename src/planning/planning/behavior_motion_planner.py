@@ -564,6 +564,10 @@ class BehaviorMotionPlanning(Node):
         Decides whether to run collision prediction based on RSU traffic light data.
         """
         print("debug, intersection awareness:", self.intersection_awareness_intersection_name)
+        
+        # print("debug number of objects: ", len(objects_ahead))
+        # for obj in objects_ahead:
+        #     print("debug, object: ", obj.relative_direction.data)
 
         if self.use_RSU_for_trafficlight:
             print("debug, collision prediction: using RSU for traffic light", self.use_RSU_for_trafficlight)
@@ -579,14 +583,36 @@ class BehaviorMotionPlanning(Node):
 
                     # Traffic light logic
                     if light_166893 in [1, 2]:
-                        if light_165709 in [2, 3]:
-                            print("debug, DO NOT PREDICT")
-                            # return self.predict_collision(objects_ahead, current_closest_point_to_vehicle_index, vehicle_pose)
-                            return []
-                        else:
-                            print("debug, DO NOT PREDICT")
-                            return []
+                        print("debug, DO NOT PREDICT")
+                        return []
+                        # if light_165709 in [2, 3]:
+                        #     print("debug, DO NOT PREDICT")
+                        #     # return self.predict_collision(objects_ahead, current_closest_point_to_vehicle_index, vehicle_pose)
+                        #     return []
+                        # else:
+                        #     print("debug, DO NOT PREDICT")
+                        #     return []
+                    if light_166893 in [3]:
+                        objects_relative_pose = []
+                        for obj in objects_ahead:
+                            rel_pose = obj.relative_direction.data
+                            print("debug, object relative pose:", rel_pose)
+                            objects_relative_pose.append(rel_pose)
 
+                        # Decision logic
+                        if all(pose == "NE" for pose in objects_relative_pose):
+                            print("debug, all objects NE → DO NOT PREDICT")
+                            return []
+                        elif any(pose == "NW" for pose in objects_relative_pose):
+                            print("debug, at least one NW → PREDICT")
+                            return self.predict_collision(objects_ahead, current_closest_point_to_vehicle_index, vehicle_pose)
+                        elif any(pose == "above" for pose in objects_relative_pose):
+                            print("debug, at least one above → PREDICT")
+                            return self.predict_collision(objects_ahead, current_closest_point_to_vehicle_index, vehicle_pose)
+                        else:
+                            print("debug, mixed poses but no NW or above → default to DO NOT PREDICT")
+                            return []
+                        
         # Default: always try to predict collisions
         print("debug, PREDICT")
         return self.predict_collision(objects_ahead, current_closest_point_to_vehicle_index, vehicle_pose)
