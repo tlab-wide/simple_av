@@ -111,6 +111,7 @@ class MissionPlanner(Node):
         self.path = []  # List of waypoints in order of path_as_lanes
         self.curves = []
         self.initial_lane = None
+        self.isFirstRequest = True
         self.search_depth = 5
 
         self.densify_interval = 2.0 # meters / Distance between each two consecutive waypoints on a lane
@@ -222,9 +223,8 @@ class MissionPlanner(Node):
 
         if self.location:
             self.get_logger().info("path planning")
-            self.start_lanelet = self.location.closest_lane_names.data
-            if start_lanelet_respawn:
-                self.start_lanelet = start_lanelet_respawn
+            self.start_lanelet = self.initial_lane
+            print("DEBUG, start lanelet: ", self.start_lanelet)
             self.bfs(self.start_lanelet, self.dest_lanelet) # Creates the path
             if self.path and self.path_as_lanes:
                 self.isPathPlanned = True
@@ -248,8 +248,13 @@ class MissionPlanner(Node):
         self.mission_plan_publisher.publish(mission_msg)
 
     def handle_mission_plan_request(self, request, response):
+        if self.isFirstRequest:
+            self.get_logger().info("Received mission planning request.")
+            self.isFirstRequest = False
+            self.initial_lane = self.location.closest_lane_names.data
+            print("DEBUG, initial lane: ", self.initial_lane)
+        
         self.get_logger().info("Received replan request.")
-
         # Generate path and path_as_lanes
         self.mission_planning()
         print(self.path_as_lanes)

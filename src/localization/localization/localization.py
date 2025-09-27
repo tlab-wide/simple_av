@@ -58,6 +58,14 @@ class Localization(Node):
         self.isGlobalPositioningDone = False
         self.local_positioning_depth_search = 2
 
+        self.isInitialPoseSampled = False
+        self.initial_pose = Point()
+        self.current_pose = Point()
+        self.last_pose = Point()
+        self.initial_closest_point = None
+        self.initial_closest_lane_name = String()
+        self.jumpThreshold = 15.0
+
         # Initialize instance variables for storing closest point and lanes
         self.closest_point = None
         self.closest_lane_name = String()
@@ -97,6 +105,10 @@ class Localization(Node):
     
     def get_pose_msg(self):
         return self.pose_msg
+    
+
+    def calculate_distance(self, point1, point2):
+        return  math.sqrt((point1.x - point2.x)**2 + (point1.y - point2.y)**2)
     
     def display_map(self, displayTrafficLight = False):
         for lanelet in self.map_data:
@@ -269,8 +281,8 @@ class Localization(Node):
             closest_point, closest_lane_name, min_distance = self.get_closest_point_and_lane(current_position)
             self.display_vehicle_position(pose_msg, closest_point, closest_lane_name, min_distance)
             self.isGlobalPositioningDone = True
-            return closest_point, closest_lane_name, min_distance
-        return None, [], float('inf')
+            return closest_point, closest_lane_name, min_distance, current_position
+        return None, [], float('inf'), Point(0.0, 0.0, 0.0)
     
     def local_positioning(self, closest_point, closest_lane_name, min_distance):
         """
@@ -299,12 +311,14 @@ class Localization(Node):
         local_search_area = self.build_search_area(closest_lane_name)
         pose_msg = self.get_pose_msg()
         if pose_msg:
+            # local_search_area = self.build_search_area(closest_lane_name)
             current_position = Point(pose_msg.pose.position.x, pose_msg.pose.position.y, pose_msg.pose.position.z)
             closest_point, closest_lane_name, min_distance = self.get_closest_point_and_lane(current_position, local_search_area)
             self.display_vehicle_position(pose_msg, closest_point, closest_lane_name, min_distance)
-            return closest_point, closest_lane_name, min_distance
+            return closest_point, closest_lane_name, min_distance, current_position
         else:
-            return closest_point, closest_lane_name, min_distance
+            return closest_point, closest_lane_name, min_distance, self.last_pose
+
 
     def localization(self):
         """
@@ -315,26 +329,68 @@ class Localization(Node):
         - If already globally positioned, calls local_positioning using previous closest point and lane names.
         - Continues to update self.closest_point, self.closest_lane_name, and self.min_distance accordingly.
         """
+        if self.reset:
+            self.get_logger().warning("RESET")
+            self.isGlobalPositioningDone = False
+            return
+
+        if not self.isInitialPoseSampled:
+            self.get_logger().warning("GLOBAL POSITIONING INITIALIZATION")
+            self.closest_point, self.closest_lane_name, self.min_distance, self.current_position = self.global_positioning()
+            if self.closest_point is None:
+                self.get_logger().warning("INITIALIZATION - NO DATA")
+                return 
+            self.initial_pose = self.current_position
+            self.last_pose = self.current_position
+            self.initial_closest_point = self.closest_point
+            self.initial_closest_lane_name = self.closest_lane_name
+            self.isInitialPoseSampled = True
+            self.get_logger().warning("GLOBAL POSITIONING INITIALIZATION Completed")
+            self.publish_vehicle_location(self.closest_point, self.closest_lane_name, self.min_distance)
+            return
+
         if self.finished:
-            self.get_logger().info("Test has finished - Localization stopped")
+            self.get_logger().warning("Test has finished - Localization stopped")
             self.node_shut = True
             return
+        
+        if self.calculate_distance(self.current_position, self.last_pose) > self.jumpThreshold:
+            self.get_logger().warning("Jump Detected")
+            self.last_pose = self.current_position
+            # self.isGlobalPositioningDone = False
+            self.closest_lane_name = self.initial_closest_lane_name
+            return
+
         if not self.isGlobalPositioningDone:
-            self.get_logger().info("GLOBAL POSITIONING")
+            self.get_logger().warning("GLOBAL POSITIONING")
             # self.get_logger().info(f"global positioning, {self.isGlobalPositioningDone}")
-            self.closest_point, self.closest_lane_name, self.min_distance = self.global_positioning()
+            self.closest_point, self.closest_lane_name, self.min_distance, self.current_position = self.global_positioning()
         else:
             self.get_logger().info("LOCAL POSITIONING")
-            if self.reset:
-                self.get_logger().info("RESET")
-                self.isGlobalPositioningDone = False
-                return
             if self.min_distance > 10.0:
                 self.get_logger().warning("Threshold - global positioning")
                 self.isGlobalPositioningDone = False
                 return
-            self.closest_point, self.closest_lane_name, self.min_distance = self.local_positioning(self.closest_point, self.closest_lane_name, self.min_distance)
-            self.publish_vehicle_location(self.closest_point, self.closest_lane_name, self.min_distance)
+            
+            self.closest_point, self.closest_lane_name, self.min_distance, self.current_position = self.local_positioning(self.closest_point, self.closest_lane_name, self.min_distance)
+
+        if self.calculate_distance(self.current_position, self.last_pose) > self.jumpThreshold:
+            self.get_logger().warning("Jump Detected")
+            self.last_pose = self.current_position
+            self.isGlobalPositioningDone = False
+            self.closest_lane_name = self.initial_closest_lane_name
+            
+        
+        # self.get_logger().info(
+        #     f'INITIAL CHECK UP\n'
+        #     f'initial Position:  {self.initial_pose.get_point()}\n'
+        #     f'initial Closest point: {self.initial_closest_point.get_point()}\n'
+        #     f'initial Closest Lane: {self.initial_closest_lane_name}\n'
+        #     f'Minimum distance - {self.min_distance}\n'
+        # )
+        
+        self.last_pose = self.current_position
+        self.publish_vehicle_location(self.closest_point, self.closest_lane_name, self.min_distance)
 
     def publish_vehicle_location(self, closest_point, closest_lane_name, min_distance):
         localization_result = LocalizationMsg()
