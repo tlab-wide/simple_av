@@ -365,10 +365,6 @@ class BehaviorPathPlanner(Node):
             self.prev_lookahead_index = 0
             self.current_lane_index = 0
             return
-            # self.get_logger().info("Requesting Misson planning Service ...")
-            # self.request_mission_plan()
-            # rclpy.spin_once(self, timeout_sec=0.125)  # allow 0.25s to receive mission plan
-            # self.handle_mission_plan()
         
         if not self.path and not self.path_as_lanes:
             self.get_logger().warning("Path has not initialized from Mission Planner!!")
@@ -395,8 +391,6 @@ class BehaviorPathPlanner(Node):
 
         self.publish_curve_internal_msg(isTurnDetected, isEndOfPath)
         self.publish_path_planning_msgs(look_ahead_point, self.speeds_on_path[look_ahead_point_index]) # publishing
-        
-        print("DEBUG, search area lanes: ", search_area_as_lanes)
 
         self.get_logger().info(
             f'behavior path planning\n'

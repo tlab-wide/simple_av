@@ -224,7 +224,6 @@ class MissionPlanner(Node):
         if self.location:
             self.get_logger().info("path planning")
             self.start_lanelet = self.initial_lane
-            print("DEBUG, start lanelet: ", self.start_lanelet)
             self.bfs(self.start_lanelet, self.dest_lanelet) # Creates the path
             if self.path and self.path_as_lanes:
                 self.isPathPlanned = True
@@ -252,7 +251,6 @@ class MissionPlanner(Node):
             self.get_logger().info("Received mission planning request.")
             self.isFirstRequest = False
             self.initial_lane = self.location.closest_lane_names.data
-            print("DEBUG, initial lane: ", self.initial_lane)
         
         self.get_logger().info("Received replan request.")
         # Generate path and path_as_lanes

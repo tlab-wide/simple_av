@@ -381,14 +381,6 @@ class Localization(Node):
             self.closest_lane_name = self.initial_closest_lane_name
             
         
-        # self.get_logger().info(
-        #     f'INITIAL CHECK UP\n'
-        #     f'initial Position:  {self.initial_pose.get_point()}\n'
-        #     f'initial Closest point: {self.initial_closest_point.get_point()}\n'
-        #     f'initial Closest Lane: {self.initial_closest_lane_name}\n'
-        #     f'Minimum distance - {self.min_distance}\n'
-        # )
-        
         self.last_pose = self.current_position
         self.publish_vehicle_location(self.closest_point, self.closest_lane_name, self.min_distance)
 
