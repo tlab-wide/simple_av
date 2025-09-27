@@ -584,14 +584,8 @@ class BehaviorMotionPlanning(Node):
                     # Traffic light logic
                     if light_166893 in [1, 2]:
                         print("debug, DO NOT PREDICT")
+                        # TODO: Consider Pedestrians and cyclists
                         return []
-                        # if light_165709 in [2, 3]:
-                        #     print("debug, DO NOT PREDICT")
-                        #     # return self.predict_collision(objects_ahead, current_closest_point_to_vehicle_index, vehicle_pose)
-                        #     return []
-                        # else:
-                        #     print("debug, DO NOT PREDICT")
-                        #     return []
                     if light_166893 in [3]:
                         objects_relative_pose = []
                         for obj in objects_ahead:
