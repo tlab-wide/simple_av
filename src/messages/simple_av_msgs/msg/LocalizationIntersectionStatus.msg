@@ -1,4 +1,4 @@
-# Name of the intersection (e.g., "intersection_1")
+# Name of the intersection (e.g., "1", "2")
 string intersection_name
 
 # Status can be: "approaching", "in", "exiting", or "none"

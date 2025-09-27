@@ -12,7 +12,7 @@ import math
 from collections import deque
 from simple_av_msgs.msg import TrafficSignalsArray, DetectedObjectsArray
 from simple_av_msgs.msg import PlanningInternalMsg, PlanningInternalMissionPlanMsg, PlanningMotionPlanningMsg
-from simple_av_msgs.msg import LocalizationMsg
+from simple_av_msgs.msg import LocalizationMsg, LocalizationIntersectionStatus
 from simple_av_msgs.msg import SimMonitor, Portal
 import numpy as np
 from scipy.spatial.transform import Rotation as R
@@ -93,6 +93,11 @@ class BehaviorMotionPlanning(Node):
         self.subscriptionSimMonitor = self.create_subscription(SimMonitor, 'simple_av/sim_monitor', self.sim_monitor_callback, 100)
         self.sim_clock_rate = 0
 
+        # Create subscriber to simple_av/localization/intersection_status topic
+        self.subscriptionIntersectionAwareness = self.create_subscription(LocalizationIntersectionStatus, 'simple_av/localization/intersection_status', self.intersectionAwareness_callback, 10)
+        self.intersection_awareness_intersection_name = None
+        self.intersection_awareness_status = None
+
         qos_profile = QoSProfile(
             history=QoSHistoryPolicy.KEEP_LAST,
             depth=1,
@@ -155,6 +160,10 @@ class BehaviorMotionPlanning(Node):
         self.mission_plan = msg
         self.path = self.mission_plan.path
         self.path_as_lanes = self.mission_plan.path_as_lanes
+    
+    def intersectionAwareness_callback(self, msg):
+        self.intersection_awareness_intersection_name = msg.intersection_name
+        self.intersection_awareness_status = msg.status
 
     def sim_monitor_callback(self, msg):
         self.sim_clock_rate = msg.sim_clock_rate
@@ -512,16 +521,30 @@ class BehaviorMotionPlanning(Node):
         self.get_logger().info("Imediate threat. Objects ahead in danger zone")
         return self.get_stop_point_by_safety_distance(closest_object_info['waypoint'], vehicle_pose, 'on_path')
     
-    def collison_prediction(self, objects_ahead, current_closest_point_to_vehicle_index, vehicle_pose):
+    def predict_collision(self, objects_ahead, current_closest_point_to_vehicle_index, vehicle_pose):
+        """
+        Predict potential collisions with objects ahead of the vehicle.
+        Returns a list of stop points if collision risk is detected.
+        """
+        predicted_stop_points = []
+
+        # Get only objects within detection range
         objects_in_range = self.get_objects_in_range(objects_ahead, self.detection_range)
         if not objects_in_range:
             return None
-        objects_absolute_positions = [self.get_object_absolute_position(self.pose.pose.orientation, vehicle_pose, obj.position) for obj in objects_in_range]
-        waypoints = self.path_of_waypoints[current_closest_point_to_vehicle_index:current_closest_point_to_vehicle_index + int(self.reaction_range / self.densify_interval) + 1]
-        if self.use_RSU_for_trafficlight:
-            if self.get_traffic_light_color_by_id(166893) == 1:
-                return []
-        predicted_stop_points = []
+
+        # Extract relevant waypoints ahead of the vehicle
+        waypoints = self.path_of_waypoints[
+            current_closest_point_to_vehicle_index:
+            current_closest_point_to_vehicle_index + int(self.reaction_range / self.densify_interval) + 1
+        ]
+
+        # Transform object positions into global coordinates
+        objects_absolute_positions = [
+            self.get_object_absolute_position(self.pose.pose.orientation, vehicle_pose, obj.position)
+            for obj in objects_in_range
+        ]
+            
         for i in range(len(objects_in_range)):
             for j in range(1, len(waypoints) - 1):
                 forward_vector = self.get_forward_vector(objects_in_range[i].orientation)
@@ -534,6 +557,60 @@ class BehaviorMotionPlanning(Node):
                             predicted_stop_points.append(stop_point)
                             break
         return predicted_stop_points
+
+    def collison_prediction(self, objects_ahead, current_closest_point_to_vehicle_index, vehicle_pose):
+        """
+        High-level collision prediction logic with traffic light awareness.
+        Decides whether to run collision prediction based on RSU traffic light data.
+        """
+        print("debug, intersection awareness:", self.intersection_awareness_intersection_name)
+        
+        # print("debug number of objects: ", len(objects_ahead))
+        # for obj in objects_ahead:
+        #     print("debug, object: ", obj.relative_direction.data)
+
+        if self.use_RSU_for_trafficlight:
+            print("debug, collision prediction: using RSU for traffic light", self.use_RSU_for_trafficlight)
+
+            if self.intersection_awareness_intersection_name is not None:
+                print("debug, intersection awareness is not NULL")
+
+                if self.intersection_awareness_intersection_name == "1":
+                    light_166893 = self.get_traffic_light_color_by_id(166893)
+                    light_165709 = self.get_traffic_light_color_by_id(165709)
+
+                    print("debug, 166893, 165709 traffic light status:", light_166893, light_165709)
+
+                    # Traffic light logic
+                    if light_166893 in [1, 2]:
+                        print("debug, DO NOT PREDICT")
+                        # TODO: Consider Pedestrians and cyclists
+                        return []
+                    if light_166893 in [3]:
+                        objects_relative_pose = []
+                        for obj in objects_ahead:
+                            rel_pose = obj.relative_direction.data
+                            print("debug, object relative pose:", rel_pose)
+                            objects_relative_pose.append(rel_pose)
+
+                        # Decision logic
+                        if all(pose == "NE" for pose in objects_relative_pose):
+                            print("debug, all objects NE → DO NOT PREDICT")
+                            return []
+                        elif any(pose == "NW" for pose in objects_relative_pose):
+                            print("debug, at least one NW → PREDICT")
+                            return self.predict_collision(objects_ahead, current_closest_point_to_vehicle_index, vehicle_pose)
+                        elif any(pose == "above" for pose in objects_relative_pose):
+                            print("debug, at least one above → PREDICT")
+                            return self.predict_collision(objects_ahead, current_closest_point_to_vehicle_index, vehicle_pose)
+                        else:
+                            print("debug, mixed poses but no NW or above → default to DO NOT PREDICT")
+                            return []
+                        
+        # Default: always try to predict collisions
+        print("debug, PREDICT")
+        return self.predict_collision(objects_ahead, current_closest_point_to_vehicle_index, vehicle_pose)
+
     
     def find_closest_stop_point(self, traffic_light_stopPoint, on_path_collision_avoidance_stopPoint, predicted_collisons_stopPoints, destination_stopPoint, vehicle_pose):
         # Create a dictionary for stop points
@@ -576,8 +653,6 @@ class BehaviorMotionPlanning(Node):
 
         # Distance to the destination
         # distance_to_destination = self.calculate_distance(vehicle_pose, self.destination)
-        
-        # TODO: Distance to the destination 
 
         # Traffic light detection
         trafficLightTask, traffic_light_stopPoint = self.manage_traffic_lights()
@@ -658,11 +733,11 @@ class BehaviorMotionPlanning(Node):
         
         self.publish_motion_planning_msgs(stop_point) # publishing
         
-        self.get_logger().info(
-            f'behavior motion planning\n'
-            f'distance to stop point: {self.calculate_distance(vehicle_pose, stop_point)}\n'
-            f'status: {self.status.data}\n'
-        )
+        # self.get_logger().info(
+        #     f'behavior motion planning\n'
+        #     f'distance to stop point: {self.calculate_distance(vehicle_pose, stop_point)}\n'
+        #     f'status: {self.status.data}\n'
+        # )
         
         self.previous_speed_slidingWindow.append(self.current_speed)
 

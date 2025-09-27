@@ -346,7 +346,7 @@ class BehaviorPathPlanner(Node):
         if not self.isPathPlanned:
             self.get_logger().info("Requesting Misson planning Service ...")
             self.request_mission_plan()
-            rclpy.spin_once(self, timeout_sec=0.25)  # allow 0.25s to receive mission plan
+            rclpy.spin_once(self, timeout_sec=0.2)  # allow 0.25s to receive mission plan
             self.handle_mission_plan()
             self.get_logger().info("Start Local Path Planning...")
             if self.path and self.path_as_lanes:
@@ -363,10 +363,8 @@ class BehaviorPathPlanner(Node):
             self.get_logger().warning("RESET")
             self.isPathPlanned = False
             self.prev_lookahead_index = 0
-            self.get_logger().info("Requesting Misson planning Service ...")
-            self.request_mission_plan()
-            rclpy.spin_once(self, timeout_sec=0.125)  # allow 0.25s to receive mission plan
-            self.handle_mission_plan()
+            self.current_lane_index = 0
+            return
         
         if not self.path and not self.path_as_lanes:
             self.get_logger().warning("Path has not initialized from Mission Planner!!")
@@ -393,12 +391,12 @@ class BehaviorPathPlanner(Node):
 
         self.publish_curve_internal_msg(isTurnDetected, isEndOfPath)
         self.publish_path_planning_msgs(look_ahead_point, self.speeds_on_path[look_ahead_point_index]) # publishing
-        
+
         self.get_logger().info(
             f'behavior path planning\n'
             f'lookahead distance:  {self.lookahead_distance}\n'
             f'current point index:  {current_closest_point_to_vehicle_index}\n'
-            f'lookahead point index:  {look_ahead_point_index}\n'
+            f'lookahead point index:  {look_ahead_point_index} {self.prev_lookahead_index}\n'
             f'speed: {self.speeds_on_path[look_ahead_point_index]}\n'
             f'is turn detected: {isTurnDetected}\n'
         )

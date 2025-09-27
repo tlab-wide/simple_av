@@ -326,18 +326,18 @@ class Perception(Node):
         detected_objects_msg.objects = detected_objects_list
         self.publisher_detected_objects.publish(detected_objects_msg)
 
-        # print("number of objects: ", len(detected_objects_msg.objects))
-        # for obj in detected_objects_msg.objects:
-        #     if obj.label != 8:
-        #         print("is RSU:", obj.is_from_rsu)
-        #         print("vehicle type:", obj.label)
-        #         print("Direction from vehicle POV: ", obj.relative_direction.data)
-        #         print("Object relative Position from Vehicle: ", obj.position.x, obj.position.y)
-        #         print("Object Orientation: ", obj.orientation.x, obj.orientation.y, obj.orientation.z, obj.orientation.w)
-        #         print("Object speed: ", obj.velocity)
-        #         print("DEBUG - min dist: ", obj.distance) 
-        #         print("object shape size: ", obj.shape)
-        #         print("---------------------")
+        print("number of objects: ", len(detected_objects_msg.objects))
+        for obj in detected_objects_msg.objects:
+            if obj.label != 8:
+                print("is RSU:", obj.is_from_rsu)
+                print("vehicle type:", obj.label)
+                print("Direction from vehicle POV: ", obj.relative_direction.data)
+                print("Object relative Position from Vehicle: ", obj.position.x, obj.position.y)
+                print("Object Orientation: ", obj.orientation.x, obj.orientation.y, obj.orientation.z, obj.orientation.w)
+                print("Object speed: ", obj.velocity)
+                print("DEBUG - min dist: ", obj.distance) 
+                print("object shape size: ", obj.shape)
+                print("---------------------")
 
 def main(args=None):
     rclpy.init(args=args)

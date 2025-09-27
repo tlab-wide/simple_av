@@ -134,10 +134,11 @@ class TrafficSignalHandler(Node):
         v2i_traffic_signals_colors = []
 
         # Handle traffic signals
+        # print("debug intersection awareness: ", self.intersection_awareness_intersection_name)
         if self.enable_trafficlight and self.intersection_awareness_intersection_name is not None:
             v2i_traffic_signals_id, v2i_traffic_signals_colors = self.process_traffic_signals()
-            # print(v2i_traffic_signals_id)
-            # print(v2i_traffic_signals_colors) 
+            print(v2i_traffic_signals_id)
+            print(v2i_traffic_signals_colors) 
 
         # Create and publish traffic signals message
         traffic_signals_msg = TrafficSignalsArray()
