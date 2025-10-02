@@ -5,9 +5,10 @@ Panels:
     Property Tree Widget:
       Expanded:
         - /Sensing1/LiDAR1/ConcatenatePointCloud1/Autocompute Value Bounds1
-        - /MarkerArray1/Topic1
+        - /laneletmap1/Topic1
+        - /LookAheadPoint1/Topic1
       Splitter Ratio: 0.557669460773468
-    Tree Height: 160
+    Tree Height: 269
   - Class: rviz_common/Selection
     Name: Selection
   - Class: rviz_common/Tool Properties
@@ -3162,6 +3163,7 @@ Visualization Manager:
                 Value: /sensing/camera/camera6/image_raw
               Value: true
               Visibility:
+                "": true
                 Control:
                   "": true
                   Value: false
@@ -3213,15 +3215,16 @@ Visualization Manager:
                     Value: true
                   Value: true
                 DetectedObjects: true
+                EGO vehicle: true
                 Localization:
                   "":
                     "": true
                     Value: true
                   Value: false
+                LookAheadPoint: true
                 Map:
                   "": true
                   Value: false
-                MarkerArray: true
                 Path: true
                 Perception:
                   "":
@@ -3233,7 +3236,6 @@ Visualization Manager:
                     "": true
                     Value: true
                   Value: false
-                Pose: true
                 RSU1 PO: true
                 RSU2 PO: true
                 RSU4 PO: true
@@ -3247,6 +3249,7 @@ Visualization Manager:
                   "": true
                   Value: false
                 Value: true
+                laneletmap: true
               Zoom Factor: 1
             - Alpha: 1
               Autocompute Intensity Bounds: true
@@ -4293,7 +4296,7 @@ Visualization Manager:
       Name: Debug
     - Class: rviz_default_plugins/MarkerArray
       Enabled: true
-      Name: MarkerArray
+      Name: laneletmap
       Namespaces:
         lanelet_map: true
       Topic:
@@ -4311,7 +4314,7 @@ Visualization Manager:
       Enabled: true
       Head Length: 1
       Head Radius: 1
-      Name: Pose
+      Name: EGO vehicle
       Shaft Length: 2
       Shaft Radius: 0.5
       Shape: Arrow
@@ -4375,14 +4378,18 @@ Visualization Manager:
       Display Yaw Covariance: false
       Display Yaw Rate: false
       Display Yaw Rate Covariance: false
-      Enabled: false
+      Enabled: true
       Line Width: 0.029999999329447746
       MOTORCYCLE:
         Alpha: 0.9990000128746033
         Color: 119; 11; 32
       Name: DetectedObjects
       Namespaces:
-        {}
+        label: true
+        position covariance: true
+        shape: true
+        twist: true
+        velocity: true
       Object Fill Type: skeleton
       PEDESTRIAN:
         Alpha: 0.9990000128746033
@@ -4403,7 +4410,7 @@ Visualization Manager:
       UNKNOWN:
         Alpha: 0.9990000128746033
         Color: 255; 255; 255
-      Value: false
+      Value: true
       Visualization Type: Normal
     - BUS:
         Alpha: 0.9990000128746033
@@ -4436,7 +4443,13 @@ Visualization Manager:
         Color: 119; 11; 32
       Name: RSU1 PO
       Namespaces:
-        {}
+        acceleration: true
+        label: true
+        position covariance: true
+        shape: true
+        twist: true
+        uuid: true
+        velocity: true
       Object Fill Type: Fill
       PEDESTRIAN:
         Alpha: 0.9990000128746033
@@ -4483,7 +4496,7 @@ Visualization Manager:
       Display Yaw Covariance: false
       Display Yaw Rate: false
       Display Yaw Rate Covariance: false
-      Enabled: true
+      Enabled: false
       Line Width: 0.20000000298023224
       MOTORCYCLE:
         Alpha: 0.9990000128746033
@@ -4511,7 +4524,7 @@ Visualization Manager:
       UNKNOWN:
         Alpha: 0.9990000128746033
         Color: 255; 255; 255
-      Value: true
+      Value: false
       Visualization Type: Normal
     - BUS:
         Alpha: 0.9990000128746033
@@ -4537,7 +4550,7 @@ Visualization Manager:
       Display Yaw Covariance: false
       Display Yaw Rate: false
       Display Yaw Rate Covariance: false
-      Enabled: true
+      Enabled: false
       Line Width: 0.20000000298023224
       MOTORCYCLE:
         Alpha: 0.9990000128746033
@@ -4565,7 +4578,7 @@ Visualization Manager:
       UNKNOWN:
         Alpha: 0.9990000128746033
         Color: 255; 255; 255
-      Value: true
+      Value: false
       Visualization Type: Normal
     - BUS:
         Alpha: 0.9990000128746033
@@ -4591,7 +4604,7 @@ Visualization Manager:
       Display Yaw Covariance: false
       Display Yaw Rate: false
       Display Yaw Rate Covariance: false
-      Enabled: true
+      Enabled: false
       Line Width: 0.20000000298023224
       MOTORCYCLE:
         Alpha: 0.9990000128746033
@@ -4619,8 +4632,34 @@ Visualization Manager:
       UNKNOWN:
         Alpha: 0.9990000128746033
         Color: 255; 255; 255
-      Value: true
+      Value: false
       Visualization Type: Normal
+    - Class: rviz_default_plugins/Marker
+      Enabled: true
+      Name: LookAheadPoint
+      Namespaces:
+        {}
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /lookahead_point_marker
+      Value: true
+    - Class: rviz_default_plugins/Marker
+      Enabled: true
+      Name: StopPoint
+      Namespaces:
+        {}
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /stop_point_marker
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 15; 20; 23
@@ -4728,11 +4767,11 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Scale: 2.200875997543335
+      Scale: 14.904873847961426
       Target Frame: viewer
       Value: TopDownOrtho (rviz_default_plugins)
-      X: 4216.56982421875
-      Y: 73424.96875
+      X: 4233.47265625
+      Y: 73456.203125
     Saved:
       - Class: rviz_default_plugins/ThirdPersonFollower
         Distance: 18
@@ -4776,12 +4815,12 @@ Window Geometry:
     collapsed: false
   Displays:
     collapsed: false
-  Height: 731
+  Height: 1043
   Hide Left Dock: false
   Hide Right Dock: false
   PointcloudOnCamera:
     collapsed: false
-  QMainWindow State: 000000ff00000000fd0000000400000000000000ef00000281fc020000000efb0000001200530065006c0065006300740069006f006e00000001e10000009b0000005c00fffffffb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb00000024004100750074006f00770061007200650053007400610074006500500061006e0065006c000000003d000001cb0000006e00fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261fb0000000c00430061006d0065007200610100000682000000eb0000000000000000fb0000000a0049006d0061006700650100000505000002680000000000000000fb0000002c0049006e0069007400690061006c0050006f007300650042007500740074006f006e00500061006e0065006c000000068f000000de0000000000000000fb0000002c0049006e0069007400690061006c0050006f007300650042007500740074006f006e00500061006e0065006c000000068f000000de0000000000000000fb00000030005200650063006f0067006e006900740069006f006e0052006500730075006c0074004f006e0049006d006100670065000000003d000002810000002800fffffffb0000002a004100750074006f0077006100720065004400610074006500540069006d006500500061006e0065006c0000000332000000720000004100fffffffb000000240050006f0069006e00740063006c006f00750064004f006e00430061006d006500720061000000039d000000560000002800ffffff000000010000015600000281fc0200000004fb000000100044006900730070006c006100790073010000003d000000dd000000c900fffffffc000001200000019e000000c10100001cfa000000000100000002fb0000000a0056006900650077007301000005d5000001ab0000010000fffffffb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000000ffffffff0000009d00fffffffb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000e7a0000005afc0100000001fb0000000a00560069006500770073030000004e00000080000002e1000001970000000300000e7a0000005afc0100000002fb0000000800540069006d0065010000000000000e7a0000000000000000fb0000000800540069006d00650100000000000004500000000000000000000002a40000028100000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  QMainWindow State: 000000ff00000000fd0000000400000000000000ef00000281fc020000000efb0000001200530065006c0065006300740069006f006e00000001e10000009b0000005c00fffffffb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb00000024004100750074006f00770061007200650053007400610074006500500061006e0065006c000000003d000001cb0000006e00fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261fb0000000c00430061006d0065007200610100000682000000eb0000000000000000fb0000000a0049006d0061006700650100000505000002680000000000000000fb0000002c0049006e0069007400690061006c0050006f007300650042007500740074006f006e00500061006e0065006c000000068f000000de0000000000000000fb0000002c0049006e0069007400690061006c0050006f007300650042007500740074006f006e00500061006e0065006c000000068f000000de0000000000000000fb00000030005200650063006f0067006e006900740069006f006e0052006500730075006c0074004f006e0049006d006100670065000000003d000002810000002800fffffffb0000002a004100750074006f0077006100720065004400610074006500540069006d006500500061006e0065006c0000000332000000720000004100fffffffb000000240050006f0069006e00740063006c006f00750064004f006e00430061006d006500720061000000039d000000560000002800ffffff0000000100000156000003b9fc0200000004fb000000100044006900730070006c006100790073010000003d0000014a000000c900fffffffc0000018d00000269000000c10100001cfa000000000100000002fb0000000a0056006900650077007301000005d5000001ab0000010000fffffffb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000000ffffffff0000009d00fffffffb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000e7a0000005afc0100000001fb0000000a00560069006500770073030000004e00000080000002e1000001970000000300000e7a0000005afc0100000002fb0000000800540069006d0065010000000000000e7a0000000000000000fb0000000800540069006d0065010000000000000450000000000000000000000624000003b900000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
   RecognitionResultOnImage:
     collapsed: false
   Selection:
@@ -4790,6 +4829,6 @@ Window Geometry:
     collapsed: false
   Views:
     collapsed: false
-  Width: 1024
-  X: 483
+  Width: 1920
+  X: 0
   Y: 0
