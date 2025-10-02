@@ -23,6 +23,7 @@ setup(
     entry_points={
         'console_scripts': [
             'portal = system.portal:main',
+            'sim_monitor = system.sim_monitor:main',
             'sim_monitor = system.sim_monitor:main'
         ],
     },
