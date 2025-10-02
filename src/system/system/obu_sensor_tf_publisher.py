@@ -4,7 +4,6 @@ from geometry_msgs.msg import PoseStamped, TransformStamped
 from tf2_ros import TransformBroadcaster
 import yaml
 import os
-from tf_transformations import quaternion_from_euler
 from ament_index_python.packages import get_package_share_directory
 
 class SensorTFPublisher(Node):
@@ -36,12 +35,8 @@ class SensorTFPublisher(Node):
 
     def gnss_callback(self, msg: PoseStamped):
         # Vehicle pose in map frame
-        veh_pose = msg.pose
+        vehicle_pose = msg.pose
 
-        # Sensor offset in vehicle frame
-        q_offset = quaternion_from_euler(
-            self.sensor_kit_base_link['roll'], self.sensor_kit_base_link['pitch'], self.sensor_kit_base_link['yaw']
-        )
 
         # Build transform map -> sensor_kit_base_link
         t = TransformStamped()
@@ -49,14 +44,20 @@ class SensorTFPublisher(Node):
         t.header.frame_id = "map"
         t.child_frame_id = "sensor_kit_base_link"
 
-        # Apply vehicle pose + sensor offset (simplified: assumes vehicle orientation applied directly)
-        t.transform.translation.x = veh_pose.position.x + self.sensor_kit_base_link['x']
-        t.transform.translation.y = veh_pose.position.y + self.sensor_kit_base_link['y']
-        t.transform.translation.z = veh_pose.position.z + self.sensor_kit_base_link['z']
+        # Just add the static offsets
+        t.transform.translation.x = vehicle_pose.position.x + self.sensor_kit_base_link['x']
+        t.transform.translation.y = vehicle_pose.position.y + self.sensor_kit_base_link['y']
+        t.transform.translation.z = vehicle_pose.position.z + self.sensor_kit_base_link['z']
 
-        # Orientation = vehicle orientation * sensor orientation offset
-        # (for now just vehicle orientation, extend with quaternion multiplication if needed)
-        t.transform.rotation = veh_pose.orientation  
+        # Orientation = vehicle orientation (no extra rotations needed)
+        t.transform.rotation = vehicle_pose.orientation  
+
+        self.get_logger().info(
+            f"tf publisher\n"
+            f"calibrations: {self.sensor_kit_base_link['x']}, {self.sensor_kit_base_link['y']}, {self.sensor_kit_base_link['z']}\n"
+            f"vehicle pose: {vehicle_pose.position.x}, {vehicle_pose.position.y}, {vehicle_pose.position.z}\n"
+        )
+
 
         self.br.sendTransform(t)
 
