@@ -6,8 +6,6 @@ Panels:
       Expanded:
         - /Sensing1/LiDAR1/ConcatenatePointCloud1/Autocompute Value Bounds1
         - /laneletmap1/Topic1
-        - /LookAheadPoint1
-        - /LookAheadPoint1/Status1
         - /LookAheadPoint1/Topic1
       Splitter Ratio: 0.557669460773468
     Tree Height: 269
@@ -3172,15 +3170,43 @@ Visualization Manager:
                 Debug:
                   Control: true
                   Localization:
-                    "": true
+                    EKFPoseHistory: true
+                    NDT pointclouds: true
+                    NDTLoadedPCDMap: true
+                    NDTPoseHistory: true
                     Value: true
                   Map: true
                   Perception:
-                    "": true
+                    CameraLidarFusion(purple): true
+                    Centerpoint(red1): true
+                    CenterpointROIFusion(red2): true
+                    CenterpointValidator(red3): true
+                    Detection(yellow): true
+                    DetectionByTracker(orange): true
+                    PointPainting(light_green1): true
+                    PointPaintingROIFusion(light_green2): true
+                    PointPaintingValidator(light_green3): true
+                    Prediction(light_blue): true
+                    RadarFarObjects(white): true
+                    Tracking(green): true
                     Value: true
                   Planning:
-                    "":
-                      "": true
+                    Objects Of Interest:
+                      AvoidanceByLCLeft: true
+                      AvoidanceByLCRight: true
+                      AvoidanceLeft: true
+                      AvoidanceRight: true
+                      BlindSpot: true
+                      Crosswalk: true
+                      DetectionArea: true
+                      GoalPlanner: true
+                      Intersection: true
+                      LaneChangeLeft: true
+                      LaneChangeRight: true
+                      NoStoppingArea: true
+                      ObstacleCruise: true
+                      StartPlanner: true
+                      TrafficLight: true
                       Value: true
                     Value: true
                   Sensing:
@@ -3195,6 +3221,7 @@ Visualization Manager:
                     "": true
                     Value: true
                   Value: false
+                LookAheadPoint: true
                 Map:
                   "": true
                   Value: false
@@ -4351,14 +4378,18 @@ Visualization Manager:
       Display Yaw Covariance: false
       Display Yaw Rate: false
       Display Yaw Rate Covariance: false
-      Enabled: false
+      Enabled: true
       Line Width: 0.029999999329447746
       MOTORCYCLE:
         Alpha: 0.9990000128746033
         Color: 119; 11; 32
       Name: DetectedObjects
       Namespaces:
-        {}
+        label: true
+        position covariance: true
+        shape: true
+        twist: true
+        velocity: true
       Object Fill Type: skeleton
       PEDESTRIAN:
         Alpha: 0.9990000128746033
@@ -4379,7 +4410,7 @@ Visualization Manager:
       UNKNOWN:
         Alpha: 0.9990000128746033
         Color: 255; 255; 255
-      Value: false
+      Value: true
       Visualization Type: Normal
     - BUS:
         Alpha: 0.9990000128746033
@@ -4465,20 +4496,14 @@ Visualization Manager:
       Display Yaw Covariance: false
       Display Yaw Rate: false
       Display Yaw Rate Covariance: false
-      Enabled: true
+      Enabled: false
       Line Width: 0.20000000298023224
       MOTORCYCLE:
         Alpha: 0.9990000128746033
         Color: 119; 11; 32
       Name: RSU2 PO
       Namespaces:
-        acceleration: true
-        label: true
-        position covariance: true
-        shape: true
-        twist: true
-        uuid: true
-        velocity: true
+        {}
       Object Fill Type: Fill
       PEDESTRIAN:
         Alpha: 0.9990000128746033
@@ -4499,7 +4524,7 @@ Visualization Manager:
       UNKNOWN:
         Alpha: 0.9990000128746033
         Color: 255; 255; 255
-      Value: true
+      Value: false
       Visualization Type: Normal
     - BUS:
         Alpha: 0.9990000128746033
@@ -4525,20 +4550,14 @@ Visualization Manager:
       Display Yaw Covariance: false
       Display Yaw Rate: false
       Display Yaw Rate Covariance: false
-      Enabled: true
+      Enabled: false
       Line Width: 0.20000000298023224
       MOTORCYCLE:
         Alpha: 0.9990000128746033
         Color: 119; 11; 32
       Name: RSU4 PO
       Namespaces:
-        acceleration: true
-        label: true
-        position covariance: true
-        shape: true
-        twist: true
-        uuid: true
-        velocity: true
+        {}
       Object Fill Type: Fill
       PEDESTRIAN:
         Alpha: 0.9990000128746033
@@ -4559,7 +4578,7 @@ Visualization Manager:
       UNKNOWN:
         Alpha: 0.9990000128746033
         Color: 255; 255; 255
-      Value: true
+      Value: false
       Visualization Type: Normal
     - BUS:
         Alpha: 0.9990000128746033
@@ -4585,7 +4604,7 @@ Visualization Manager:
       Display Yaw Covariance: false
       Display Yaw Rate: false
       Display Yaw Rate Covariance: false
-      Enabled: true
+      Enabled: false
       Line Width: 0.20000000298023224
       MOTORCYCLE:
         Alpha: 0.9990000128746033
@@ -4613,13 +4632,13 @@ Visualization Manager:
       UNKNOWN:
         Alpha: 0.9990000128746033
         Color: 255; 255; 255
-      Value: true
+      Value: false
       Visualization Type: Normal
     - Class: rviz_default_plugins/Marker
       Enabled: true
       Name: LookAheadPoint
       Namespaces:
-        lookahead: true
+        {}
       Topic:
         Depth: 5
         Durability Policy: Volatile
@@ -4627,6 +4646,19 @@ Visualization Manager:
         History Policy: Keep Last
         Reliability Policy: Reliable
         Value: /lookahead_point_marker
+      Value: true
+    - Class: rviz_default_plugins/Marker
+      Enabled: true
+      Name: StopPoint
+      Namespaces:
+        {}
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /stop_point_marker
       Value: true
   Enabled: true
   Global Options:
