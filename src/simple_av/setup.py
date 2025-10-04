@@ -26,6 +26,8 @@ setup(
         'console_scripts': [
             'monitor = simple_av.monitor:main',
             'lanelet_map_publisher = simple_av.lanelet_map_publisher:main',
+            'tf_publisher = system.tf_publisher:main',
+            'point_visualizer = system.point_visualizer:main'
         ],
     },
 )

@@ -23,9 +23,7 @@ setup(
     entry_points={
         'console_scripts': [
             'portal = system.portal:main',
-            'sim_monitor = system.sim_monitor:main',
-            'obu_sensor_tf_publisher = system.obu_sensor_tf_publisher:main',
-            'point_visualizer = system.point_visualizer:main'
+            'sim_monitor = system.sim_monitor:main'
         ],
     },
 )

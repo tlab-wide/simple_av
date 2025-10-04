@@ -14,17 +14,5 @@ def generate_launch_description():
             executable='portal',
             name='portal_node',
             output='screen'
-        ),
-        Node(
-            package='system',
-            executable='obu_sensor_tf_publisher',
-            name='obu_sensor_tf_publisher_node',
-            output='screen'
-        ),
-        Node(
-            package='system',
-            executable='point_visualizer',
-            name='point_visualizer_node',
-            output='screen'
         )
     ])

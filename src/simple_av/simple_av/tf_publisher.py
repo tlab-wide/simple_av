@@ -8,7 +8,7 @@ from ament_index_python.packages import get_package_share_directory
 
 class SensorTFPublisher(Node):
     def __init__(self):
-        super().__init__('obu_sensor_tf_publisher')
+        super().__init__('tf_publisher')
 
         self.sensors_calibration = self.config_file_loader("sensors_calibration.yaml")
         self.sensor_kit_base_link = self.sensors_calibration['base_link']['sensor_kit_base_link']

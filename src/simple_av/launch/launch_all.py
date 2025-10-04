@@ -74,6 +74,18 @@ def generate_launch_description():
             name='monitor',
             output='screen'
         ),
+        Node(
+            package='simple_av',
+            executable='obu_sensor_tf_publisher',
+            name='obu_sensor_tf_publisher_node',
+            output='screen'
+        ),
+        Node(
+            package='simple_av',
+            executable='point_visualizer',
+            name='point_visualizer_node',
+            output='screen'
+        )
 
 
         # # Lanelet2 Map Loader
