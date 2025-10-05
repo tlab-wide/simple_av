@@ -62,30 +62,30 @@ def generate_launch_description():
         # 👉 Lanelet2 Map Publisher
         Node(
             package='simple_av',
-            executable='lanelet_map_publisher',
-            name='lanelet_map_publisher',
+            executable='rviz_lanelet_map_publisher',
+            name='rviz_lanelet_map_publisher_node',
             output='screen'
         ),
 
         # 👉 path monitor node
         Node(
             package='simple_av',
-            executable='monitor',
-            name='monitor',
+            executable='rviz_path_monitor',
+            name='rviz_path_monitor_node',
             output='screen'
         ),
         Node(
             package='simple_av',
-            executable='obu_sensor_tf_publisher',
-            name='obu_sensor_tf_publisher_node',
+            executable='tf_publisher',
+            name='tf_publisher_node',
             output='screen'
         ),
         Node(
             package='simple_av',
-            executable='point_visualizer',
-            name='point_visualizer_node',
+            executable='rviz_point_visualizer',
+            name='rviz_point_visualizer_node',
             output='screen'
-        )
+        ),
 
 
         # # Lanelet2 Map Loader

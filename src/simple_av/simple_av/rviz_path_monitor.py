@@ -7,7 +7,7 @@ from nav_msgs.msg import Path
 
 class GNSSPathPublisher(Node):
     def __init__(self):
-        super().__init__('gnss_path_publisher')
+        super().__init__('rviz_path_monitor')
         self.subscription = self.create_subscription(
             PoseStamped,
             '/sensing/gnss/pose',

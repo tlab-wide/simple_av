@@ -18,6 +18,7 @@ import numpy as np
 from scipy.spatial.transform import Rotation as R
 from autoware_vehicle_msgs.msg import VelocityReport
 from rclpy.qos import QoSProfile, QoSHistoryPolicy, QoSReliabilityPolicy, QoSDurabilityPolicy
+from autoware_perception_msgs.msg import TrafficLightGroup, TrafficLightElement
 
 class BehaviorMotionPlanning(Node):
     def __init__(self):
@@ -112,6 +113,12 @@ class BehaviorMotionPlanning(Node):
 
         # Publish topics
         self.planning_publisher = self.create_publisher(PlanningMotionPlanningMsg, 'simple_av/planning/motion_planning', 10)
+
+        self.pub = self.create_publisher(
+            TrafficLightGroup,
+            '/planning/scenario_planning/lane_driving/behavior_planning/debug/traffic_signal',
+            10
+        )
 
         #Path
         self.isPathPlanned = False
@@ -313,6 +320,20 @@ class BehaviorMotionPlanning(Node):
         stop_point = self.calculate_traffic_light_stop_point(lane_obj['stopLinePoseP1'], lane_obj['stopLinePoseP2'])
         return stop_point
 
+    def publish_rviz_traffic_light_status(self,color):
+        msg = TrafficLightGroup()
+        msg.traffic_light_group_id = 1
+
+        element = TrafficLightElement()
+        element.color = color
+        element.shape = TrafficLightElement.CIRCLE
+        element.status = TrafficLightElement.SOLID_ON
+        element.confidence = 1.0
+        msg.elements.append(element)
+
+        self.pub.publish(msg)
+        self.get_logger().info("Published RViZ traffic light status")
+
     def manage_traffic_lights(self):
         v2i_traffic_signals_id = list(self.trafficSignal.v2i_traffic_signals_id)
         v2i_traffic_signals_colors = list(self.trafficSignal.v2i_traffic_signals_colors)
@@ -323,6 +344,7 @@ class BehaviorMotionPlanning(Node):
         if current_lane_traffic_light_id: # this lane have a traffic light
             if current_lane_traffic_light_id[0] in v2i_traffic_signals_id: # traffic light id is on the list
                 color = v2i_traffic_signals_colors[v2i_traffic_signals_id.index(current_lane_traffic_light_id[0])]
+                self.publish_rviz_traffic_light_status(color)
                 stop_point = self.get_traffic_light_stop_point_by_lane(current_lane)
                 self.traffic_light_stopPoint_lastState = stop_point
                 if color == 1 or color == 2:

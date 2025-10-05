@@ -24,7 +24,7 @@ the logic of the algorithms and keeps RViz displays organized and flexible.
 
 class point_visualizer(Node):
     def __init__(self):
-        super().__init__('point_visualizer')
+        super().__init__('rviz_point_visualizer')
 
         # Publisher for visualization marker
         self.lookahead_pub = self.create_publisher(Marker, '/lookahead_point_marker', 10)
