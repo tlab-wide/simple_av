@@ -338,6 +338,10 @@ class BehaviorMotionPlanning(Node):
         v2i_traffic_signals_id = list(self.trafficSignal.v2i_traffic_signals_id)
         v2i_traffic_signals_colors = list(self.trafficSignal.v2i_traffic_signals_colors)
 
+        if not v2i_traffic_signals_id: #ego vehicle is out of intersection zone
+            self.publish_rviz_traffic_light_status(0)
+
+
         current_lane = self.route[self.current_lane_index]
         lane_obj = self.find_lane_by_name(current_lane)
         current_lane_traffic_light_id = lane_obj['trafficlightsRelationID']
