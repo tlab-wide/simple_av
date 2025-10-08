@@ -2,7 +2,8 @@ import rclpy
 from rclpy.node import Node
 from visualization_msgs.msg import Marker
 from std_msgs.msg import String
-from simple_av_msgs.msg import PlanningPathPlanningMsg, PlanningMotionPlanningMsg # adjust if your msg package is different
+from geometry_msgs.msg import Point
+from simple_av_msgs.msg import PlanningMotionPlanningMsg
 
 class RVizTextPublisher(Node):
     def __init__(self):
@@ -17,38 +18,43 @@ class RVizTextPublisher(Node):
             self.stopPoint_callback,
             10
         )
+        
+        # Initialize defaults
+        self.current_text = "Waiting for stop point..."
+        self.stop_point = Point()
+        self.stop_point.x = 0.0
+        self.stop_point.y = 0.0
+        self.stop_point.z = 0.0
 
-        self.current_text = "Hello world"
         self.publish_text_marker()
 
     def stopPoint_callback(self, msg):
-        """Callback to update text dynamically."""
+        """Callback to update text and position dynamically."""
         self.current_text = msg.status.data
+        self.stop_point = msg.stop_point  # geometry_msgs/Point
         self.publish_text_marker()
 
     def publish_text_marker(self):
         """Publish text marker to RViz."""
         marker = Marker()
-        marker.header.frame_id = "map"  # or "base_link" depending on where you want it
+        marker.header.frame_id = "map"
         marker.header.stamp = self.get_clock().now().to_msg()
         marker.ns = "text_display"
         marker.id = 0
         marker.type = Marker.TEXT_VIEW_FACING
         marker.action = Marker.ADD
 
-        # Position in RViz (adjust to make it visible)
-        marker.pose.position.x = 0.0
-        marker.pose.position.y = 0.0
-        marker.pose.position.z = 3.0  # height of the text
+        # Position the text slightly above the stop point
+        marker.pose.position.x = self.stop_point.x
+        marker.pose.position.y = self.stop_point.y
+        marker.pose.position.z = self.stop_point.z + 2.0  # lift text above the ground
 
-        # Orientation (optional)
+        # Orientation
         marker.pose.orientation.w = 1.0
 
         # Text properties
-        marker.scale.x = 5.0
-        marker.scale.y = 5.0
-        marker.scale.z = 5.0
-        marker.color.a = 1.0  # opacity (1 = fully visible)
+        marker.scale.z = 1.5  # text height in meters
+        marker.color.a = 1.0
         marker.color.r = 1.0
         marker.color.g = 1.0
         marker.color.b = 1.0
@@ -56,7 +62,7 @@ class RVizTextPublisher(Node):
         marker.text = self.current_text
 
         self.marker_pub.publish(marker)
-        self.get_logger().info(f"Displayed text: {self.current_text}")
+        self.get_logger().info(f"Displayed text '{self.current_text}' at ({self.stop_point.x:.2f}, {self.stop_point.y:.2f})")
 
 
 def main(args=None):
