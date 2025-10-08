@@ -27,7 +27,8 @@ setup(
             'rviz_path_monitor = simple_av.rviz_path_monitor:main',
             'rviz_lanelet_map_publisher = simple_av.rviz_lanelet_map_publisher:main',
             'tf_publisher = simple_av.tf_publisher:main',
-            'rviz_point_visualizer = simple_av.rviz_point_visualizer:main'
+            'rviz_point_visualizer = simple_av.rviz_point_visualizer:main',
+            'rviz_status_publisher = simple_av.rviz_status_publisher:main'
         ],
     },
 )

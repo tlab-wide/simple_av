@@ -29,8 +29,8 @@ class point_visualizer(Node):
         # Publisher for visualization marker
         self.lookahead_pub = self.create_publisher(Marker, '/lookahead_point_marker', 10)
         self.stop_point_pub = self.create_publisher(Marker, '/stop_point_marker', 10)
-        # Publisher for the text marker
-        self.marker_pub = self.create_publisher(Marker, '/stop_reason_marker', 10)
+        # # Publisher for the text marker
+        # self.marker_pub = self.create_publisher(Marker, '/stop_reason_marker', 10)
 
         # Subscribe to path planning topic
         self.create_subscription(
@@ -70,35 +70,6 @@ class point_visualizer(Node):
         self.lookahead_pub.publish(marker)
         self.get_logger().debug(f"Published lookahead point at {msg.look_ahead_point.x}, {msg.look_ahead_point.y}, {msg.look_ahead_point.z}")
 
-    def reason_callback(self, stop_reason, position):
-        # Create the marker
-        marker = Marker()
-        marker.header.frame_id = "map"
-        marker.header.stamp = self.get_clock().now().to_msg()
-        marker.ns = "stop_reason"
-        marker.id = 0
-        marker.type = Marker.TEXT_VIEW_FACING
-        marker.action = Marker.ADD
-
-        # Position above the vehicle
-        marker.pose.position.x = position.x
-        marker.pose.position.y = position.y
-        marker.pose.position.z = position.z + 3.0   # float above ego bus
-        marker.pose.orientation.w = 1.0
-
-        # Text
-        marker.text = stop_reason  # e.g. "Collision Avoidance"
-
-        # Style
-        marker.scale.z = 5.0    # font size
-        marker.color.r = 1.0
-        marker.color.g = 1.0
-        marker.color.b = 1.0
-        marker.color.a = 1.0
-
-        self.marker_pub.publish(marker)
-        self.get_logger().info(f"Stop reason: {stop_reason}")
-
 
     def stopPoint_callback(self, msg: PlanningMotionPlanningMsg):
         marker = Marker()
@@ -109,7 +80,6 @@ class point_visualizer(Node):
         marker.type = Marker.SPHERE
         marker.action = Marker.ADD
         marker.pose.position = msg.stop_point  # geometry_msgs/Point
-        marker.text = msg.status.data  # e.g. "Collision Avoidance"
         marker.pose.orientation.w = 1.0
         marker.scale.x = 2.0
         marker.scale.y = 2.0
@@ -119,8 +89,6 @@ class point_visualizer(Node):
         marker.color.b = 38.0/255.0
         marker.color.a = 0.8
         marker.lifetime.sec = 0  # 0 = forever
-
-        self.reason_callback(msg.status.data, msg.stop_point)
 
         self.stop_point_pub.publish(marker)
         self.get_logger().debug(f"Published stop point at {msg.stop_point.x}, {msg.stop_point.y}, {msg.stop_point.z}")
