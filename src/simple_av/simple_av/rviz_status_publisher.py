@@ -30,7 +30,7 @@ class RVizTextPublisher(Node):
 
     def stopPoint_callback(self, msg):
         """Callback to update text and position dynamically."""
-        self.current_text = msg.status.data
+        self.current_text = msg.stop_reason.data
         self.stop_point = msg.stop_point  # geometry_msgs/Point
         self.publish_text_marker()
 
@@ -47,7 +47,7 @@ class RVizTextPublisher(Node):
         # Position the text slightly above the stop point
         marker.pose.position.x = self.stop_point.x
         marker.pose.position.y = self.stop_point.y
-        marker.pose.position.z = self.stop_point.z + 2.0  # lift text above the ground
+        marker.pose.position.z = self.stop_point.z + 3.0  # lift text above the ground
 
         # Orientation
         marker.pose.orientation.w = 1.0
