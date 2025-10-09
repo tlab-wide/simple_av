@@ -1,5 +1,5 @@
 Stable Version
-Version 2.11.10
+Version 2.12.11
 
 new architecture of Modules
 Modules:
