@@ -3170,43 +3170,15 @@ Visualization Manager:
                 Debug:
                   Control: true
                   Localization:
-                    EKFPoseHistory: true
-                    NDT pointclouds: true
-                    NDTLoadedPCDMap: true
-                    NDTPoseHistory: true
+                    "": true
                     Value: true
                   Map: true
                   Perception:
-                    CameraLidarFusion(purple): true
-                    Centerpoint(red1): true
-                    CenterpointROIFusion(red2): true
-                    CenterpointValidator(red3): true
-                    Detection(yellow): true
-                    DetectionByTracker(orange): true
-                    PointPainting(light_green1): true
-                    PointPaintingROIFusion(light_green2): true
-                    PointPaintingValidator(light_green3): true
-                    Prediction(light_blue): true
-                    RadarFarObjects(white): true
-                    Tracking(green): true
+                    "": true
                     Value: true
                   Planning:
-                    Objects Of Interest:
-                      AvoidanceByLCLeft: true
-                      AvoidanceByLCRight: true
-                      AvoidanceLeft: true
-                      AvoidanceRight: true
-                      BlindSpot: true
-                      Crosswalk: true
-                      DetectionArea: true
-                      GoalPlanner: true
-                      Intersection: true
-                      LaneChangeLeft: true
-                      LaneChangeRight: true
-                      NoStoppingArea: true
-                      ObstacleCruise: true
-                      StartPlanner: true
-                      TrafficLight: true
+                    "":
+                      "": true
                       Value: true
                     Value: true
                   Sensing:
@@ -3245,6 +3217,7 @@ Visualization Manager:
                     "": true
                     Value: true
                   Value: true
+                StopPoint: true
                 System:
                   "": true
                   Value: false
@@ -4298,7 +4271,7 @@ Visualization Manager:
       Enabled: true
       Name: laneletmap
       Namespaces:
-        lanelet_map: true
+        {}
       Topic:
         Depth: 5
         Durability Policy: Transient Local
@@ -4330,7 +4303,7 @@ Visualization Manager:
       Buffer Length: 1
       Class: rviz_default_plugins/Path
       Color: 25; 255; 0
-      Enabled: true
+      Enabled: false
       Head Diameter: 0.30000001192092896
       Head Length: 0.20000000298023224
       Length: 0.30000001192092896
@@ -4353,7 +4326,7 @@ Visualization Manager:
         History Policy: Keep Last
         Reliability Policy: Reliable
         Value: simple_av/path
-      Value: true
+      Value: false
     - BUS:
         Alpha: 0.9990000128746033
         Color: 30; 144; 255
@@ -4638,7 +4611,7 @@ Visualization Manager:
       Enabled: true
       Name: LookAheadPoint
       Namespaces:
-        {}
+        lookahead: true
       Topic:
         Depth: 5
         Durability Policy: Volatile
@@ -4651,7 +4624,7 @@ Visualization Manager:
       Enabled: true
       Name: StopPoint
       Namespaces:
-        {}
+        stop_point: true
       Topic:
         Depth: 5
         Durability Policy: Volatile
@@ -4659,6 +4632,19 @@ Visualization Manager:
         History Policy: Keep Last
         Reliability Policy: Reliable
         Value: /stop_point_marker
+      Value: true
+    - Class: rviz_default_plugins/Marker
+      Enabled: true
+      Name: Stop reason
+      Namespaces:
+        text_display: true
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /status_marker
       Value: true
   Enabled: true
   Global Options:

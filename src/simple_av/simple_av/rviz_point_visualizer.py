@@ -24,11 +24,13 @@ the logic of the algorithms and keeps RViz displays organized and flexible.
 
 class point_visualizer(Node):
     def __init__(self):
-        super().__init__('point_visualizer')
+        super().__init__('rviz_point_visualizer')
 
         # Publisher for visualization marker
         self.lookahead_pub = self.create_publisher(Marker, '/lookahead_point_marker', 10)
         self.stop_point_pub = self.create_publisher(Marker, '/stop_point_marker', 10)
+        # # Publisher for the text marker
+        # self.marker_pub = self.create_publisher(Marker, '/stop_reason_marker', 10)
 
         # Subscribe to path planning topic
         self.create_subscription(
@@ -67,6 +69,7 @@ class point_visualizer(Node):
 
         self.lookahead_pub.publish(marker)
         self.get_logger().debug(f"Published lookahead point at {msg.look_ahead_point.x}, {msg.look_ahead_point.y}, {msg.look_ahead_point.z}")
+
 
     def stopPoint_callback(self, msg: PlanningMotionPlanningMsg):
         marker = Marker()

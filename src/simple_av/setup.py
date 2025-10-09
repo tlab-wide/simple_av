@@ -24,8 +24,11 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'monitor = simple_av.monitor:main',
-            'lanelet_map_publisher = simple_av.lanelet_map_publisher:main',
+            'rviz_path_monitor = simple_av.rviz_path_monitor:main',
+            'rviz_lanelet_map_publisher = simple_av.rviz_lanelet_map_publisher:main',
+            'tf_publisher = simple_av.tf_publisher:main',
+            'rviz_point_visualizer = simple_av.rviz_point_visualizer:main',
+            'rviz_status_publisher = simple_av.rviz_status_publisher:main'
         ],
     },
 )

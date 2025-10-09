@@ -4,14 +4,14 @@ intersections:
     reference_point: 
       x: 4250.0
       y: 73455.0
-    threshold: 100.0
+    threshold: 120.0
   
   intersection_2:
     name: "2"
     reference_point: 
       x: 4505.21
       y: 72937.26
-    threshold: 100.0
+    threshold: 120.0
   
   intersection_4:
     name: "4"
@@ -25,4 +25,4 @@ intersections:
     reference_point: 
       x: 5227.0
       y: 72751.0
-    threshold: 100.0
+    threshold: 120.0

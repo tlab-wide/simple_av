@@ -18,6 +18,7 @@ import numpy as np
 from scipy.spatial.transform import Rotation as R
 from autoware_vehicle_msgs.msg import VelocityReport
 from rclpy.qos import QoSProfile, QoSHistoryPolicy, QoSReliabilityPolicy, QoSDurabilityPolicy
+from autoware_perception_msgs.msg import TrafficLightGroup, TrafficLightElement
 
 class BehaviorMotionPlanning(Node):
     def __init__(self):
@@ -113,6 +114,12 @@ class BehaviorMotionPlanning(Node):
         # Publish topics
         self.planning_publisher = self.create_publisher(PlanningMotionPlanningMsg, 'simple_av/planning/motion_planning', 10)
 
+        self.pub = self.create_publisher(
+            TrafficLightGroup,
+            '/planning/scenario_planning/lane_driving/behavior_planning/debug/traffic_signal',
+            10
+        )
+
         #Path
         self.isPathPlanned = False
         self.route = None # List of lanes from start lane to destination
@@ -128,6 +135,7 @@ class BehaviorMotionPlanning(Node):
         self.previous_speed_slidingWindow = deque(maxlen=8) # for storing 10 recent previous speed values
         self.previous_speed_slidingWindow.append(0.0)  # initializing the queue
         self.status = String() # Cruise, Decelerate, PrepareToStop, Turn
+        self.stop_reason = String() # Cruise, Decelerate, PrepareToStop, Turn
 
         self.densify_interval = 2.0 # meters / Distance between each two consecutive waypoints on a lane
         
@@ -313,9 +321,27 @@ class BehaviorMotionPlanning(Node):
         stop_point = self.calculate_traffic_light_stop_point(lane_obj['stopLinePoseP1'], lane_obj['stopLinePoseP2'])
         return stop_point
 
+    def publish_rviz_traffic_light_status(self,color):
+        msg = TrafficLightGroup()
+        msg.traffic_light_group_id = 1
+
+        element = TrafficLightElement()
+        element.color = color
+        element.shape = TrafficLightElement.CIRCLE
+        element.status = TrafficLightElement.SOLID_ON
+        element.confidence = 1.0
+        msg.elements.append(element)
+
+        self.pub.publish(msg)
+        self.get_logger().info("Published RViZ traffic light status")
+
     def manage_traffic_lights(self):
         v2i_traffic_signals_id = list(self.trafficSignal.v2i_traffic_signals_id)
         v2i_traffic_signals_colors = list(self.trafficSignal.v2i_traffic_signals_colors)
+
+        if not v2i_traffic_signals_id: #ego vehicle is out of intersection zone
+            self.publish_rviz_traffic_light_status(0)
+
 
         current_lane = self.route[self.current_lane_index]
         lane_obj = self.find_lane_by_name(current_lane)
@@ -323,6 +349,7 @@ class BehaviorMotionPlanning(Node):
         if current_lane_traffic_light_id: # this lane have a traffic light
             if current_lane_traffic_light_id[0] in v2i_traffic_signals_id: # traffic light id is on the list
                 color = v2i_traffic_signals_colors[v2i_traffic_signals_id.index(current_lane_traffic_light_id[0])]
+                self.publish_rviz_traffic_light_status(color)
                 stop_point = self.get_traffic_light_stop_point_by_lane(current_lane)
                 self.traffic_light_stopPoint_lastState = stop_point
                 if color == 1 or color == 2:
@@ -661,26 +688,33 @@ class BehaviorMotionPlanning(Node):
         on_path_collision_avoidance_stopPoint = self.on_path_collision_avoidance(objects_ahead, current_closest_point_to_vehicle_index, vehicle_pose)
         predicted_collisons_stopPoints = self.collison_prediction(objects_ahead, current_closest_point_to_vehicle_index, vehicle_pose)
         stop_point, stop_point_type = self.find_closest_stop_point(traffic_light_stopPoint, on_path_collision_avoidance_stopPoint, predicted_collisons_stopPoints, self.destination, vehicle_pose)
+        
         self.status.data = 'Cruise'
+        self.stop_reason.data = 'No stop'
 
         if self.isTurnDetected:
             self.get_logger().info("Turn detected")
             self.status.data = 'Turn'
+            
 
         if stop_point_type == 'CollisonAvoidance' or stop_point_type == 'CollisonPrediction':
             if stop_point_type == 'CollisonAvoidance':
                 self.get_logger().info('Collison Avoidance')
+                self.stop_reason.data = 'Collison Avoidance'
             else:
                 self.get_logger().info('Prediction')
+                self.stop_reason.data = 'Collison Prediction'
             self.status.data = 'Decelerate'
         
         if stop_point_type == 'TrafficLight':
             self.get_logger().info('TrafficLight')
             self.status.data = trafficLightTask
+            self.stop_reason.data = trafficLightTask
         
         if self.isEndOfPath:
             self.get_logger().info("Approaching destination, decelerating.")
             self.status.data = 'Park'
+            self.stop_reason.data = 'Park'
         
         return stop_point
             
@@ -688,6 +722,7 @@ class BehaviorMotionPlanning(Node):
         motion_plan = PlanningMotionPlanningMsg()
         motion_plan.stop_point = stop_point
         motion_plan.status = self.status
+        motion_plan.stop_reason = self.stop_reason
         self.planning_publisher.publish(motion_plan)
 
     def motion_planning(self):
@@ -733,11 +768,12 @@ class BehaviorMotionPlanning(Node):
         
         self.publish_motion_planning_msgs(stop_point) # publishing
         
-        # self.get_logger().info(
-        #     f'behavior motion planning\n'
-        #     f'distance to stop point: {self.calculate_distance(vehicle_pose, stop_point)}\n'
-        #     f'status: {self.status.data}\n'
-        # )
+        self.get_logger().info(
+            f'behavior motion planning\n'
+            f'distance to stop point: {self.calculate_distance(vehicle_pose, stop_point)}\n'
+            f'status: {self.status.data}\n'
+            f'stop reason: {self.stop_reason.data}\n'
+        )
         
         self.previous_speed_slidingWindow.append(self.current_speed)
 
