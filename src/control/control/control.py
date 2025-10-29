@@ -81,9 +81,10 @@ class VehicleControl(Node):
         
         self.previous_steering_angle = 0
         self.steering_gain = 0.2  # Proportional gain for steering
-        self.maximum_accel = self.vehicle_config['performance']['max_acceleration']
+        self.acceleration_rate = self.vehicle_config['performance']['acceleration_rate']
+        
         self.maximum_Stereing = None
-        self.maximum_braking_accel = self.vehicle_config['performance']['max_braking_acceleration']
+        self.normal_deceleration_rate = self.vehicle_config['performance']['normal_deceleration_rate']
 
         # Subscribe topics
         self.subscriptionPose = self.create_subscription(PoseStamped, '/sensing/gnss/pose', self.pose_callback, 10)
@@ -261,10 +262,10 @@ class VehicleControl(Node):
                 target_speed = 0.0
 
         accel = self.pid_controller.updatePID(current_speed, target_speed, time.time() * self.sim_clock_rate)
-        if accel > self.maximum_accel:
-            accel = self.maximum_accel
-        if accel < self.maximum_braking_accel:
-            accel = self.maximum_braking_accel
+        if accel > self.acceleration_rate:
+            accel = self.acceleration_rate
+        if accel < self.normal_deceleration_rate:
+            accel = self.normal_deceleration_rate
 
         longitudinal_command = Longitudinal()
         longitudinal_command.velocity = self.velocity_report.longitudinal_velocity

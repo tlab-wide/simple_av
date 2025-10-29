@@ -10,9 +10,12 @@ vehicles:
       rear_overhang: 1.0  # Distance from rear axle to vehicle back (meters)
     weight: 3000  # Vehicle weight (kg)
     performance:
-      max_speed: 30.0          # Maximum speed (m/s)
-      max_acceleration: 3.8     # Maximum acceleration (m/s²)
-      max_braking_acceleration: -6.0 # Maximum braking acceleration (m/s²)
+      max_speed: 20.0         # Maximum speed (m/s)
+      min_speed: 0.83          # Minimum speed (m/s)
+      middle_speed: 3.33          # Middle speed (m/s)
+      acceleration_rate: 3.8     # acceleration rate (m/s²)
+      normal_deceleration_rate: -1.0 # Normal deceleration (m/s²)
+      max_braking_deceleration: -4.0 # Maximum braking acceleration (m/s²)
 
   bus:
     model: "TierIV"
@@ -25,6 +28,9 @@ vehicles:
       rear_overhang: 3.2  # Distance from rear axle to vehicle back (meters)
     weight: 10000  # Vehicle weight (kg)
     performance:
-      max_speed: 20.0          # Maximum speed (m/s)
-      max_acceleration: 1.4     # Maximum acceleration (m/s²)
-      max_braking_acceleration: -2.6 # Maximum braking acceleration (m/s²)
+      max_speed: 8.33         # Maximum speed (m/s)
+      min_speed: 0.83          # Minimum speed (m/s)
+      middle_speed: 3.33          # Middle speed (m/s)
+      acceleration_rate: 0.35     # Acceleration rate (m/s²)
+      normal_deceleration_rate: -0.15 # Normal deceleration (m/s²)
+      max_braking_acceleration: -0.25 # Maximum braking deceleration (m/s²)
