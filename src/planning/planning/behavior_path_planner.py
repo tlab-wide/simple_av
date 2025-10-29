@@ -110,6 +110,20 @@ class BehaviorPathPlanner(Node):
         #Shutting down
         self.node_shut = False
     
+    def load_vehicle_config(self, vehicle_model):
+        # Path to the YAML file
+        package_share_directory = get_package_share_directory('common')
+        config_path = os.path.join(package_share_directory, "configs", "vehicle_config.yaml")
+
+        # Load the configuration file
+        with open(config_path, "r") as file:
+            config = yaml.safe_load(file)
+
+        # Retrieve the specific vehicle's configuration
+        if vehicle_model in config["vehicles"]:
+            return config["vehicles"][vehicle_model]
+        else:
+            raise ValueError(f"Vehicle type '{vehicle_model}' not found in the configuration.")
 
     def load_map_data(self, vehicle_model):
         """
@@ -310,7 +324,7 @@ class BehaviorPathPlanner(Node):
         """
 
         _NORMAL_ACCEL = self.NORMAL_ACCEL * waypoint_distance
-        _NORMAL_DECEL = self.NORMAL_DECEL * waypoint_distance
+        _NORMAL_DECEL = abs(self.NORMAL_DECEL) * waypoint_distance
 
         # 1. Base speeds from curvature
         base_speeds = []
