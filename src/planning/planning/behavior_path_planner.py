@@ -46,6 +46,15 @@ class BehaviorPathPlanner(Node):
         self.lookahead_distance_C = self.motion_behavior_config['motion']['lookahead']['coefficient']
         self.lookahead_distance_B = self.motion_behavior_config['motion']['lookahead']['base']
 
+        self.vehicle_config = self.load_vehicle_config(self.vehicle_model)
+
+        self.NORMAL_ACCEL = self.vehicle_config['performance']['acceleration_rate']
+        self.NORMAL_DECEL = self.vehicle_config['performance']['normal_deceleration_rate']
+
+        self.MAX_SPEED = self.vehicle_config['performance']['max_speed']
+        self.MIN_SPEED = self.vehicle_config['performance']['min_speed']
+        self.MIDDLE_SPEED = self.vehicle_config['performance']['middle_speed']
+
         # Subscribe topics
         self.subscriptionPose = self.create_subscription(PoseStamped, '/sensing/gnss/pose', self.pose_callback, 10)
         self.pose = PoseStamped()
@@ -293,7 +302,46 @@ class BehaviorPathPlanner(Node):
         speed = min(max_speed, k / curvature)
         return speed
 
-    def get_path_speed_profile(self, path, accel = 2.0):
+    def simple_av_speed_profile_maker(self, path, waypoint_distance=2.0):
+        """
+        Generate smooth, physically constrained speed profile.
+        Vehicle starts at 0 and stops at the last waypoint.
+        Enforces acceleration and deceleration limits and minimum speed.
+        """
+
+        _NORMAL_ACCEL = self.NORMAL_ACCEL * waypoint_distance
+        _NORMAL_DECEL = self.NORMAL_DECEL * waypoint_distance
+
+        # 1. Base speeds from curvature
+        base_speeds = []
+        for i, waypoint in enumerate(path):
+            speed = self.adjust_speed_to_curve(waypoint.curve)
+            base_speeds.append(speed)
+
+        # 2. Forward pass (acceleration constraint)
+        speeds = [0.0]  # Start from speed 0
+        for i in range(1, len(base_speeds)):
+            prev_speed = speeds[-1]
+            # Max speed allowed by acceleration
+            max_next_speed = math.sqrt(prev_speed**2 + 2 * _NORMAL_ACCEL * waypoint_distance)
+            # Clamp by curvature and max speed
+            speeds.append(min(base_speeds[i], max_next_speed, self.MAX_SPEED))
+
+        # 3. Backward pass (deceleration constraint)
+        speeds[-1] = 0.0  # Ensure full stop at the end
+        for i in reversed(range(len(speeds) - 1)):
+            next_speed = speeds[i + 1]
+            # Max speed allowed by deceleration to reach next point safely
+            max_prev_speed = math.sqrt(next_speed**2 + 2 * _NORMAL_DECEL * waypoint_distance)
+            speeds[i] = min(speeds[i], max_prev_speed, self.MAX_SPEED)
+
+        # 4. Clamp to MIN_SPEED (except first and last points)
+        for i in range(1, len(speeds)-1):
+            speeds[i] = max(speeds[i], self.MIN_SPEED)
+
+        return speeds
+
+    def make_simple_av_speed_profile(self, path, accel = 2.0):
         speeds = []
         for i, waypoint in enumerate(path):
             speed = self.adjust_speed_to_curve(waypoint.curve)
@@ -321,7 +369,7 @@ class BehaviorPathPlanner(Node):
 
         if self.path and self.path_as_lanes:
             self.destination = self.path[-1].waypoint
-            self.speeds_on_path = self.get_path_speed_profile(self.path)
+            self.speeds_on_path = self.simple_av_speed_profile_maker(self.path)
             
             for i, waypoint in enumerate(self.path):
                 self.path_of_waypoints.append(waypoint.waypoint)
