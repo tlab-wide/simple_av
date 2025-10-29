@@ -4,14 +4,14 @@ intersections:
     reference_point: 
       x: 4250.0
       y: 73455.0
-    threshold: 120.0
+    threshold: 150.0
   
   intersection_2:
     name: "2"
     reference_point: 
       x: 4505.21
       y: 72937.26
-    threshold: 120.0
+    threshold: 150.0
 # --
   
   intersection_4:
@@ -19,14 +19,14 @@ intersections:
     reference_point: 
       x: 5194.0
       y: 73135.0
-    threshold: 100.0
+    threshold: 150.0
   
   intersection_5:
     name: "5"
     reference_point: 
       x: 5227.0
       y: 72751.0
-    threshold: 120.0
+    threshold: 150.0
 
 # ------ CONFIG Start and Exit location from intersection 2 in scenarion2
 intersection_points: {

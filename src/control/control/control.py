@@ -85,6 +85,8 @@ class VehicleControl(Node):
         
         self.maximum_Stereing = None
         self.normal_deceleration_rate = self.vehicle_config['performance']['normal_deceleration_rate']
+        self.max_braking_deceleration_rate = self.vehicle_config['performance']['max_braking_deceleration_rate']
+        self.emergency_braking_deceleration_rate = self.vehicle_config['performance']['emergency_braking_deceleration_rate']
 
         # Subscribe topics
         self.subscriptionPose = self.create_subscription(PoseStamped, '/sensing/gnss/pose', self.pose_callback, 10)
@@ -245,16 +247,17 @@ class VehicleControl(Node):
 
         current_speed = self.velocity_report.longitudinal_velocity if self.velocity_report else 0.0
         target_speed = self.path_plan.speed_limit
+        distance_to_stop = self.calculate_distance(self.motion_plan.stop_point, self.pose.pose.position)
 
         if self.motion_plan.status.data == "Decelerate" or self.motion_plan.status.data == "Stop_red" or self.reset:
             print("debug: ", self.motion_plan.stop_point, type(self.motion_plan.stop_point))
             print("debug: ", self.pose.pose.position, type(self.pose.pose.position))
-            distance_to_stop = self.calculate_distance(self.motion_plan.stop_point, self.pose.pose.position)
+            
             target_speed = self.calculate_target_speed_for_stop(distance_to_stop, current_speed)
             if self.motion_plan.status.data == "Stop_red" and distance_to_stop <= 4.0:
                 self.get_logger().warning("Full stop!")
                 target_speed = 0.0
-            if self.motion_plan.status.data == "Decelerate" and distance_to_stop <= 2.0:
+            if self.motion_plan.status.data == "Decelerate" and distance_to_stop <= 4.0:
                 self.get_logger().warning("Full stop!")
                 target_speed = 0.0
             if self.reset:
@@ -262,10 +265,23 @@ class VehicleControl(Node):
                 target_speed = 0.0
 
         accel = self.pid_controller.updatePID(current_speed, target_speed, time.time() * self.sim_clock_rate)
+
+        deceleration_rate = self.normal_deceleration_rate
+
+        if self.motion_plan.status.data == "Decelerate" or self.motion_plan.status.data == "Stop_red" or self.reset:
+            deceleration_rate = self.max_braking_deceleration_rate
+        
+        if self.motion_plan.status.data == "Decelerate" and distance_to_stop <= current_speed:
+            deceleration_rate = self.emergency_braking_deceleration_rate
+        
+        if self.motion_plan.status.data == "Stop_red" and distance_to_stop <= 7.5 and distance_to_stop <= current_speed:
+            deceleration_rate = self.emergency_braking_deceleration_rate
+
+
         if accel > self.acceleration_rate:
             accel = self.acceleration_rate
-        if accel < self.normal_deceleration_rate:
-            accel = self.normal_deceleration_rate
+        if accel < deceleration_rate:
+            accel = deceleration_rate
 
         longitudinal_command = Longitudinal()
         longitudinal_command.velocity = self.velocity_report.longitudinal_velocity

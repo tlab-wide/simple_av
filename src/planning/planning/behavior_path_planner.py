@@ -323,7 +323,7 @@ class BehaviorPathPlanner(Node):
         Enforces acceleration and deceleration limits and minimum speed.
         """
 
-        _NORMAL_ACCEL = self.NORMAL_ACCEL * waypoint_distance
+        _NORMAL_ACCEL = (self.NORMAL_ACCEL - 0.1) * waypoint_distance
         _NORMAL_DECEL = abs(self.NORMAL_DECEL) * waypoint_distance
 
         # 1. Base speeds from curvature
