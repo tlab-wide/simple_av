@@ -11,7 +11,7 @@ from std_msgs.msg import String
 import math
 from collections import deque
 from simple_av_msgs.msg import PlanningPathPlanningMsg, PlanningInternalMsg, PlanningInternalMissionPlanMsg, PlanningWaypoint
-from simple_av_msgs.msg import LocalizationMsg
+from simple_av_msgs.msg import LocalizationMsg, LocalizationIntersectionStatus
 from simple_av_msgs.msg import Portal
 import numpy as np
 from simple_av_msgs.srv import TriggerMissionPlan
@@ -27,6 +27,12 @@ class BehaviorPathPlanner(Node):
         self.vehicle_model = self.scenario_config['scenario']['vehicle_model']
         self.dest_lanelet = self.scenario_config['scenario']['destination']
         self.start_lanelet = None
+
+        # Load av features configs
+        self.av_features = self.config_file_loader("av_features.yaml")
+        self.is_cool4_speed_profile_enable = self.av_features['cool4_speed_profile_test']['enable']
+        self.is_RSU_enabled = self.av_features['object_detection']['use_rsu']
+        self.DANGER = self.av_features['cool4_speed_profile_test']['DANGER']
 
         # Load the map
         self.map_data = self.load_map_data(self.vehicle_model)
@@ -46,6 +52,7 @@ class BehaviorPathPlanner(Node):
         self.lookahead_distance_C = self.motion_behavior_config['motion']['lookahead']['coefficient']
         self.lookahead_distance_B = self.motion_behavior_config['motion']['lookahead']['base']
 
+        # Load Vehicle configs
         self.vehicle_config = self.load_vehicle_config(self.vehicle_model)
 
         self.NORMAL_ACCEL = self.vehicle_config['performance']['acceleration_rate']
@@ -54,6 +61,16 @@ class BehaviorPathPlanner(Node):
         self.MAX_SPEED = self.vehicle_config['performance']['max_speed']
         self.MIN_SPEED = self.vehicle_config['performance']['min_speed']
         self.MIDDLE_SPEED = self.vehicle_config['performance']['middle_speed']
+
+        # Load intersection data
+        self.intersection_profiles = self.load_intersections()
+        self.intersection_points = self.intersection_profiles['intersection_points']
+        self.intersection2_scenario2_points = self.intersection_profiles['intersection_points']['2']['2']
+
+        # Create subscriber to simple_av/localization/intersection_status topic
+        self.subscriptionIntersectionAwareness = self.create_subscription(LocalizationIntersectionStatus, 'simple_av/localization/intersection_status', self.intersectionAwareness_callback, 10)
+        self.intersection_awareness_intersection_name = None
+        self.intersection_awareness_status = None
 
         # Subscribe topics
         self.subscriptionPose = self.create_subscription(PoseStamped, '/sensing/gnss/pose', self.pose_callback, 10)
@@ -110,6 +127,14 @@ class BehaviorPathPlanner(Node):
         #Shutting down
         self.node_shut = False
     
+    def load_intersections(self):
+        package_share_directory = get_package_share_directory('common')
+        zones_path = os.path.join(package_share_directory, "zones", 'intersection_profiles.yaml')
+
+        with open(zones_path, "r") as file:
+            intersection_profiles = yaml.safe_load(file)
+        return intersection_profiles
+    
     def load_vehicle_config(self, vehicle_model):
         # Path to the YAML file
         package_share_directory = get_package_share_directory('common')
@@ -150,6 +175,10 @@ class BehaviorPathPlanner(Node):
             config = yaml.safe_load(file)
         return config
     
+    def intersectionAwareness_callback(self, msg):
+        self.intersection_awareness_intersection_name = msg.intersection_name
+        self.intersection_awareness_status = msg.status
+
     def portal_callback(self, msg):
         self.reset = msg.reset
         self.finished = msg.finished
@@ -355,35 +384,81 @@ class BehaviorPathPlanner(Node):
 
         return speeds
 
-    def make_simple_av_speed_profile(self, path, accel = 2.0):
-        speeds = []
+    def cool4_speed_profile_adjustment(self, cool4_adjusted_speed_profile, intersection_points,  waypoint_distance=2.0):
+        start_idx, exit_idx, end_idx = intersection_points
+        if self.is_RSU_enabled and not self.DANGER:
+                # Case 1: RSU active and no danger → keep moderate constant speed
+                cool4_adjusted_speed_profile[start_idx:exit_idx] = [self.MIDDLE_SPEED] * (exit_idx - start_idx)
+
+        elif (self.is_RSU_enabled and self.DANGER) or (not self.is_RSU_enabled):
+            # Case 2: RSU danger OR no RSU → decelerate gradually from MIDDLE_SPEED → MIN_SPEED
+            n_points = exit_idx - start_idx
+            if n_points > 0:
+                decel_profile = []
+                v = self.MIDDLE_SPEED
+                for _ in range(n_points):
+                    v = max(self.MIN_SPEED, math.sqrt(max(v**2 - 2 * self.NORMAL_DECEL * waypoint_distance, 0)))
+                    decel_profile.append(v)
+                cool4_adjusted_speed_profile[start_idx:exit_idx] = decel_profile
+
+            # accelerate again from MIN_SPEED to MAX_SPEED after intersection
+            n_points_after = end_idx - exit_idx
+            if n_points_after > 0:
+                accel_profile = []
+                v = self.MIN_SPEED
+                accel_profile.append(v)  # include initial speed
+                for _ in range(1, n_points_after):
+                    v = min(self.MAX_SPEED, math.sqrt(v**2 + 2 * self.NORMAL_ACCEL * waypoint_distance))
+                    accel_profile.append(v)
+                cool4_adjusted_speed_profile[exit_idx:end_idx] = accel_profile
+
+
+        return cool4_adjusted_speed_profile
+
+    def find_intersection_start_and_exit_using_config(self, path):
+        intersection_start_point_idx = -1
+        intersection_exit_point_idx = -1
+        intersection_end_point_idx = -1
+        has_found_on_path = False
+        points = {}
+
+        points = self.intersection2_scenario2_points
+
         for i, waypoint in enumerate(path):
-            speed = self.adjust_speed_to_curve(waypoint.curve)
-            speeds.append(speed)
+            wp = waypoint.waypoint  # geometry_msgs/Point
+            print(f"i: {i}, waypoint: {wp}")
+
+            if wp.x == points['1']['x'] and wp.y == points['1']['y'] and wp.z == points['1']['z']:
+                intersection_start_point_idx = i
+            if wp.x == points['2']['x'] and wp.y == points['2']['y'] and wp.z == points['2']['z']:
+                intersection_exit_point_idx = i
+            if '3' in points and wp.x == points['3']['x'] and wp.y == points['3']['y'] and wp.z == points['3']['z']:
+                intersection_end_point_idx = i
+
+        if intersection_start_point_idx != -1 and intersection_exit_point_idx != -1 and intersection_end_point_idx != -1:
+            has_found_on_path = True
+
+        return has_found_on_path, [intersection_start_point_idx, intersection_exit_point_idx, intersection_end_point_idx]
+
+    def speed_profile_maker(self, path):
+
+        speed_profile_base = self.simple_av_speed_profile_maker(path)
+
         
-        updated_speeds = []
-        for i in range(len(speeds) - 6):
-            new_speed = min(speeds[i], math.sqrt((speeds[i+1]) ** 2 + 2 * accel))
-            filtered_speed = new_speed + 0.6 * (abs(speeds[i+1] - new_speed))
-            updated_speeds.append(max(filtered_speed, 2.5))
-
-        j = 1
-        for i in range(len(speeds) - 6, len(speeds) - 1):
-            new_speed = 11.0 - j * float(11.0/6)
-            if new_speed < 0:
-                new_speed = 0
-            updated_speeds.append(new_speed)
-            j += 1
-            
-        updated_speeds.append(0.0)
-
-        return updated_speeds
+        if self.is_cool4_speed_profile_enable:
+            has_found_on_path, intersection_points = self.find_intersection_start_and_exit_using_config(path)
+            print(f"DEBUG - speed profile: has_found_on_path: {has_found_on_path}, indexes: {intersection_points}")
+            if has_found_on_path:
+                cool4_adjusted_speed_profile = self.cool4_speed_profile_adjustment(speed_profile_base, intersection_points)
+                return cool4_adjusted_speed_profile
+    
+        return speed_profile_base
 
     def handle_mission_plan(self):
 
         if self.path and self.path_as_lanes:
             self.destination = self.path[-1].waypoint
-            self.speeds_on_path = self.simple_av_speed_profile_maker(self.path)
+            self.speeds_on_path = self.speed_profile_maker(self.path)
             
             for i, waypoint in enumerate(self.path):
                 self.path_of_waypoints.append(waypoint.waypoint)
