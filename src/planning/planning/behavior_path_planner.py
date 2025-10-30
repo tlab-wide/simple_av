@@ -335,6 +335,21 @@ class BehaviorPathPlanner(Node):
         request = TriggerMissionPlan.Request()
         future = self.mission_planner_client.call_async(request)
         return future
+
+    # def get_detected_objects(self):
+    #     if not self.detectedObjects:
+    #         self.get_logger().warning("No Perception / no object detected!")
+    #         return None
+
+    #     objects_ahead = []
+    #     for obj in self.detectedObjects.objects:
+    #         object_direction = obj.relative_direction.data
+    #         if object_direction == 'above' or object_direction == 'NW' or object_direction == 'NE':
+    #             objects_ahead.append(obj)
+    #     return objects_ahead
+
+    # def is_rsu_object_detected(self, intersection_name, areas, detected_objects):
+    #     pass
     
     def adjust_speed_to_curve(self, curvature, max_speed=11.0, k=1.0):
         # If curvature is zero, return the max speed (straight path)
@@ -383,14 +398,29 @@ class BehaviorPathPlanner(Node):
             speeds[i] = max(speeds[i], self.MIN_SPEED)
 
         return speeds
+    
 
     def cool4_speed_profile_adjustment(self, cool4_adjusted_speed_profile, intersection_points,  waypoint_distance=2.0):
         start_idx, exit_idx, end_idx = intersection_points
+        print(f"is_RSU_enabled: {self.is_RSU_enabled}, Danger:{self.DANGER}")
         if self.is_RSU_enabled and not self.DANGER:
+                print("DEBUG: RSU enabled, Danger false continue the curve with 12KM/H")
                 # Case 1: RSU active and no danger → keep moderate constant speed
                 cool4_adjusted_speed_profile[start_idx:exit_idx] = [self.MIDDLE_SPEED] * (exit_idx - start_idx)
 
+                # accelerate again from MIN_SPEED to MAX_SPEED after intersection
+                n_points_after = end_idx - exit_idx
+                if n_points_after > 0:
+                    accel_profile = []
+                    v = self.MIDDLE_SPEED
+                    accel_profile.append(v)  # include initial speed
+                    for _ in range(1, n_points_after):
+                        v = min(self.MAX_SPEED, math.sqrt(v**2 + 2 * self.NORMAL_ACCEL * waypoint_distance))
+                        accel_profile.append(v)
+                    cool4_adjusted_speed_profile[exit_idx:end_idx] = accel_profile
+
         elif (self.is_RSU_enabled and self.DANGER) or (not self.is_RSU_enabled):
+            print("DEBUG: RSU enabled/Disable, Danger TRUE or  continue the curve with 12KM/H->3KM/H")
             # Case 2: RSU danger OR no RSU → decelerate gradually from MIDDLE_SPEED → MIN_SPEED
             n_points = exit_idx - start_idx
             if n_points > 0:
@@ -426,7 +456,7 @@ class BehaviorPathPlanner(Node):
 
         for i, waypoint in enumerate(path):
             wp = waypoint.waypoint  # geometry_msgs/Point
-            print(f"i: {i}, waypoint: {wp}")
+            # print(f"i: {i}, waypoint: {wp}")
 
             if wp.x == points['1']['x'] and wp.y == points['1']['y'] and wp.z == points['1']['z']:
                 intersection_start_point_idx = i
