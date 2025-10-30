@@ -81,9 +81,13 @@ class VehicleControl(Node):
         
         self.previous_steering_angle = 0
         self.steering_gain = 0.2  # Proportional gain for steering
-        self.maximum_accel = self.vehicle_config['performance']['max_acceleration']
+        self.acceleration_rate = self.vehicle_config['performance']['acceleration_rate']
+        
         self.maximum_Stereing = None
-        self.maximum_braking_accel = self.vehicle_config['performance']['max_braking_acceleration']
+        self.normal_deceleration_rate = self.vehicle_config['performance']['normal_deceleration_rate']
+        self.normal_braking_deceleration_rate = self.vehicle_config['performance']['normal_braking_deceleration_rate']
+        self.max_braking_deceleration_rate = self.vehicle_config['performance']['max_braking_deceleration_rate']
+        self.emergency_braking_deceleration_rate = self.vehicle_config['performance']['emergency_braking_deceleration_rate']
 
         # Subscribe topics
         self.subscriptionPose = self.create_subscription(PoseStamped, '/sensing/gnss/pose', self.pose_callback, 10)
@@ -121,7 +125,7 @@ class VehicleControl(Node):
         self.gear_publisher = self.create_publisher(GearCommand, '/control/command/gear_cmd', qos_profile)
         # self.turn_indicator_publisher = self.create_publisher(TurnIndicatorsCommand, '/control/command/turn_indicators_cmd', qos_profile)
 
-        self.pid_controller = PIDController(p_gain=2.4, i_gain=25.0, d_gain=1.5)
+        self.pid_controller = PIDController(p_gain=2.8, i_gain=25.0, d_gain=1.5)
 
         self.node_shut = False
     
@@ -244,27 +248,50 @@ class VehicleControl(Node):
 
         current_speed = self.velocity_report.longitudinal_velocity if self.velocity_report else 0.0
         target_speed = self.path_plan.speed_limit
+        distance_to_stop = self.calculate_distance(self.motion_plan.stop_point, self.pose.pose.position)
+
+        print(f"status: {self.motion_plan.status.data}")
+        print(f"current_speed: {current_speed}")
+        print(f"distance_to_stop: {distance_to_stop}")
 
         if self.motion_plan.status.data == "Decelerate" or self.motion_plan.status.data == "Stop_red" or self.reset:
-            print("debug: ", self.motion_plan.stop_point, type(self.motion_plan.stop_point))
-            print("debug: ", self.pose.pose.position, type(self.pose.pose.position))
-            distance_to_stop = self.calculate_distance(self.motion_plan.stop_point, self.pose.pose.position)
+            # print("debug: ", self.motion_plan.stop_point, type(self.motion_plan.stop_point))
+            # print("debug: ", self.pose.pose.position, type(self.pose.pose.position))
+            
             target_speed = self.calculate_target_speed_for_stop(distance_to_stop, current_speed)
             if self.motion_plan.status.data == "Stop_red" and distance_to_stop <= 4.0:
                 self.get_logger().warning("Full stop!")
                 target_speed = 0.0
-            if self.motion_plan.status.data == "Decelerate" and distance_to_stop <= 2.0:
+            if self.motion_plan.status.data == "Decelerate" and distance_to_stop <= 4.0:
                 self.get_logger().warning("Full stop!")
                 target_speed = 0.0
             if self.reset:
                 self.get_logger().warning("Full stop!")
                 target_speed = 0.0
+            
+            print(f"Decelerate or stop red target_speed: {target_speed}")
 
         accel = self.pid_controller.updatePID(current_speed, target_speed, time.time() * self.sim_clock_rate)
-        if accel > self.maximum_accel:
-            accel = self.maximum_accel
-        if accel < self.maximum_braking_accel:
-            accel = self.maximum_braking_accel
+        
+        deceleration_rate = self.normal_deceleration_rate
+
+        print(f"calculated accel: {accel}")
+        if self.motion_plan.status.data == "Decelerate" or self.motion_plan.status.data == "Stop_red" or self.reset:
+            print(f"normal braking deceleration {self.normal_braking_deceleration_rate}")
+            deceleration_rate = self.normal_braking_deceleration_rate
+        
+        if self.motion_plan.status.data == "Decelerate" and distance_to_stop <= current_speed:
+            deceleration_rate = self.max_braking_deceleration_rate
+        
+        if self.motion_plan.status.data == "Stop_red" and (distance_to_stop <= current_speed or (distance_to_stop <= 8.0 and current_speed >= 2)):
+            print(f"MAX braking deceleration {self.max_braking_deceleration_rate}")
+            deceleration_rate = self.max_braking_deceleration_rate
+
+        print("--------------------------")
+        if accel > self.acceleration_rate:
+            accel = self.acceleration_rate
+        if accel < deceleration_rate:
+            accel = deceleration_rate
 
         longitudinal_command = Longitudinal()
         longitudinal_command.velocity = self.velocity_report.longitudinal_velocity
@@ -299,7 +326,7 @@ class VehicleControl(Node):
         target_speed = current_speed * (distance_to_stop / (self.path_plan.speed_limit * 3.0))**1.0
         
         # Clamp for realistic behavior
-        return min(self.path_plan.speed_limit, max(2.0, target_speed))
+        return min(self.path_plan.speed_limit, max(1.0, target_speed))
 
     def filter(self, new_value, previous_value, gain):
         return gain * previous_value + (1 - gain) * new_value

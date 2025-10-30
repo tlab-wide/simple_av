@@ -29,5 +29,5 @@ behavior:
       safety_distance: 4.0  # Minimum stopping distance behind an object (meters)
       detection_range:
         coefficient: 5.0  # Scaling factor for detection radius
-        base: 25.0      # Base detection radius (meters)
+        base: 50.0      # Base detection radius (meters)
 
