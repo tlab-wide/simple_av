@@ -696,7 +696,6 @@ class BehaviorMotionPlanning(Node):
             self.get_logger().info("Turn detected")
             self.status.data = 'Turn'
             
-
         if stop_point_type == 'CollisonAvoidance' or stop_point_type == 'CollisonPrediction':
             if stop_point_type == 'CollisonAvoidance':
                 self.get_logger().info('Collison Avoidance')
