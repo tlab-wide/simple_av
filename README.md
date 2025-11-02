@@ -1,5 +1,7 @@
 # Simple_AV
 
+Version - 2.14.15
+
 ## Overview
 
 **Simple_AV** is an autonomous vehicle simulation project designed to integrate various modules, including perception, localization, planning, and control, within a simulated environment provided by AWSIM. The primary purpose of this project is to create a functional and modular autonomous vehicle system that can interact with a simulated environment, enabling testing and development in a controlled setting. Simple_AV offers a simplified alternative to Autoware for autonomous vehicle control. Built with simplicity and flexibility in mind, Simple_AV provides a straightforward approach to vehicle navigation and control, making it an ideal choice for developers seeking a lightweight solution without sacrificing functionality.
@@ -144,7 +146,3 @@ ros2 run control controller
 
 ## Documentation 
 Full documentation for the project, including architecture details, usage instructions, and API references, can be found [documentation](https://hoosh-ir.github.io/simple_av/).
-
-## Contributing 
-Contributions to the Simple_AV project are welcome! Please fork the repository and submit a pull request for any improvements or bug fixes.
-
