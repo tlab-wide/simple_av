@@ -18,7 +18,7 @@
 #include "gear_display.hpp"
 #include "overlay_utils.hpp"
 #include "speed_display.hpp"
-#include "speed_limit_display.hpp"
+// #include "speed_limit_display.hpp"
 #include "steering_wheel_display.hpp"
 #include "traffic_display.hpp"
 #include "turn_signals_display.hpp"
@@ -65,7 +65,7 @@ private Q_SLOTS:
   void topic_updated_gear();
   void topic_updated_steering();
   void topic_updated_speed();
-  void topic_updated_speed_limit();
+  // void topic_updated_speed_limit();
   void topic_updated_turn_signals();
   void topic_updated_hazard_lights();
   void topic_updated_traffic();
@@ -93,7 +93,7 @@ private:
   std::unique_ptr<rviz_common::properties::RosTopicProperty> turn_signals_topic_property_;
   std::unique_ptr<rviz_common::properties::RosTopicProperty> hazard_lights_topic_property_;
   std::unique_ptr<rviz_common::properties::RosTopicProperty> traffic_topic_property_;
-  std::unique_ptr<rviz_common::properties::RosTopicProperty> speed_limit_topic_property_;
+  // std::unique_ptr<rviz_common::properties::RosTopicProperty> speed_limit_topic_property_;
 
   void drawHorizontalRoundedRectangle(QPainter & painter, const QRectF & backgroundRect);
   void drawVerticalRoundedRectangle(QPainter & painter, const QRectF & backgroundRect);
@@ -104,7 +104,7 @@ private:
   std::unique_ptr<SpeedDisplay> speed_display_;
   std::unique_ptr<TurnSignalsDisplay> turn_signals_display_;
   std::unique_ptr<TrafficDisplay> traffic_display_;
-  std::unique_ptr<SpeedLimitDisplay> speed_limit_display_;
+  // std::unique_ptr<SpeedLimitDisplay> speed_limit_display_;
 
   rclcpp::Subscription<autoware_vehicle_msgs::msg::GearReport>::SharedPtr gear_sub_;
   rclcpp::Subscription<autoware_vehicle_msgs::msg::SteeringReport>::SharedPtr steering_sub_;
@@ -114,8 +114,8 @@ private:
   rclcpp::Subscription<autoware_vehicle_msgs::msg::HazardLightsReport>::SharedPtr
     hazard_lights_sub_;
   rclcpp::Subscription<autoware_perception_msgs::msg::TrafficLightGroup>::SharedPtr traffic_sub_;
-  rclcpp::Subscription<autoware_internal_planning_msgs::msg::VelocityLimit>::SharedPtr
-    speed_limit_sub_;
+  // rclcpp::Subscription<autoware_internal_planning_msgs::msg::VelocityLimit>::SharedPtr
+  //   speed_limit_sub_;
 
   std::mutex property_mutex_;
 
@@ -126,8 +126,8 @@ private:
     const autoware_vehicle_msgs::msg::TurnIndicatorsReport::ConstSharedPtr & msg);
   void updateHazardLightsData(
     const autoware_vehicle_msgs::msg::HazardLightsReport::ConstSharedPtr & msg);
-  void updateSpeedLimitData(
-    const autoware_internal_planning_msgs::msg::VelocityLimit::ConstSharedPtr msg);
+  // void updateSpeedLimitData(
+  //   const autoware_internal_planning_msgs::msg::VelocityLimit::ConstSharedPtr msg);
   void updateTrafficLightData(
     const autoware_perception_msgs::msg::TrafficLightGroup::ConstSharedPtr msg);
   void drawWidget(QImage & hud);

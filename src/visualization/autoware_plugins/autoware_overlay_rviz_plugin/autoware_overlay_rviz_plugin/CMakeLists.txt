@@ -15,7 +15,7 @@ set(headers_to_not_moc
   include/speed_display.hpp
   include/turn_signals_display.hpp
   include/traffic_display.hpp
-  include/speed_limit_display.hpp
+  # include/speed_limit_display.hpp
 )
 
 find_package(autoware_perception_msgs REQUIRED)
@@ -32,7 +32,7 @@ set(display_source_files
   src/speed_display.cpp
   src/turn_signals_display.cpp
   src/traffic_display.cpp
-  src/speed_limit_display.cpp
+  # src/speed_limit_display.cpp
 )
 
 # Create the library target FIRST
@@ -71,7 +71,7 @@ ament_target_dependencies(${PROJECT_NAME} PUBLIC
   rviz_common
   rviz_rendering
   autoware_vehicle_msgs
-  autoware_internal_planning_msgs
+  # autoware_internal_planning_msgs
   autoware_perception_msgs
 )
 
