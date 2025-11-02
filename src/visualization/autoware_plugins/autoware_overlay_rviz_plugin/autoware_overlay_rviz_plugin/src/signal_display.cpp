@@ -79,7 +79,7 @@ SignalDisplay::SignalDisplay()
   speed_display_ = std::make_unique<SpeedDisplay>();
   turn_signals_display_ = std::make_unique<TurnSignalsDisplay>();
   traffic_display_ = std::make_unique<TrafficDisplay>();
-  speed_limit_display_ = std::make_unique<SpeedLimitDisplay>();
+  // speed_limit_display_ = std::make_unique<SpeedLimitDisplay>();
 }
 
 void SignalDisplay::onInitialize()
@@ -125,11 +125,11 @@ void SignalDisplay::onInitialize()
     SLOT(topic_updated_hazard_lights()));
   hazard_lights_topic_property_->initialize(rviz_ros_node);
 
-  speed_limit_topic_property_ = std::make_unique<rviz_common::properties::RosTopicProperty>(
-    "Speed Limit Topic", "/planning/scenario_planning/current_max_velocity",
-    "autoware_internal_planning_msgs/msg/VelocityLimit", "Topic for Speed Limit Data", this,
-    SLOT(topic_updated_speed_limit()));
-  speed_limit_topic_property_->initialize(rviz_ros_node);
+  // speed_limit_topic_property_ = std::make_unique<rviz_common::properties::RosTopicProperty>(
+  //   "Speed Limit Topic", "/planning/scenario_planning/current_max_velocity",
+  //   "autoware_internal_planning_msgs/msg/VelocityLimit", "Topic for Speed Limit Data", this,
+  //   SLOT(topic_updated_speed_limit()));
+  // speed_limit_topic_property_->initialize(rviz_ros_node);
 
   traffic_topic_property_ = std::make_unique<rviz_common::properties::RosTopicProperty>(
     "Traffic Topic",
@@ -144,7 +144,7 @@ void SignalDisplay::setupRosSubscriptions()
   topic_updated_gear();
   topic_updated_steering();
   topic_updated_speed();
-  topic_updated_speed_limit();
+  // topic_updated_speed_limit();
   topic_updated_turn_signals();
   topic_updated_hazard_lights();
   topic_updated_traffic();
@@ -167,7 +167,7 @@ SignalDisplay::~SignalDisplay()
   speed_display_.reset();
   turn_signals_display_.reset();
   traffic_display_.reset();
-  speed_limit_display_.reset();
+  // speed_limit_display_.reset();
 
   gear_topic_property_.reset();
   turn_signals_topic_property_.reset();
@@ -175,6 +175,7 @@ SignalDisplay::~SignalDisplay()
   steering_topic_property_.reset();
   hazard_lights_topic_property_.reset();
   traffic_topic_property_.reset();
+  // speed_limit_topic_property_.reset();
 }
 
 void SignalDisplay::update(float /* wall_dt */, float /* ros_dt */)
@@ -222,16 +223,16 @@ void SignalDisplay::updateTrafficLightData(
   }
 }
 
-void SignalDisplay::updateSpeedLimitData(
-  const autoware_internal_planning_msgs::msg::VelocityLimit::ConstSharedPtr msg)
-{
-  std::lock_guard<std::mutex> lock(property_mutex_);
-
-  if (speed_limit_display_) {
-    speed_limit_display_->updateSpeedLimitData(msg);
-    queueRender();
-  }
-}
+// void SignalDisplay::updateSpeedLimitData(
+//   const autoware_internal_planning_msgs::msg::VelocityLimit::ConstSharedPtr msg)
+// {
+//   std::lock_guard<std::mutex> lock(property_mutex_);
+//
+//   if (speed_limit_display_) {
+//     speed_limit_display_->updateSpeedLimitData(msg);
+//     queueRender();
+//   }
+// }
 
 void SignalDisplay::updateHazardLightsData(
   const autoware_vehicle_msgs::msg::HazardLightsReport::ConstSharedPtr & msg)
@@ -273,7 +274,7 @@ void SignalDisplay::updateSpeedData(
 
   if (speed_display_) {
     speed_display_->updateSpeedData(msg);
-    speed_limit_display_->updateSpeedData(msg);
+    // speed_limit_display_->updateSpeedData(msg);
     queueRender();
   }
 }
@@ -326,12 +327,12 @@ void SignalDisplay::drawWidget(QImage & hud)
     traffic_display_->drawTrafficLightIndicator(painter, backgroundRect);
   }
 
-  if (speed_limit_display_) {
-    speed_limit_display_->drawSpeedLimitIndicator(
-      painter, backgroundRect, property_primary_color_->getColor(),
-      property_light_limit_color_->getColor(), property_dark_limit_color_->getColor(),
-      property_background_color_->getColor(), property_background_alpha_->getFloat());
-  }
+  // if (speed_limit_display_) {
+  //   speed_limit_display_->drawSpeedLimitIndicator(
+  //     painter, backgroundRect, property_primary_color_->getColor(),
+  //     property_light_limit_color_->getColor(), property_dark_limit_color_->getColor(),
+  //     property_background_color_->getColor(), property_background_alpha_->getFloat());
+  // }
 
   painter.end();
 }
@@ -447,20 +448,20 @@ void SignalDisplay::topic_updated_speed()
       });
 }
 
-void SignalDisplay::topic_updated_speed_limit()
-{
-  // resubscribe to the topic
-  speed_limit_sub_.reset();
-  auto rviz_ros_node = context_->getRosNodeAbstraction().lock();
-  speed_limit_sub_ =
-    rviz_ros_node->get_raw_node()
-      ->create_subscription<autoware_internal_planning_msgs::msg::VelocityLimit>(
-        speed_limit_topic_property_->getTopicStd(),
-        rclcpp::QoS(rclcpp::KeepLast(10)).transient_local(),
-        [this](const autoware_internal_planning_msgs::msg::VelocityLimit::ConstSharedPtr msg) {
-          updateSpeedLimitData(msg);
-        });
-}
+// void SignalDisplay::topic_updated_speed_limit()
+// {
+//   // resubscribe to the topic
+//   speed_limit_sub_.reset();
+//   auto rviz_ros_node = context_->getRosNodeAbstraction().lock();
+//   speed_limit_sub_ =
+//     rviz_ros_node->get_raw_node()
+//       ->create_subscription<autoware_internal_planning_msgs::msg::VelocityLimit>(
+//         speed_limit_topic_property_->getTopicStd(),
+//         rclcpp::QoS(rclcpp::KeepLast(10)).transient_local(),
+//         [this](const autoware_internal_planning_msgs::msg::VelocityLimit::ConstSharedPtr msg) {
+//           updateSpeedLimitData(msg);
+//         });
+// }
 
 void SignalDisplay::topic_updated_turn_signals()
 {
