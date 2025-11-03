@@ -1,1 +1,8 @@
+# Geometry transformations
 transformations>=2025.1.1
+
+# NumPy - pinned to avoid binary incompatibility with scipy
+numpy>=1.17.3,<1.25.0
+
+# SciPy - for spatial transformations in perception and planning nodes
+scipy>=1.7.0,<1.12.0
