@@ -94,7 +94,7 @@ class point_visualizer(Node):
     def get_layout_data(self):
         sidewalks = []
         try:
-            intersection = self.layout_data['intersections']['intersection_2']
+            intersection = self.layout_data['intersections']['2']
             for sw_name, sw_data in intersection.items():
                 self.get_logger().info(f"debug se name: {sw_name} - sw data: {sw_data}")
                 points = [tuple(p) for p in sw_data["points"]]
