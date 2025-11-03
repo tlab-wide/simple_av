@@ -491,6 +491,7 @@ class BehaviorPathPlanner(Node):
         return inside
 
     def is_object_detected_on_intersection_danger_zones(self, intersection_name):
+        self.get_logger().debug(f"insde is_object_detected_on_intersection_danger_zones ")
         # Validate that we have pose data
         if not self.pose or not self.pose.pose:
             self.get_logger().warning("No pose data available for danger zone detection")
@@ -542,10 +543,13 @@ class BehaviorPathPlanner(Node):
 
 
     def cool4_speed_profile_adjustment(self, cool4_adjusted_speed_profile, intersection_points,  waypoint_distance=2.0):
+        self.get_logger().debug(f"insde cool4_speed_profile_adjustment ")
         start_idx, exit_idx, end_idx = intersection_points
 
         # Only check danger zones if we're at intersection 2 and have intersection awareness data
         is_object_in_danger_zone = False
+        self.get_logger().debug(f"intersection_awareness_intersection_name: {self.intersection_awareness_intersection_name} ")
+        self.get_logger().debug(f"intersection_awareness_status: {self.intersection_awareness_status} ")
         if self.intersection_awareness_intersection_name == '2' and self.intersection_awareness_status is not None:
             is_object_in_danger_zone = self.is_object_detected_on_intersection_danger_zones('2')
             self.get_logger().debug(f"At intersection 2, checking danger zones: {is_object_in_danger_zone}")
@@ -621,12 +625,14 @@ class BehaviorPathPlanner(Node):
         return has_found_on_path, [intersection_start_point_idx, intersection_exit_point_idx, intersection_end_point_idx]
 
     def speed_profile_maker(self, path):
+        self.get_logger().debug(f"insde speed_profile_maker method is cool4 enabled: {self.is_cool4_speed_profile_enable}")
 
         speed_profile_base = self.simple_av_speed_profile_maker(path)
 
 
         if self.is_cool4_speed_profile_enable:
             has_found_on_path, intersection_points = self.find_intersection_start_and_exit_using_config(path)
+            self.get_logger().debug(f"has_found_on_path: {has_found_on_path} - intersection_points: {intersection_points}")
             if has_found_on_path:
                 self.get_logger().info(f"Intersection points found on path at indices: start={intersection_points[0]}, exit={intersection_points[1]}, end={intersection_points[2]}")
                 cool4_adjusted_speed_profile = self.cool4_speed_profile_adjustment(speed_profile_base, intersection_points)
