@@ -163,10 +163,24 @@ class BehaviorPathPlanner(Node):
         try:
             with open(intersections_danger_zones_path, 'r') as f:
                 intersections_danger_zones = yaml.safe_load(f)
-            self.get_logger().info("YAML file loaded successfully.")
+
+            # Validate that the file has the expected structure
+            if intersections_danger_zones and 'intersections' in intersections_danger_zones:
+                num_intersections = len(intersections_danger_zones['intersections'])
+                self.get_logger().info(f"Loaded danger zones for {num_intersections} intersection(s)")
+            else:
+                self.get_logger().warning("Danger zones YAML file loaded but has unexpected structure")
+                intersections_danger_zones = {'intersections': {}}
+
+        except FileNotFoundError:
+            self.get_logger().error(f"Danger zones file not found: {intersections_danger_zones_path}")
+            intersections_danger_zones = {'intersections': {}}
+        except yaml.YAMLError as e:
+            self.get_logger().error(f"YAML parsing error in danger zones file: {e}")
+            intersections_danger_zones = {'intersections': {}}
         except Exception as e:
-            self.get_logger().error(f"Failed to load YAML file: {e}")
-            intersections_danger_zones = None
+            self.get_logger().error(f"Failed to load danger zones YAML file: {e}")
+            intersections_danger_zones = {'intersections': {}}
 
         return intersections_danger_zones
 
@@ -409,15 +423,26 @@ class BehaviorPathPlanner(Node):
     
     
     def get_detected_pedestrians(self):
-        if not self.detectedObjects:
-            self.get_logger().warning("No Perception / no object detected!")
-            return None
+        """
+        Get detected pedestrians and cyclists from perception data.
+        Returns a list of detected objects with labels:
+        - 2: Pedestrian
+        - 7: Cyclist/Bicycle
+        """
+        if not self.detectedObjects or not self.detectedObjects.objects:
+            self.get_logger().debug("No perception data or no objects detected")
+            return []  # Return empty list instead of None
 
         detected_pedestrians = []
         for obj in self.detectedObjects.objects:
             object_type = obj.label
-            if object_type == '7' or object_type == '2':
+            # Label is int32, check for pedestrian (2) and cyclist (7)
+            if object_type in [2, 7]:
                 detected_pedestrians.append(obj)
+
+        if detected_pedestrians:
+            self.get_logger().debug(f"Found {len(detected_pedestrians)} pedestrians/cyclists")
+
         return detected_pedestrians
 
     def apply_quaternion_rotation(self, quaternion, vector):
@@ -466,39 +491,70 @@ class BehaviorPathPlanner(Node):
         return inside
 
     def is_object_detected_on_intersection_danger_zones(self, intersection_name):
+        # Validate that we have pose data
+        if not self.pose or not self.pose.pose:
+            self.get_logger().warning("No pose data available for danger zone detection")
+            return False
+
         vehicle_pose = self.pose.pose.position
+        vehicle_orientation = self.pose.pose.orientation
+
+        # Check if pose is valid (not at origin)
+        if vehicle_pose.x == 0.0 and vehicle_pose.y == 0.0 and vehicle_pose.z == 0.0:
+            self.get_logger().debug("Vehicle pose at origin, skipping danger zone check")
+            return False
+
         self.get_logger().debug("Checking intersection danger zones...")
         detected_pedestrians = self.get_detected_pedestrians()
         if not detected_pedestrians:
+            self.get_logger().debug("No pedestrians detected")
+            return False
+
+        # Validate layout data exists
+        if not self.layout_data or "intersections" not in self.layout_data:
+            self.get_logger().warning("No intersection layout data loaded")
             return False
 
         intersection = self.layout_data["intersections"].get(str(intersection_name))
         if not intersection:
-            self.get_logger().warning(f"No intersection data for {intersection_name}")
+            self.get_logger().warning(f"No intersection data for intersection '{intersection_name}'")
             return False
 
         objects_in_zones = 0
         for ped in detected_pedestrians:
-            ped_abs = self.get_object_absolute_position(vehicle_pose, ped)
+            # Convert relative position to absolute position
+            ped_abs = self.get_object_absolute_position(vehicle_orientation, vehicle_pose, ped.position)
+            self.get_logger().debug(f"Checking pedestrian at absolute position: ({ped_abs.x:.2f}, {ped_abs.y:.2f})")
+
             for zone_name, zone_data in intersection.items():
                 polygon = zone_data["points"]
                 if self.is_point_in_polygon(ped_abs, polygon):
                     objects_in_zones += 1
                     self.get_logger().info(
-                        f"Pedestrian detected in {zone_name} of intersection {intersection_name}"
+                        f"Pedestrian detected at ({ped_abs.x:.2f}, {ped_abs.y:.2f}) in {zone_name} of intersection {intersection_name}"
                     )
 
-        self.get_logger().info(f"Total pedestrians in danger zones: {objects_in_zones}")
+        if objects_in_zones > 0:
+            self.get_logger().info(f"Total pedestrians in danger zones: {objects_in_zones}")
+        else:
+            self.get_logger().debug("No pedestrians in danger zones")
         return objects_in_zones > 0
 
 
     def cool4_speed_profile_adjustment(self, cool4_adjusted_speed_profile, intersection_points,  waypoint_distance=2.0):
         start_idx, exit_idx, end_idx = intersection_points
-        is_object_in_danger_zone = self.is_object_detected_on_intersection_danger_zones('2')
 
-        print(f"is_RSU_enabled: {self.is_RSU_enabled}, Danger:{is_object_in_danger_zone}")
+        # Only check danger zones if we're at intersection 2 and have intersection awareness data
+        is_object_in_danger_zone = False
+        if self.intersection_awareness_intersection_name == '2' and self.intersection_awareness_status is not None:
+            is_object_in_danger_zone = self.is_object_detected_on_intersection_danger_zones('2')
+            self.get_logger().debug(f"At intersection 2, checking danger zones: {is_object_in_danger_zone}")
+        else:
+            self.get_logger().debug(f"Not at intersection 2 (current: {self.intersection_awareness_intersection_name}), skipping danger zone check")
+
+        self.get_logger().info(f"is_RSU_enabled: {self.is_RSU_enabled}, Danger: {is_object_in_danger_zone}")
         if self.is_RSU_enabled and not is_object_in_danger_zone:
-                print("DEBUG: RSU enabled, Danger false continue the curve with 12KM/H")
+                self.get_logger().info("RSU enabled, no danger detected - continuing through intersection at moderate speed (12 km/h)")
                 # Case 1: RSU active and no danger → keep moderate constant speed
                 cool4_adjusted_speed_profile[start_idx:exit_idx] = [self.MIDDLE_SPEED] * (exit_idx - start_idx)
 
@@ -514,7 +570,7 @@ class BehaviorPathPlanner(Node):
                     cool4_adjusted_speed_profile[exit_idx:end_idx] = accel_profile
 
         elif (self.is_RSU_enabled and is_object_in_danger_zone) or (not self.is_RSU_enabled):
-            print("DEBUG: RSU enabled/Disable, Danger TRUE or  continue the curve with 12KM/H->3KM/H")
+            self.get_logger().info("Danger detected or RSU disabled - decelerating through intersection (12 km/h -> 3 km/h)")
             # Case 2: RSU is_object_in_danger_zone OR no RSU → decelerate gradually from MIDDLE_SPEED → MIN_SPEED
             n_points = exit_idx - start_idx
             if n_points > 0:
@@ -568,14 +624,16 @@ class BehaviorPathPlanner(Node):
 
         speed_profile_base = self.simple_av_speed_profile_maker(path)
 
-        
+
         if self.is_cool4_speed_profile_enable:
             has_found_on_path, intersection_points = self.find_intersection_start_and_exit_using_config(path)
-            print(f"DEBUG - speed profile: has_found_on_path: {has_found_on_path}, indexes: {intersection_points}")
             if has_found_on_path:
+                self.get_logger().info(f"Intersection points found on path at indices: start={intersection_points[0]}, exit={intersection_points[1]}, end={intersection_points[2]}")
                 cool4_adjusted_speed_profile = self.cool4_speed_profile_adjustment(speed_profile_base, intersection_points)
                 return cool4_adjusted_speed_profile
-    
+            else:
+                self.get_logger().debug("Intersection points not found on current path, using base speed profile")
+
         return speed_profile_base
 
     def handle_mission_plan(self):
