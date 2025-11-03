@@ -12,10 +12,11 @@ import math
 from collections import deque
 from simple_av_msgs.msg import PlanningPathPlanningMsg, PlanningInternalMsg, PlanningInternalMissionPlanMsg, PlanningWaypoint
 from simple_av_msgs.msg import LocalizationMsg, LocalizationIntersectionStatus
-from simple_av_msgs.msg import Portal
+from simple_av_msgs.msg import Portal, DetectedObjectsArray
 import numpy as np
 from simple_av_msgs.srv import TriggerMissionPlan
 from rclpy.qos import QoSProfile, QoSHistoryPolicy, QoSReliabilityPolicy, QoSDurabilityPolicy
+from scipy.spatial.transform import Rotation as R
 
 
 class BehaviorPathPlanner(Node):
@@ -32,7 +33,6 @@ class BehaviorPathPlanner(Node):
         self.av_features = self.config_file_loader("av_features.yaml")
         self.is_cool4_speed_profile_enable = self.av_features['cool4_speed_profile_test']['enable']
         self.is_RSU_enabled = self.av_features['object_detection']['use_rsu']
-        self.DANGER = self.av_features['cool4_speed_profile_test']['DANGER']
 
         # Load the map
         self.map_data = self.load_map_data(self.vehicle_model)
@@ -66,6 +66,8 @@ class BehaviorPathPlanner(Node):
         self.intersection_profiles = self.load_intersections()
         self.intersection_points = self.intersection_profiles['intersection_points']
         self.intersection2_scenario2_points = self.intersection_profiles['intersection_points']['2']['2']
+        # Load YAML sidewalk data
+        self.layout_data = self.load_intersection_layout()
 
         # Create subscriber to simple_av/localization/intersection_status topic
         self.subscriptionIntersectionAwareness = self.create_subscription(LocalizationIntersectionStatus, 'simple_av/localization/intersection_status', self.intersectionAwareness_callback, 10)
@@ -94,6 +96,9 @@ class BehaviorPathPlanner(Node):
         self.subscriptionPortal = self.create_subscription(Portal, 'simple_av/portal', self.portal_callback, 10)
         self.reset = False
         self.finished = False
+
+        self.subscriptionDetectedObjects = self.create_subscription(DetectedObjectsArray, 'simple_av/perception/detected_objects', self.detectedObjects_callback, 10)
+        self.detectedObjects = DetectedObjectsArray()
 
         # Publish topics
         self.planning_publisher = self.create_publisher(PlanningPathPlanningMsg, 'simple_av/planning/path_planning', 10)
@@ -149,6 +154,21 @@ class BehaviorPathPlanner(Node):
             return config["vehicles"][vehicle_model]
         else:
             raise ValueError(f"Vehicle type '{vehicle_model}' not found in the configuration.")
+        
+    # ---- parse into structured sidewalks ----
+    def load_intersection_layout(self):
+        package_share_directory = get_package_share_directory('common')
+        intersections_danger_zones_path = os.path.join(package_share_directory, "zones", 'intersections_danger_zones.yaml')
+
+        try:
+            with open(intersections_danger_zones_path, 'r') as f:
+                intersections_danger_zones = yaml.safe_load(f)
+            self.get_logger().info("YAML file loaded successfully.")
+        except Exception as e:
+            self.get_logger().error(f"Failed to load YAML file: {e}")
+            intersections_danger_zones = None
+
+        return intersections_danger_zones
 
     def load_map_data(self, vehicle_model):
         """
@@ -175,6 +195,9 @@ class BehaviorPathPlanner(Node):
             config = yaml.safe_load(file)
         return config
     
+    def detectedObjects_callback(self, msg):
+        self.detectedObjects = msg
+
     def intersectionAwareness_callback(self, msg):
         self.intersection_awareness_intersection_name = msg.intersection_name
         self.intersection_awareness_status = msg.status
@@ -336,21 +359,6 @@ class BehaviorPathPlanner(Node):
         future = self.mission_planner_client.call_async(request)
         return future
 
-    # def get_detected_objects(self):
-    #     if not self.detectedObjects:
-    #         self.get_logger().warning("No Perception / no object detected!")
-    #         return None
-
-    #     objects_ahead = []
-    #     for obj in self.detectedObjects.objects:
-    #         object_direction = obj.relative_direction.data
-    #         if object_direction == 'above' or object_direction == 'NW' or object_direction == 'NE':
-    #             objects_ahead.append(obj)
-    #     return objects_ahead
-
-    # def is_rsu_object_detected(self, intersection_name, areas, detected_objects):
-    #     pass
-    
     def adjust_speed_to_curve(self, curvature, max_speed=11.0, k=1.0):
         # If curvature is zero, return the max speed (straight path)
         if curvature == 0:
@@ -399,11 +407,97 @@ class BehaviorPathPlanner(Node):
 
         return speeds
     
+    
+    def get_detected_pedestrians(self):
+        if not self.detectedObjects:
+            self.get_logger().warning("No Perception / no object detected!")
+            return None
+
+        detected_pedestrians = []
+        for obj in self.detectedObjects.objects:
+            object_type = obj.label
+            if object_type == '7' or object_type == '2':
+                detected_pedestrians.append(obj)
+        return detected_pedestrians
+
+    def apply_quaternion_rotation(self, quaternion, vector):
+        """
+        Applies a quaternion rotation to a given vector.
+        """
+        rotation = R.from_quat(np.array([quaternion.x, quaternion.y, quaternion.z, quaternion.w]))
+        transformed_vector = rotation.apply(np.array([vector.x, vector.y, vector.z]))
+        return Point(x=transformed_vector[0], y=transformed_vector[1], z=transformed_vector[2])
+
+    def get_object_absolute_position(self, vehicle_orientation, vehicle_pose, vector):
+        """
+        Converts an object's relative position back to its absolute position using the vehicle's pose.
+        """
+        # Apply the quaternion rotation (forward rotation)
+        rotated_vector = self.apply_quaternion_rotation(vehicle_orientation, vector)
+
+        # Add the rotated vector to the vehicle's position
+        obj_x = vehicle_pose.x + rotated_vector.x
+        obj_y = vehicle_pose.y + rotated_vector.y
+        obj_z = vehicle_pose.z + rotated_vector.z
+
+        # Create the absolute position
+        object_absolute_pose = Point(x=obj_x, y=obj_y, z=obj_z)
+        return object_absolute_pose
+
+    def is_point_in_polygon(self, point, polygon_points):
+        """
+        Check if a 2D point is inside a polygon (ray casting algorithm).
+        polygon_points: list of [x, y, z]
+        """
+        x, y = point.x, point.y
+        inside = False
+        n = len(polygon_points)
+        p1x, p1y = polygon_points[0][0], polygon_points[0][1]
+        for i in range(n + 1):
+            p2x, p2y = polygon_points[i % n][0], polygon_points[i % n][1]
+            if y > min(p1y, p2y):
+                if y <= max(p1y, p2y):
+                    if x <= max(p1x, p2x):
+                        if p1y != p2y:
+                            xinters = (y - p1y) * (p2x - p1x) / (p2y - p1y) + p1x
+                        if p1x == p2x or x <= xinters:
+                            inside = not inside
+            p1x, p1y = p2x, p2y
+        return inside
+
+    def is_object_detected_on_intersection_danger_zones(self, intersection_name):
+        vehicle_pose = self.pose.pose.position
+        self.get_logger().debug("Checking intersection danger zones...")
+        detected_pedestrians = self.get_detected_pedestrians()
+        if not detected_pedestrians:
+            return False
+
+        intersection = self.layout_data["intersections"].get(str(intersection_name))
+        if not intersection:
+            self.get_logger().warning(f"No intersection data for {intersection_name}")
+            return False
+
+        objects_in_zones = 0
+        for ped in detected_pedestrians:
+            ped_abs = self.get_object_absolute_position(vehicle_pose, ped)
+            for zone_name, zone_data in intersection.items():
+                polygon = zone_data["points"]
+                if self.is_point_in_polygon(ped_abs, polygon):
+                    objects_in_zones += 1
+                    self.get_logger().info(
+                        f"Pedestrian detected in {zone_name} of intersection {intersection_name}"
+                    )
+
+        self.get_logger().info(f"Total pedestrians in danger zones: {objects_in_zones}")
+        return objects_in_zones > 0
+
 
     def cool4_speed_profile_adjustment(self, cool4_adjusted_speed_profile, intersection_points,  waypoint_distance=2.0):
         start_idx, exit_idx, end_idx = intersection_points
-        print(f"is_RSU_enabled: {self.is_RSU_enabled}, Danger:{self.DANGER}")
-        if self.is_RSU_enabled and not self.DANGER:
+        is_object_in_danger_zone = self.is_object_detected_on_intersection_danger_zones('2')
+
+        print(f"is_RSU_enabled: {self.is_RSU_enabled}, Danger:{is_object_in_danger_zone}")
+        if self.is_RSU_enabled and not is_object_in_danger_zone:
                 print("DEBUG: RSU enabled, Danger false continue the curve with 12KM/H")
                 # Case 1: RSU active and no danger → keep moderate constant speed
                 cool4_adjusted_speed_profile[start_idx:exit_idx] = [self.MIDDLE_SPEED] * (exit_idx - start_idx)
@@ -419,9 +513,9 @@ class BehaviorPathPlanner(Node):
                         accel_profile.append(v)
                     cool4_adjusted_speed_profile[exit_idx:end_idx] = accel_profile
 
-        elif (self.is_RSU_enabled and self.DANGER) or (not self.is_RSU_enabled):
+        elif (self.is_RSU_enabled and is_object_in_danger_zone) or (not self.is_RSU_enabled):
             print("DEBUG: RSU enabled/Disable, Danger TRUE or  continue the curve with 12KM/H->3KM/H")
-            # Case 2: RSU danger OR no RSU → decelerate gradually from MIDDLE_SPEED → MIN_SPEED
+            # Case 2: RSU is_object_in_danger_zone OR no RSU → decelerate gradually from MIDDLE_SPEED → MIN_SPEED
             n_points = exit_idx - start_idx
             if n_points > 0:
                 decel_profile = []
