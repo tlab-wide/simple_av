@@ -33,7 +33,6 @@ class BehaviorPathPlanner(Node):
         self.av_features = self.config_file_loader("av_features.yaml")
         self.is_cool4_speed_profile_enable = self.av_features['cool4_speed_profile_test']['enable']
         self.is_RSU_enabled = self.av_features['object_detection']['use_rsu']
-        self.DANGER = self.av_features['cool4_speed_profile_test']['DANGER']
 
         # Load the map
         self.map_data = self.load_map_data(self.vehicle_model)

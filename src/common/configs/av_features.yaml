@@ -16,5 +16,4 @@ collision_avoidance:
   collision_prediction: True       # Enable or disable collision prediction
 
 cool4_speed_profile_test:
-  enable: True 
-  DANGER: False
+  enable: True
