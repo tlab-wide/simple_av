@@ -5,8 +5,12 @@ Panels:
     Property Tree Widget:
       Expanded:
         - /Sensing1/LiDAR1/ConcatenatePointCloud1/Autocompute Value Bounds1
+        - /laneletmap1
         - /laneletmap1/Topic1
         - /LookAheadPoint1/Topic1
+        - /Stop reason1/Topic1
+        - /Area Zones1
+        - /Area Zones1/Topic1
       Splitter Ratio: 0.557669460773468
     Tree Height: 269
   - Class: rviz_common/Selection
@@ -118,7 +122,6 @@ Visualization Manager:
               Primary Color: 174; 174; 174
               Signal Blinking Mode: Static
               Signal Color: 0; 230; 120
-              Speed Limit Topic: /planning/scenario_planning/current_max_velocity
               Speed Topic: /vehicle/status/velocity_status
               Steering Topic: /vehicle/status/steering_status
               Top: 10
@@ -3163,22 +3166,50 @@ Visualization Manager:
                 Value: /sensing/camera/camera6/image_raw
               Value: true
               Visibility:
-                "": true
+                Area Zones: true
                 Control:
                   "": true
                   Value: false
                 Debug:
                   Control: true
                   Localization:
-                    "": true
+                    EKFPoseHistory: true
+                    NDT pointclouds: true
+                    NDTLoadedPCDMap: true
+                    NDTPoseHistory: true
                     Value: true
                   Map: true
                   Perception:
-                    "": true
+                    CameraLidarFusion(purple): true
+                    Centerpoint(red1): true
+                    CenterpointROIFusion(red2): true
+                    CenterpointValidator(red3): true
+                    Detection(yellow): true
+                    DetectionByTracker(orange): true
+                    PointPainting(light_green1): true
+                    PointPaintingROIFusion(light_green2): true
+                    PointPaintingValidator(light_green3): true
+                    Prediction(light_blue): true
+                    RadarFarObjects(white): true
+                    Tracking(green): true
                     Value: true
                   Planning:
-                    "":
-                      "": true
+                    Objects Of Interest:
+                      AvoidanceByLCLeft: true
+                      AvoidanceByLCRight: true
+                      AvoidanceLeft: true
+                      AvoidanceRight: true
+                      BlindSpot: true
+                      Crosswalk: true
+                      DetectionArea: true
+                      GoalPlanner: true
+                      Intersection: true
+                      LaneChangeLeft: true
+                      LaneChangeRight: true
+                      NoStoppingArea: true
+                      ObstacleCruise: true
+                      StartPlanner: true
+                      TrafficLight: true
                       Value: true
                     Value: true
                   Sensing:
@@ -3217,6 +3248,7 @@ Visualization Manager:
                     "": true
                     Value: true
                   Value: true
+                Stop reason: true
                 StopPoint: true
                 System:
                   "": true
@@ -4271,7 +4303,7 @@ Visualization Manager:
       Enabled: true
       Name: laneletmap
       Namespaces:
-        {}
+        lanelet_map: true
       Topic:
         Depth: 5
         Durability Policy: Transient Local
@@ -4358,11 +4390,7 @@ Visualization Manager:
         Color: 119; 11; 32
       Name: DetectedObjects
       Namespaces:
-        label: true
-        position covariance: true
-        shape: true
-        twist: true
-        velocity: true
+        {}
       Object Fill Type: skeleton
       PEDESTRIAN:
         Alpha: 0.9990000128746033
@@ -4416,13 +4444,7 @@ Visualization Manager:
         Color: 119; 11; 32
       Name: RSU1 PO
       Namespaces:
-        acceleration: true
-        label: true
-        position covariance: true
-        shape: true
-        twist: true
-        uuid: true
-        velocity: true
+        {}
       Object Fill Type: Fill
       PEDESTRIAN:
         Alpha: 0.9990000128746033
@@ -4611,7 +4633,7 @@ Visualization Manager:
       Enabled: true
       Name: LookAheadPoint
       Namespaces:
-        lookahead: true
+        {}
       Topic:
         Depth: 5
         Durability Policy: Volatile
@@ -4624,7 +4646,7 @@ Visualization Manager:
       Enabled: true
       Name: StopPoint
       Namespaces:
-        stop_point: true
+        {}
       Topic:
         Depth: 5
         Durability Policy: Volatile
@@ -4637,7 +4659,7 @@ Visualization Manager:
       Enabled: true
       Name: Stop reason
       Namespaces:
-        text_display: true
+        {}
       Topic:
         Depth: 5
         Durability Policy: Volatile
@@ -4645,6 +4667,19 @@ Visualization Manager:
         History Policy: Keep Last
         Reliability Policy: Reliable
         Value: /status_marker
+      Value: true
+    - Class: rviz_default_plugins/Marker
+      Enabled: true
+      Name: Area Zones
+      Namespaces:
+        {}
+      Topic:
+        Depth: 5
+        Durability Policy: Transient Local
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /sidewalk_marker
       Value: true
   Enabled: true
   Global Options:
@@ -4743,7 +4778,7 @@ Visualization Manager:
   Value: true
   Views:
     Current:
-      Angle: -0.004999999888241291
+      Angle: 3.2149996757507324
       Class: rviz_default_plugins/TopDownOrtho
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
@@ -4753,11 +4788,11 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Scale: 14.904873847961426
+      Scale: -2.816408395767212
       Target Frame: viewer
       Value: TopDownOrtho (rviz_default_plugins)
-      X: 4233.47265625
-      Y: 73456.203125
+      X: 4499.00341796875
+      Y: 72945.96875
     Saved:
       - Class: rviz_default_plugins/ThirdPersonFollower
         Distance: 18
