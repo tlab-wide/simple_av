@@ -52,12 +52,12 @@ def generate_launch_description():
         ),
 
         # 👉 Lanelet2 Map Publisher
-        # Node(
-        #     package='simple_av',
-        #     executable='rviz_lanelet_map_publisher',
-        #     name='rviz_lanelet_map_publisher_node',
-        #     output='screen'
-        # ),
+        Node(
+            package='simple_av',
+            executable='rviz_lanelet_map_publisher',
+            name='rviz_lanelet_map_publisher_node',
+            output='screen'
+        ),
 
         # 👉 path monitor node
         Node(
