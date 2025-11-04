@@ -118905,10 +118905,22 @@
             "nextLanes": [
                 "lanelet328"
             ],
-            "trafficlightsWayIDs": [],
-            "trafficlightsRelationID": [],
-            "stopLinePoseP1": [],
-            "stopLinePoseP2": [],
+            "trafficlightsWayIDs": [
+                166953
+            ],
+            "trafficlightsRelationID": [
+                165626
+            ],
+            "stopLinePoseP1": [
+                4519.830078125,
+                72946.25,
+                18.670000076293945
+            ],
+            "stopLinePoseP2": [
+                4522.6201171875,
+                72941.078125,
+                18.670000076293945
+            ],
             "dense_waypoints": [
                 {
                     "x": 4547.30908203125,
