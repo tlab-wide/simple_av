@@ -338,26 +338,33 @@ class BehaviorMotionPlanning(Node):
     def manage_traffic_lights(self):
         v2i_traffic_signals_id = list(self.trafficSignal.v2i_traffic_signals_id)
         v2i_traffic_signals_colors = list(self.trafficSignal.v2i_traffic_signals_colors)
-
+        self.get_logger().info("DEBUG_trafficlight - in manage traffic light method")
+        self.get_logger().info(f"DEBUG_trafficlight - v2i_traffic_signals_id: {v2i_traffic_signals_id}")
         if not v2i_traffic_signals_id: #ego vehicle is out of intersection zone
+            self.get_logger().info("DEBUG_trafficlight - ego vehicle is out of intersection zone")
             self.publish_rviz_traffic_light_status(0)
-
 
         current_lane = self.route[self.current_lane_index]
         lane_obj = self.find_lane_by_name(current_lane)
         current_lane_traffic_light_id = lane_obj['trafficlightsRelationID']
+        self.get_logger().info(f"DEBUG_trafficlight - current_lane: {current_lane} - current_lane_traffic_light_id: {current_lane_traffic_light_id}")
         if current_lane_traffic_light_id: # this lane have a traffic light
             if current_lane_traffic_light_id[0] in v2i_traffic_signals_id: # traffic light id is on the list
+                self.get_logger().info(f"DEBUG_trafficlight - current_lane_traffic_light_id[0]: {current_lane_traffic_light_id[0]}")
                 color = v2i_traffic_signals_colors[v2i_traffic_signals_id.index(current_lane_traffic_light_id[0])]
+                self.get_logger().info(f"DEBUG_trafficlight - color: {color}")
                 self.publish_rviz_traffic_light_status(color)
                 stop_point = self.get_traffic_light_stop_point_by_lane(current_lane)
                 self.traffic_light_stopPoint_lastState = stop_point
                 if color == 1 or color == 2:
                     self.traffic_light_state_lastState = 'Stop_red'
+                    self.get_logger().info(f"DEBUG_trafficlight - Stop_red")
                     return 'Stop_red', stop_point
                 self.traffic_light_state_lastState = 'Cruise_green'
+                self.get_logger().info(f"DEBUG_trafficlight - Cruise_green")
                 return 'Cruise_green', None
             else:
+                self.get_logger().info(f"DEBUG_trafficlight - else")
                 if self.traffic_light_state_lastState == 'Stop_red':
                     return 'Stop_red', self.traffic_light_stopPoint_lastState
                 return 'Cruise_green', None
@@ -683,6 +690,7 @@ class BehaviorMotionPlanning(Node):
 
         # Traffic light detection
         trafficLightTask, traffic_light_stopPoint = self.manage_traffic_lights()
+        self.get_logger().info(f"DEBUG_trafficlight - trafficLightTask: {trafficLightTask} - traffic_light_stopPoint: {traffic_light_stopPoint}")
         # Collision avoidance
         objects_ahead = self.get_detected_objects_in_front()
         on_path_collision_avoidance_stopPoint = self.on_path_collision_avoidance(objects_ahead, current_closest_point_to_vehicle_index, vehicle_pose)

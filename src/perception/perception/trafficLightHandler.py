@@ -110,7 +110,7 @@ class TrafficSignalHandler(Node):
         except AttributeError:
             self.get_logger().warning(f"No traffic signal data for intersection {intersection_number}")
             return [], []
-
+        print(f"debug - trafficSignal_intersection{intersection_number}")
         v2i_traffic_signals_id = []
         v2i_traffic_signals_colors = []
 
@@ -137,8 +137,8 @@ class TrafficSignalHandler(Node):
         print("debug intersection awareness: ", self.intersection_awareness_intersection_name)
         if self.enable_trafficlight and self.intersection_awareness_intersection_name is not None:
             v2i_traffic_signals_id, v2i_traffic_signals_colors = self.process_traffic_signals()
-            print(v2i_traffic_signals_id)
-            print(v2i_traffic_signals_colors) 
+            print(f'ids: {v2i_traffic_signals_id}')
+            print(f'colors: {v2i_traffic_signals_colors}') 
 
         # Create and publish traffic signals message
         traffic_signals_msg = TrafficSignalsArray()
