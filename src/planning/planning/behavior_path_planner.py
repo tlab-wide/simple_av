@@ -597,7 +597,7 @@ class BehaviorPathPlanner(Node):
                     accel_profile.append(v)
                 self.speeds_on_path[exit_idx:end_idx] = accel_profile
 
-    def check_cool4_speed_profile_trigger(self, vehicle_pose, threshold=3.0):
+    def check_cool4_speed_profile_trigger(self, vehicle_pose, threshold=6.0):
         if self.is_cool4_speed_profile_enable and self.intersection_points and not self.cool4_triggered:
             trigger_point_index = self.intersection_points[0]
             if self.calculate_distance(vehicle_pose, self.path[trigger_point_index].waypoint) <= threshold:
