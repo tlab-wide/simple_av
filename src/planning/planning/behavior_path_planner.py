@@ -92,6 +92,8 @@ class BehaviorPathPlanner(Node):
         self.path_as_lanes = None  # List of lanes from start lane to destination
         self.path = None  # List of [waypoints,curve] in order of path_as_lanes
         self.path_of_waypoints = [] # List of waypoints in order of path_as_lanes
+        self.intersection_points = []
+        self.cool4_triggered = False
 
         self.subscriptionPortal = self.create_subscription(Portal, 'simple_av/portal', self.portal_callback, 10)
         self.reset = False
@@ -558,20 +560,20 @@ class BehaviorPathPlanner(Node):
 
         self.get_logger().info(f"is_RSU_enabled: {self.is_RSU_enabled}, Danger: {is_object_in_danger_zone}")
         if self.is_RSU_enabled and not is_object_in_danger_zone:
-                self.get_logger().info("RSU enabled, no danger detected - continuing through intersection at moderate speed (12 km/h)")
-                # Case 1: RSU active and no danger → keep moderate constant speed
-                cool4_adjusted_speed_profile[start_idx:exit_idx] = [self.MIDDLE_SPEED] * (exit_idx - start_idx)
+            self.get_logger().info("RSU enabled, no danger detected - continuing through intersection at moderate speed (12 km/h)")
+            # Case 1: RSU active and no danger → keep moderate constant speed
+            cool4_adjusted_speed_profile[start_idx:exit_idx] = [self.MIDDLE_SPEED] * (exit_idx - start_idx)
 
-                # accelerate again from MIN_SPEED to MAX_SPEED after intersection
-                n_points_after = end_idx - exit_idx
-                if n_points_after > 0:
-                    accel_profile = []
-                    v = self.MIDDLE_SPEED
-                    accel_profile.append(v)  # include initial speed
-                    for _ in range(1, n_points_after):
-                        v = min(self.MAX_SPEED, math.sqrt(v**2 + 2 * self.NORMAL_ACCEL * waypoint_distance))
-                        accel_profile.append(v)
-                    cool4_adjusted_speed_profile[exit_idx:end_idx] = accel_profile
+            # accelerate again from MIN_SPEED to MAX_SPEED after intersection
+            n_points_after = end_idx - exit_idx
+            if n_points_after > 0:
+                accel_profile = []
+                v = self.MIDDLE_SPEED
+                accel_profile.append(v)  # include initial speed
+                for _ in range(1, n_points_after):
+                    v = min(self.MAX_SPEED, math.sqrt(v**2 + 2 * self.NORMAL_ACCEL * waypoint_distance))
+                    accel_profile.append(v)
+                cool4_adjusted_speed_profile[exit_idx:end_idx] = accel_profile
 
         elif (self.is_RSU_enabled and is_object_in_danger_zone) or (not self.is_RSU_enabled):
             self.get_logger().info("Danger detected or RSU disabled - decelerating through intersection (12 km/h -> 3 km/h)")
@@ -598,56 +600,45 @@ class BehaviorPathPlanner(Node):
 
 
         return cool4_adjusted_speed_profile
+    
+
+    def check_cool4_speed_profile_trigger(self, path, base_speed_profile, vehicle_pose, threshold=3.0):
+        if self.is_cool4_speed_profile_enable and self.intersection_points and not self.cool4_triggered:
+            trigger_point_index = self.intersection_points[0]
+            if self.calculate_distance(vehicle_pose, path[trigger_point_index]) <= threshold:
+                self.get_logger().info("Reached Cool4 trigger waypoint — adjusting speed profile...")
+                self.cool4_speed_profile_adjustment(self, base_speed_profile, self.intersection_points)
+                self.cool4_triggered = True
+
 
     def find_intersection_start_and_exit_using_config(self, path):
-        intersection_start_point_idx = -1
-        intersection_exit_point_idx = -1
-        intersection_end_point_idx = -1
-        has_found_on_path = False
         points = {}
-
+        intersection_points = []
         points = self.intersection2_scenario2_points
 
         for i, waypoint in enumerate(path):
             wp = waypoint.waypoint  # geometry_msgs/Point
             # print(f"i: {i}, waypoint: {wp}")
 
-            if wp.x == points['1']['x'] and wp.y == points['1']['y'] and wp.z == points['1']['z']:
-                intersection_start_point_idx = i
-            if wp.x == points['2']['x'] and wp.y == points['2']['y'] and wp.z == points['2']['z']:
-                intersection_exit_point_idx = i
-            if '3' in points and wp.x == points['3']['x'] and wp.y == points['3']['y'] and wp.z == points['3']['z']:
-                intersection_end_point_idx = i
+            if wp.x == points['1']['x'] and wp.y == points['1']['y'] and wp.z == points['1']['z']: # intersection start and trigger point
+                intersection_points.append(i)
+            if wp.x == points['2']['x'] and wp.y == points['2']['y'] and wp.z == points['2']['z']: # intersection exit point
+                intersection_points.append(i)
+            if '3' in points and wp.x == points['3']['x'] and wp.y == points['3']['y'] and wp.z == points['3']['z']: # intersection end point
+                intersection_points.append(i)
 
-        if intersection_start_point_idx != -1 and intersection_exit_point_idx != -1 and intersection_end_point_idx != -1:
-            has_found_on_path = True
+        return intersection_points
 
-        return has_found_on_path, [intersection_start_point_idx, intersection_exit_point_idx, intersection_end_point_idx]
-
-    def speed_profile_maker(self, path):
-        self.get_logger().debug(f"insde speed_profile_maker method is cool4 enabled: {self.is_cool4_speed_profile_enable}")
-
-        speed_profile_base = self.simple_av_speed_profile_maker(path)
-
-
-        if self.is_cool4_speed_profile_enable:
-            has_found_on_path, intersection_points = self.find_intersection_start_and_exit_using_config(path)
-            self.get_logger().debug(f"has_found_on_path: {has_found_on_path} - intersection_points: {intersection_points}")
-            if has_found_on_path:
-                self.get_logger().info(f"Intersection points found on path at indices: start={intersection_points[0]}, exit={intersection_points[1]}, end={intersection_points[2]}")
-                cool4_adjusted_speed_profile = self.cool4_speed_profile_adjustment(speed_profile_base, intersection_points)
-                return cool4_adjusted_speed_profile
-            else:
-                self.get_logger().debug("Intersection points not found on current path, using base speed profile")
-
-        return speed_profile_base
 
     def handle_mission_plan(self):
 
         if self.path and self.path_as_lanes:
             self.destination = self.path[-1].waypoint
-            self.speeds_on_path = self.speed_profile_maker(self.path)
-            
+            self.speeds_on_path = self.simple_av_speed_profile_maker(self.path)
+            if self.is_cool4_speed_profile_enable:
+                self.intersection_points = self.find_intersection_start_and_exit_using_config(self.path)
+                self.get_logger().debug(f"intersection_points: {self.intersection_points}")
+                
             for i, waypoint in enumerate(self.path):
                 self.path_of_waypoints.append(waypoint.waypoint)
 
@@ -687,6 +678,7 @@ class BehaviorPathPlanner(Node):
         if self.reset:
             self.get_logger().warning("RESET")
             self.isPathPlanned = False
+            self.cool4_triggered = False
             self.prev_lookahead_index = 0
             self.current_lane_index = 0
             return
@@ -699,6 +691,8 @@ class BehaviorPathPlanner(Node):
         if vehicle_pose.x == 0.0 and vehicle_pose.y == 0.0 and vehicle_pose.z == 0.0:
             self.get_logger().warning("Vehicle Pose is not accessible")
             return
+        
+        self.check_cool4_speed_profile_trigger(self, self.path, self.speeds_on_path, vehicle_pose, threshold=3.0)
             
         search_area, search_area_as_lanes = self.create_search_area()
         current_closest_point_to_vehicle_index = self.find_closest_waypoint_to_vehicle(vehicle_pose, search_area)
