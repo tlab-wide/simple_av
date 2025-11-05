@@ -544,25 +544,24 @@ class BehaviorPathPlanner(Node):
         return objects_in_zones > 0
 
 
-    def cool4_speed_profile_adjustment(self, cool4_adjusted_speed_profile, intersection_points,  waypoint_distance=2.0):
-        self.get_logger().debug(f"insde cool4_speed_profile_adjustment ")
+    def cool4_speed_profile_adjustment(self, intersection_points,  waypoint_distance=2.0):
         start_idx, exit_idx, end_idx = intersection_points
 
         # Only check danger zones if we're at intersection 2 and have intersection awareness data
         is_object_in_danger_zone = False
-        self.get_logger().debug(f"intersection_awareness_intersection_name: {self.intersection_awareness_intersection_name} ")
-        self.get_logger().debug(f"intersection_awareness_status: {self.intersection_awareness_status} ")
+        self.get_logger().info(f"intersection_awareness_intersection_name: {self.intersection_awareness_intersection_name} ")
+        self.get_logger().info(f"intersection_awareness_status: {self.intersection_awareness_status} ")
         if self.intersection_awareness_intersection_name == '2' and self.intersection_awareness_status is not None:
             is_object_in_danger_zone = self.is_object_detected_on_intersection_danger_zones('2')
-            self.get_logger().debug(f"At intersection 2, checking danger zones: {is_object_in_danger_zone}")
+            self.get_logger().info(f"At intersection 2, checking danger zones: {is_object_in_danger_zone}")
         else:
-            self.get_logger().debug(f"Not at intersection 2 (current: {self.intersection_awareness_intersection_name}), skipping danger zone check")
+            self.get_logger().info(f"Not at intersection 2 (current: {self.intersection_awareness_intersection_name}), skipping danger zone check")
 
         self.get_logger().info(f"is_RSU_enabled: {self.is_RSU_enabled}, Danger: {is_object_in_danger_zone}")
         if self.is_RSU_enabled and not is_object_in_danger_zone:
             self.get_logger().info("RSU enabled, no danger detected - continuing through intersection at moderate speed (12 km/h)")
             # Case 1: RSU active and no danger → keep moderate constant speed
-            cool4_adjusted_speed_profile[start_idx:exit_idx] = [self.MIDDLE_SPEED] * (exit_idx - start_idx)
+            self.speeds_on_path[start_idx:exit_idx] = [self.MIDDLE_SPEED] * (exit_idx - start_idx)
 
             # accelerate again from MIN_SPEED to MAX_SPEED after intersection
             n_points_after = end_idx - exit_idx
@@ -573,7 +572,7 @@ class BehaviorPathPlanner(Node):
                 for _ in range(1, n_points_after):
                     v = min(self.MAX_SPEED, math.sqrt(v**2 + 2 * self.NORMAL_ACCEL * waypoint_distance))
                     accel_profile.append(v)
-                cool4_adjusted_speed_profile[exit_idx:end_idx] = accel_profile
+                self.speeds_on_path[exit_idx:end_idx] = accel_profile
 
         elif (self.is_RSU_enabled and is_object_in_danger_zone) or (not self.is_RSU_enabled):
             self.get_logger().info("Danger detected or RSU disabled - decelerating through intersection (12 km/h -> 3 km/h)")
@@ -585,7 +584,7 @@ class BehaviorPathPlanner(Node):
                 for _ in range(n_points):
                     v = max(self.MIN_SPEED, math.sqrt(max(v**2 - 2 * self.NORMAL_DECEL * waypoint_distance, 0)))
                     decel_profile.append(v)
-                cool4_adjusted_speed_profile[start_idx:exit_idx] = decel_profile
+                self.speeds_on_path[start_idx:exit_idx] = decel_profile
 
             # accelerate again from MIN_SPEED to MAX_SPEED after intersection
             n_points_after = end_idx - exit_idx
@@ -596,18 +595,14 @@ class BehaviorPathPlanner(Node):
                 for _ in range(1, n_points_after):
                     v = min(self.MAX_SPEED, math.sqrt(v**2 + 2 * self.NORMAL_ACCEL * waypoint_distance))
                     accel_profile.append(v)
-                cool4_adjusted_speed_profile[exit_idx:end_idx] = accel_profile
+                self.speeds_on_path[exit_idx:end_idx] = accel_profile
 
-
-        return cool4_adjusted_speed_profile
-    
-
-    def check_cool4_speed_profile_trigger(self, path, base_speed_profile, vehicle_pose, threshold=3.0):
+    def check_cool4_speed_profile_trigger(self, vehicle_pose, threshold=3.0):
         if self.is_cool4_speed_profile_enable and self.intersection_points and not self.cool4_triggered:
             trigger_point_index = self.intersection_points[0]
-            if self.calculate_distance(vehicle_pose, path[trigger_point_index]) <= threshold:
+            if self.calculate_distance(vehicle_pose, self.path[trigger_point_index].waypoint) <= threshold:
                 self.get_logger().info("Reached Cool4 trigger waypoint — adjusting speed profile...")
-                self.cool4_speed_profile_adjustment(self, base_speed_profile, self.intersection_points)
+                self.cool4_speed_profile_adjustment(self.intersection_points)
                 self.cool4_triggered = True
 
 
@@ -692,7 +687,7 @@ class BehaviorPathPlanner(Node):
             self.get_logger().warning("Vehicle Pose is not accessible")
             return
         
-        self.check_cool4_speed_profile_trigger(self, self.path, self.speeds_on_path, vehicle_pose, threshold=3.0)
+        self.check_cool4_speed_profile_trigger(vehicle_pose)
             
         search_area, search_area_as_lanes = self.create_search_area()
         current_closest_point_to_vehicle_index = self.find_closest_waypoint_to_vehicle(vehicle_pose, search_area)
