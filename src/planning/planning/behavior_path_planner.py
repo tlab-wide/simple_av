@@ -577,17 +577,28 @@ class BehaviorPathPlanner(Node):
         elif (self.is_RSU_enabled and is_object_in_danger_zone) or (not self.is_RSU_enabled):
             self.get_logger().info("Danger detected or RSU disabled - decelerating through intersection (12 km/h -> 3 km/h)")
             # Case 2: RSU is_object_in_danger_zone OR no RSU → decelerate gradually from MIDDLE_SPEED → MIN_SPEED
-            n_points = exit_idx - start_idx
-            if n_points > 0:
-                decel_profile = []
-                v = self.MIDDLE_SPEED
-                for _ in range(n_points):
-                    v = max(self.MIN_SPEED, math.sqrt(max(v**2 - 2 * self.NORMAL_DECEL * waypoint_distance, 0)))
-                    decel_profile.append(v)
-                self.speeds_on_path[start_idx:exit_idx] = decel_profile
+            # exit_idx += 1
+            # n_points = exit_idx - start_idx
+            # self.speeds_on_path[start_idx:start_idx+3] = [self.MIDDLE_SPEED] * (exit_idx - start_idx)
+            treshold_test = 10
+            decel_profile = []
+            v = self.MIDDLE_SPEED
+            for _ in range(treshold_test):
+                v = max(self.MIN_SPEED, math.sqrt(max(v**2 - 2 * self.NORMAL_DECEL * waypoint_distance, 0)))
+                decel_profile.append(v)
+            self.speeds_on_path[start_idx:start_idx+treshold_test] = decel_profile
+            self.speeds_on_path[start_idx+treshold_test:exit_idx] = [self.MIN_SPEED] * (exit_idx - (start_idx+treshold_test))
+
+            # if n_points > 0:
+            #     decel_profile = []
+            #     v = self.MIDDLE_SPEED
+            #     for _ in range(n_points):
+            #         v = max(self.MIN_SPEED, math.sqrt(max(v**2 - 2 * self.NORMAL_DECEL * waypoint_distance, 0)))
+            #         decel_profile.append(v)
+            #     self.speeds_on_path[start_idx:exit_idx] = decel_profile
 
             # accelerate again from MIN_SPEED to MAX_SPEED after intersection
-            n_points_after = end_idx - exit_idx
+            n_points_after = end_idx - (exit_idx + 1)
             if n_points_after > 0:
                 accel_profile = []
                 v = self.MIN_SPEED
