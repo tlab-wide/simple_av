@@ -423,6 +423,24 @@ class BehaviorMotionPlanning(Node):
         # Create the absolute position
         object_absolute_pose = Point(x=obj_x, y=obj_y, z=obj_z)
         return object_absolute_pose
+
+    def get_detected_pedestrians(self, objects):
+        """
+        Get detected pedestrians and cyclists from perception data.
+        Returns a list of detected objects with labels:
+        - 7: Cyclist/Bicycle & Pedestrian
+        """
+
+        detected_pedestrians = []
+        for obj in objects:
+            # Label is int32, check for pedestrian and cyclist (7)
+            if obj.label in [7]:
+                detected_pedestrians.append(obj)
+
+        if detected_pedestrians:
+            self.get_logger().debug(f"DEBUG - ped : Found {len(detected_pedestrians)} pedestrians/cyclists")
+
+        return detected_pedestrians
     
     def find_obstacle_on_path(self, objects_in_range, current_closest_point_to_vehicle_index, vehicle_pose):
         objects_on_path = []
@@ -538,6 +556,9 @@ class BehaviorMotionPlanning(Node):
     def get_stop_point_by_safety_distance(self, waypoint, vehicle_pose, collision_avoidance_type):
         # Helper function to calculate distances
         saftey_distance = self.motion_behavior_config['behavior']['collision_avoidance'][collision_avoidance_type]['safety_distance'] #meters
+        #TODO: clean the code below
+        if self.intersection_awareness_intersection_name == "2" and collision_avoidance_type == "prediction": #TODO: clean this
+            saftey_distance = 4.0
         dist_to_waypoint = self.calculate_distance(waypoint, vehicle_pose)
         if dist_to_waypoint <= saftey_distance: # Stop the vehicle if distance to the object is less that safety distance
             self.get_logger().warning("CP - INSTANT STOP!!")
@@ -609,10 +630,10 @@ class BehaviorMotionPlanning(Node):
         #     print("debug, object: ", obj.relative_direction.data)
 
         if self.use_RSU_for_trafficlight:
-            print("debug, collision prediction: using RSU for traffic light", self.use_RSU_for_trafficlight)
+            print("DEBUG, collision prediction: using RSU for traffic light", self.use_RSU_for_trafficlight)
 
             if self.intersection_awareness_intersection_name is not None:
-                print("debug, intersection awareness is not NULL")
+                print("DEBUG, intersection awareness is not NULL")
 
                 if self.intersection_awareness_intersection_name == "1":
                     light_166893 = self.get_traffic_light_color_by_id(166893)
@@ -623,8 +644,8 @@ class BehaviorMotionPlanning(Node):
                     # Traffic light logic
                     if light_166893 in [1, 2]:
                         print("debug, DO NOT PREDICT")
-                        # TODO: Consider Pedestrians and cyclists
-                        return []
+                        pedestrians = self.get_detected_pedestrians(objects_ahead)
+                        return self.predict_collision(pedestrians, current_closest_point_to_vehicle_index, vehicle_pose)
                     if light_166893 in [3]:
                         objects_relative_pose = []
                         for obj in objects_ahead:
@@ -645,9 +666,22 @@ class BehaviorMotionPlanning(Node):
                         else:
                             print("debug, mixed poses but no NW or above → default to DO NOT PREDICT")
                             return []
+                
+                if self.intersection_awareness_intersection_name == "2":
+                    light_165626 = self.get_traffic_light_color_by_id(165626)
+                    light_166922 = self.get_traffic_light_color_by_id(166922)
+                    light_166940 = self.get_traffic_light_color_by_id(166940)
+                    print("DEBUG - colliision prediction in intersection #2")
+                    print(f"DEBUG, 165626: {light_165626}, 166922: {light_166922},  166940: {light_166940}")
+
+                    if light_165626 in [3]: # if the ego vehicle traffic light is green, other traffic lights are red.
+                        print("DEBUG - light_165626 is green")
+                        pedestrians = self.get_detected_pedestrians(objects_ahead)
+                        print(f"DEBUG - number of detected pedestrians: {len(pedestrians)}")
+                        return self.predict_collision(pedestrians, current_closest_point_to_vehicle_index, vehicle_pose)
                         
         # Default: always try to predict collisions
-        print("debug, PREDICT")
+        print("DEBUG, NORMAL PREDICT")
         return self.predict_collision(objects_ahead, current_closest_point_to_vehicle_index, vehicle_pose)
 
     
