@@ -428,8 +428,7 @@ class BehaviorPathPlanner(Node):
         """
         Get detected pedestrians and cyclists from perception data.
         Returns a list of detected objects with labels:
-        - 2: Pedestrian
-        - 7: Cyclist/Bicycle
+        - 7: Cyclist/Bicycle & Pedestrian
         """
         if not self.detectedObjects or not self.detectedObjects.objects:
             self.get_logger().debug("No perception data or no objects detected")
