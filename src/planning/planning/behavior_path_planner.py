@@ -438,8 +438,8 @@ class BehaviorPathPlanner(Node):
         detected_pedestrians = []
         for obj in self.detectedObjects.objects:
             object_type = obj.label
-            # Label is int32, check for pedestrian (2) and cyclist (7)
-            if object_type in [2, 7]:
+            # Label is int32, check for pedestrian and cyclist (7)
+            if object_type in [7]:
                 detected_pedestrians.append(obj)
 
         if detected_pedestrians:
