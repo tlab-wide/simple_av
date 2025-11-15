@@ -554,19 +554,19 @@ class BehaviorMotionPlanning(Node):
             return True
         return False
     
-    def get_stop_point_by_safety_distance(self, waypoint, vehicle_pose, collision_avoidance_type):
+    def get_stop_point_by_safety_distance(self, event_waypoint, vehicle_pose, collision_avoidance_type):
         # Helper function to calculate distances
         saftey_distance = self.motion_behavior_config['behavior']['collision_avoidance'][collision_avoidance_type]['safety_distance'] #meters
         if self.intersection_awareness_intersection_name == "2" and collision_avoidance_type == "prediction": #TODO: clean this
             saftey_distance = 4.0
-        dist_to_waypoint = self.calculate_distance(waypoint, vehicle_pose)
+        dist_to_waypoint = self.calculate_distance(event_waypoint, vehicle_pose)
         if dist_to_waypoint <= saftey_distance: # Stop the vehicle if distance to the object is less that safety distance
             self.get_logger().warning("CP - INSTANT STOP!!")
-            return (vehicle_pose, self.path_of_waypoints.index(waypoint))
+            return (vehicle_pose, event_waypoint)
 
-        stop_point_index = self.path_of_waypoints.index(waypoint) - int(saftey_distance/self.densify_interval)
+        stop_point_index = self.path_of_waypoints.index(event_waypoint) - int(saftey_distance/self.densify_interval)
         stop_point = self.path_of_waypoints[stop_point_index]
-        return (Point(x=stop_point.x, y=stop_point.y, z=stop_point.z), self.path_of_waypoints.index(waypoint))
+        return (Point(x=stop_point.x, y=stop_point.y, z=stop_point.z), event_waypoint)
          
 
     def on_path_collision_avoidance(self, objects_ahead, current_closest_waypoint_to_vehicle_index, vehicle_pose):
@@ -616,12 +616,12 @@ class BehaviorMotionPlanning(Node):
                     if self.is_point_on_segment(objects_absolute_positions[i],collide_point,waypoints[j],waypoints[j+1],forward_vector):
                         if self.will_collide_on_path(obj.label,obj.velocity,objects_absolute_positions[i],vehicle_pose,collide_point,waypoints[j]):
                             self.get_logger().warning('P - Collide predicted!!!')
-                            stop_point, object_wp_index = self.get_stop_point_by_safety_distance(waypoints[j], vehicle_pose, 'prediction')
+                            stop_point, event_waypoint = self.get_stop_point_by_safety_distance(waypoints[j], vehicle_pose, 'prediction')
 
                             # compute distance to vehicle for nearest selection
                             distance = self.calculate_distance(stop_point, vehicle_pose)
 
-                            candidates.append((stop_point, object_wp_index, distance))
+                            candidates.append((stop_point, event_waypoint, distance))
                             break
 
         # Return None if no collisions predicted
@@ -630,9 +630,9 @@ class BehaviorMotionPlanning(Node):
 
         # Pick nearest collision stop point
         nearest = min(candidates, key=lambda x: x[2])  # smallest distance
-        stop_point, object_wp_index, _ = nearest
+        stop_point, event_waypoint, _ = nearest
 
-        return (stop_point, object_wp_index)
+        return (stop_point, event_waypoint)
 
 
     def collison_prediction_core(self, objects_ahead, current_closest_waypoint_to_vehicle_index, vehicle_pose, current_lane_traffic_light_id):
@@ -679,41 +679,92 @@ class BehaviorMotionPlanning(Node):
         print("DEBUG, NORMAL PREDICT")
         return self.predict_nearest_collision(objects_ahead, current_closest_waypoint_to_vehicle_index, vehicle_pose)
 
-    
-    def find_closest_stop_point(self, traffic_light_stopPoint, on_path_collision_avoidance_result, predicted_collisons_result, destination_stopPoint, vehicle_pose):
-        # Create a dictionary for stop points
+
+    def find_closest_stop_point(self, traffic_light_stopPoint, on_path_collision_avoidance_result, collision_prediction_result, destination_stopPoint, vehicle_pose):
+        """
+        Returns:
+        {
+            "type": "on_path" | "collision_prediction" | "traffic_light",
+            "event_waypoint": waypoint,
+            "stop_point": stop_point
+        }
+        or None if no event exists.
+        """
+
         stop_points = {}
-        
-        on_path_collision_avoidance_stopPoint, on_path_obstacle_waypoint_index = on_path_collision_avoidance_result
-        predicted_collisons_stopPoint, predicted_obstacle_waypoint_index = predicted_collisons_result
+        candidate_events = []
+
+        # -------------------------------
+        # 1. On-path collision
+        # -------------------------------
+        if on_path_collision_avoidance_result:
+            on_path_collision_stop_point, obstacle_occupied_wp = on_path_collision_avoidance_result
+            distance_to_obstacle = self.calculate_distance(vehicle_pose, obstacle_occupied_wp)
+            distance_to_stop_point = self.calculate_distance(vehicle_pose, on_path_collision_stop_point)
+            candidate_events.append({
+                "type": "on_path",
+                "event_distance": distance_to_obstacle,
+                "stop_point": on_path_collision_stop_point,
+                "stop_point_distance": distance_to_stop_point
+            })
+
+        # -------------------------------
+        # 2. Collision prediction
+        # -------------------------------
+        if collision_prediction_result:
+            collision_prediction_stop_point, predicted_collision_wp = collision_prediction_result
+            distance_to_predicted_collision_wp = self.calculate_distance(vehicle_pose, predicted_collision_wp)
+            distance_to_stop_point = self.calculate_distance(vehicle_pose, collision_prediction_stop_point)
+            candidate_events.append({
+                "type": "collision_prediction",
+                "event_distance": distance_to_predicted_collision_wp,
+                "stop_point": collision_prediction_stop_point,
+                "stop_point_distance": distance_to_stop_point
+            })
+
+        # -------------------------------
+        # 3. Traffic Light Stop
+        # -------------------------------
         if traffic_light_stopPoint:
-            stop_points[id(traffic_light_stopPoint)] = ('TrafficLight', traffic_light_stopPoint)
-        if on_path_collision_avoidance_stopPoint:
-            stop_points[id(on_path_collision_avoidance_stopPoint)] = ('CollisonAvoidance', on_path_collision_avoidance_stopPoint)
-        if predicted_collisons_stopPoint:
-            stop_points[id(predicted_collisons_stopPoint)] = ('CollisonPrediction', predicted_collisons_stopPoint)
+            distance_to_stop_point = self.calculate_distance(vehicle_pose, traffic_light_stopPoint)
+            candidate_events.append({
+                "type": "traffic_light",
+                "event_distance": distance_to_stop_point,
+                "stop_point": traffic_light_stopPoint,
+                "stop_point_distance": distance_to_stop_point
+            })
+
+        # -------------------------------
+        # 4. Destination
+        # -------------------------------
         if destination_stopPoint:
-            stop_points[id(destination_stopPoint)] = ('Destination', destination_stopPoint)
-        
-        # Helper function to calculate distances
-        def calculate_distance_to(point):
-            return self.calculate_distance(
-                vehicle_pose, 
-                point
-            )
-        
-        minimum_distance = float("inf")
-        closest_stop_point = None
-        stop_point_type = None
-        
-        for _, (type, stop_point) in stop_points.items():
-            dist = calculate_distance_to(stop_point)
-            if dist <= minimum_distance:
-                minimum_distance = dist
-                closest_stop_point = stop_point
-                stop_point_type = type
-        
-        return closest_stop_point, stop_point_type
+            distance_to_destination = self.calculate_distance(vehicle_pose, destination_stopPoint)
+            candidate_events.append({
+                "type": "Destination",
+                "event_distance": distance_to_destination,
+                "stop_point": destination_stopPoint,
+                "stop_point_distance": distance_to_destination
+            })
+
+        # Nothing found
+        if not candidate_events:
+            return None
+
+        # -------------------------------------------------------------
+        # SPECIAL CASE: Traffic light + at least one collision event
+        # Select nearest based on EVENT distance (not stop_point distance)
+        # -------------------------------------------------------------
+        if traffic_light_stopPoint and (on_path_collision_avoidance_result or collision_prediction_result):
+            closest_event = min(candidate_events, key=lambda x: x["event_distance"])
+            return closest_event
+
+        # -------------------------------------------------------------
+        # DEFAULT CASE: choose based on stop_point distance
+        # -------------------------------------------------------------
+        closest_event = min(candidate_events, key=lambda x: x["stop_point_distance"])
+        return closest_event
+
+
 
     def get_current_lane_name(self):
         try:
@@ -742,7 +793,7 @@ class BehaviorMotionPlanning(Node):
         objects_ahead = self.get_detected_objects_in_front()
         on_path_collision_avoidance_result = self.on_path_collision_avoidance(objects_ahead, current_closest_waypoint_to_vehicle_index, vehicle_pose)
         prediction_result = self.collison_prediction_core(objects_ahead, current_closest_waypoint_to_vehicle_index, vehicle_pose, current_lane_traffic_light_id)
-        stop_point, stop_point_type = self.find_closest_stop_point(traffic_light_stopPoint, on_path_collision_avoidance_result, prediction_result, self.destination, vehicle_pose)
+        closest_event = self.find_closest_stop_point(traffic_light_stopPoint, on_path_collision_avoidance_result, prediction_result, self.destination, vehicle_pose)
         
         self.status.data = 'Cruise'
         self.stop_reason.data = 'No stop'
@@ -750,27 +801,28 @@ class BehaviorMotionPlanning(Node):
         if self.isTurnDetected:
             self.get_logger().info("Turn detected")
             self.status.data = 'Turn'
-            
-        if stop_point_type == 'CollisonAvoidance' or stop_point_type == 'CollisonPrediction':
-            if stop_point_type == 'CollisonAvoidance':
-                self.get_logger().info('Collison Avoidance')
-                self.stop_reason.data = 'Collison Avoidance'
-            else:
-                self.get_logger().info('Prediction')
-                self.stop_reason.data = 'Collison Prediction'
-            self.status.data = 'Decelerate'
-        
-        if stop_point_type == 'TrafficLight':
-            self.get_logger().info('TrafficLight')
-            self.status.data = trafficLightTask
-            self.stop_reason.data = trafficLightTask
+
+        if closest_event is not None:
+
+            if closest_event['type'] in ('on_path', 'collision_prediction'):
+                self.get_logger().info('Collison Avoidance or prediction')
+                self.status.data = 'Decelerate'
+                self.stop_reason.data = (
+                    'Collision Avoidance' if closest_event['type'] == 'on_path'
+                    else 'Collision Prediction'
+                )
+
+            elif closest_event['type'] == 'traffic_light':
+                self.get_logger().info('traffic_light')
+                self.status.data = trafficLightTask
+                self.stop_reason.data = trafficLightTask
         
         if self.isEndOfPath:
             self.get_logger().info("Approaching destination, decelerating.")
             self.status.data = 'Park'
             self.stop_reason.data = 'Park'
-        
-        return stop_point
+
+        return closest_event['stop_point'] if closest_event else None
             
     def publish_motion_planning_msgs(self, stop_point):
         motion_plan = PlanningMotionPlanningMsg()
