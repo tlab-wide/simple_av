@@ -248,7 +248,7 @@ class BehaviorMotionPlanning(Node):
         """
         return np.dot(vector1, vector2)
     
-    def find_lane_by_name(self, lane_name):
+    def get_lane_by_name(self, lane_name):
         """
         Get the lane object by its name.
         Args:
@@ -277,7 +277,7 @@ class BehaviorMotionPlanning(Node):
         # convert lanes in the search are into a list of waypoints
         search_area = []
         for lane in search_area_as_lanes:
-            lane_obj = self.find_lane_by_name(lane)
+            lane_obj = self.get_lane_by_name(lane)
             waypoints = lane_obj['dense_waypoints']
             for waypoint in waypoints:
                 search_area.append(Point(x=waypoint['x'], y=waypoint['y'], z=waypoint['z']))
@@ -307,8 +307,7 @@ class BehaviorMotionPlanning(Node):
             self.opposite_traffic_light_last_Color = v2i_traffic_signals_colors[v2i_traffic_signals_id.index(traffic_light_id)]
         return self.opposite_traffic_light_last_Color
 
-    def get_traffic_light_color_by_lane(self, lane):
-        lane_obj = self.find_lane_by_name(lane)
+    def get_traffic_light_color_by_lane(self, lane_obj):
         current_lane_traffic_light_id = lane_obj['trafficlightsWayIDs']
         v2i_traffic_signals_id = list(self.trafficSignal.v2i_traffic_signals_id)
         if current_lane_traffic_light_id and current_lane_traffic_light_id[0] in v2i_traffic_signals_id:
@@ -316,8 +315,7 @@ class BehaviorMotionPlanning(Node):
             return v2i_traffic_signals_colors[v2i_traffic_signals_id.index(current_lane_traffic_light_id[0])]
         return None
 
-    def get_traffic_light_stop_point_by_lane(self, lane):
-        lane_obj = self.find_lane_by_name(lane)
+    def get_traffic_light_stop_point_by_lane(self, lane_obj):
         stop_point = self.calculate_traffic_light_stop_point(lane_obj['stopLinePoseP1'], lane_obj['stopLinePoseP2'])
         return stop_point
 
@@ -335,46 +333,29 @@ class BehaviorMotionPlanning(Node):
         self.pub.publish(msg)
         self.get_logger().info("Published RViZ traffic light status")
 
-    def manage_traffic_lights(self):
+    def manage_traffic_lights(self, current_lane_obj):
         v2i_traffic_signals_id = list(self.trafficSignal.v2i_traffic_signals_id)
         v2i_traffic_signals_colors = list(self.trafficSignal.v2i_traffic_signals_colors)
-        # self.get_logger().info("DEBUG_trafficlight - in manage traffic light method")
-        # self.get_logger().info(f"DEBUG_trafficlight - v2i_traffic_signals_id: {v2i_traffic_signals_id}")
         if not v2i_traffic_signals_id: #ego vehicle is out of intersection zone
-            # self.get_logger().info("DEBUG_trafficlight - ego vehicle is out of intersection zone")
             self.publish_rviz_traffic_light_status(0)
 
-        try:
-            lane_index = self.route.index(self.location.closest_lane_names.data)
-            current_lane = self.route[lane_index]
-        except:
-            current_lane = self.route[self.current_lane_index]
-
-        lane_obj = self.find_lane_by_name(current_lane)
-        current_lane_traffic_light_id = lane_obj['trafficlightsRelationID']
-        # self.get_logger().info(f"DEBUG_trafficlight - current_lane: {current_lane} - current_lane_traffic_light_id: {current_lane_traffic_light_id}")
+        current_lane_traffic_light_id = current_lane_obj['trafficlightsRelationID']
         if current_lane_traffic_light_id: # this lane have a traffic light
             if current_lane_traffic_light_id[0] in v2i_traffic_signals_id: # traffic light id is on the list
-                # self.get_logger().info(f"DEBUG_trafficlight - current_lane_traffic_light_id[0]: {current_lane_traffic_light_id[0]}")
                 color = v2i_traffic_signals_colors[v2i_traffic_signals_id.index(current_lane_traffic_light_id[0])]
-                # self.get_logger().info(f"DEBUG_trafficlight - color: {color}")
                 self.publish_rviz_traffic_light_status(color)
-                stop_point = self.get_traffic_light_stop_point_by_lane(current_lane)
+                stop_point = self.get_traffic_light_stop_point_by_lane(current_lane_obj)
                 self.traffic_light_stopPoint_lastState = stop_point
                 if color == 1 or color == 2:
                     self.traffic_light_state_lastState = 'Stop_red'
-                    # self.get_logger().info(f"DEBUG_trafficlight - Stop_red")
                     return 'Stop_red', stop_point
                 self.traffic_light_state_lastState = 'Cruise_green'
-                # self.get_logger().info(f"DEBUG_trafficlight - Cruise_green")
                 return 'Cruise_green', None
             else:
-                # self.get_logger().info(f"DEBUG_trafficlight - else")
                 if self.traffic_light_state_lastState == 'Stop_red':
                     return 'Stop_red', self.traffic_light_stopPoint_lastState
                 return 'Cruise_green', None
 
-        # self.get_logger().info(f"Traffic light Not detected on {lane_obj['name']}")
         return 'Cruise',  None
         
 
@@ -623,23 +604,15 @@ class BehaviorMotionPlanning(Node):
         High-level collision prediction logic with traffic light awareness.
         Decides whether to run collision prediction based on RSU traffic light data.
         """
-        print("debug, intersection awareness:", self.intersection_awareness_intersection_name)
-        
-        # print("debug number of objects: ", len(objects_ahead))
-        # for obj in objects_ahead:
-        #     print("debug, object: ", obj.relative_direction.data)
 
         if self.use_RSU_for_trafficlight:
             print("DEBUG, collision prediction: using RSU for traffic light", self.use_RSU_for_trafficlight)
 
             if self.intersection_awareness_intersection_name is not None:
-                print("DEBUG, intersection awareness is not NULL")
-
                 if self.intersection_awareness_intersection_name == "1":
+                    light_166849 = self.get_traffic_light_color_by_id(166849)
                     light_166893 = self.get_traffic_light_color_by_id(166893)
                     light_165709 = self.get_traffic_light_color_by_id(165709)
-
-                    print("debug, 166893, 165709 traffic light status:", light_166893, light_165709)
 
                     # Traffic light logic
                     if light_166893 in [1, 2]:
@@ -719,6 +692,16 @@ class BehaviorMotionPlanning(Node):
         
         return closest_stop_point, stop_point_type
 
+    def get_current_lane_name(self):
+        try:
+            lane_index = self.route.index(self.location.closest_lane_names.data)
+            current_lane = self.route[lane_index]
+        except:
+            current_lane = self.route[self.current_lane_index]
+        
+        return current_lane
+    
+
 
     def motion_planner(self, current_closest_point_to_vehicle_index):
         # Current vehicle position
@@ -727,8 +710,11 @@ class BehaviorMotionPlanning(Node):
         # Distance to the destination
         # distance_to_destination = self.calculate_distance(vehicle_pose, self.destination)
 
+        current_lane_name = self.get_current_lane_name()
+        current_lane_obj = self.get_lane_by_name(current_lane_name)
+
         # Traffic light detection
-        trafficLightTask, traffic_light_stopPoint = self.manage_traffic_lights()
+        trafficLightTask, traffic_light_stopPoint = self.manage_traffic_lights(current_lane_obj)
         self.get_logger().info(f"DEBUG_trafficlight - trafficLightTask: {trafficLightTask} - traffic_light_stopPoint: {traffic_light_stopPoint}")
         # Collision avoidance
         objects_ahead = self.get_detected_objects_in_front()
