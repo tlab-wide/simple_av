@@ -142,7 +142,7 @@ class BehaviorMotionPlanning(Node):
         #Traffic light
         self.traffic_light_stopPoint_lastState = Point()
         self.traffic_light_state_lastState = 'Cruise_green'
-        self.opposite_traffic_light_last_Color = 1
+        self.traffic_light_last_Color = 1
 
         #Shutting down
         self.node_shut = False
@@ -301,11 +301,12 @@ class BehaviorMotionPlanning(Node):
 
     
     def get_traffic_light_color_by_id(self, traffic_light_id):
-        v2i_traffic_signals_id = list(self.trafficSignal.v2i_traffic_signals_id)
-        v2i_traffic_signals_colors = list(self.trafficSignal.v2i_traffic_signals_colors)
-        if traffic_light_id in v2i_traffic_signals_id:
-            self.opposite_traffic_light_last_Color = v2i_traffic_signals_colors[v2i_traffic_signals_id.index(traffic_light_id)]
-        return self.opposite_traffic_light_last_Color
+        if self.intersection_awareness_intersection_name is not None:
+            v2i_traffic_signals_id = list(self.trafficSignal.v2i_traffic_signals_id)
+            v2i_traffic_signals_colors = list(self.trafficSignal.v2i_traffic_signals_colors)
+            if traffic_light_id in v2i_traffic_signals_id:
+                return v2i_traffic_signals_colors[v2i_traffic_signals_id.index(traffic_light_id)]
+        return None
 
     def get_traffic_light_color_by_lane(self, lane_obj):
         current_lane_traffic_light_id = lane_obj['trafficlightsWayIDs']
@@ -348,15 +349,11 @@ class BehaviorMotionPlanning(Node):
                 self.traffic_light_stopPoint_lastState = stop_point
                 if color == 1 or color == 2:
                     self.traffic_light_state_lastState = 'Stop_red'
-                    return 'Stop_red', stop_point
+                    return 'Stop_red', stop_point, current_lane_traffic_light_id[0]
                 self.traffic_light_state_lastState = 'Cruise_green'
-                return 'Cruise_green', None
-            else:
-                if self.traffic_light_state_lastState == 'Stop_red':
-                    return 'Stop_red', self.traffic_light_stopPoint_lastState
-                return 'Cruise_green', None
+                return 'Cruise_green', None, current_lane_traffic_light_id[0]
 
-        return 'Cruise',  None
+        return 'Cruise', None, None
         
 
     def get_detected_objects_in_front(self):
@@ -599,7 +596,7 @@ class BehaviorMotionPlanning(Node):
                             break
         return predicted_stop_points
 
-    def collison_prediction(self, objects_ahead, current_closest_point_to_vehicle_index, vehicle_pose):
+    def collison_prediction(self, objects_ahead, current_closest_point_to_vehicle_index, vehicle_pose, current_lane_traffic_light_id):
         """
         High-level collision prediction logic with traffic light awareness.
         Decides whether to run collision prediction based on RSU traffic light data.
@@ -610,44 +607,30 @@ class BehaviorMotionPlanning(Node):
 
             if self.intersection_awareness_intersection_name is not None:
                 if self.intersection_awareness_intersection_name == "1":
-                    light_166849 = self.get_traffic_light_color_by_id(166849)
-                    light_166893 = self.get_traffic_light_color_by_id(166893)
-                    light_165709 = self.get_traffic_light_color_by_id(165709)
+                    current_lane_traffic_light_color = self.get_traffic_light_color_by_id(current_lane_traffic_light_id)
+                    light_166893 = self.get_traffic_light_color_by_id(166893) # opposite side of the intersection
+                    light_165709 = self.get_traffic_light_color_by_id(165709) # adjacent side of the intersection
 
-                    # Traffic light logic
-                    if light_166893 in [1, 2]:
-                        print("debug, DO NOT PREDICT")
+
+                    # TODO: add lane polygons to determine if the ego vehicle is inside or outside the intersection
+                    if current_lane_traffic_light_color in [1,2]: # the Ego vehicle traffic light is red
                         pedestrians = self.get_detected_pedestrians(objects_ahead)
                         return self.predict_collision(pedestrians, current_closest_point_to_vehicle_index, vehicle_pose)
-                    if light_166893 in [3]:
-                        objects_relative_pose = []
-                        for obj in objects_ahead:
-                            rel_pose = obj.relative_direction.data
-                            print("debug, object relative pose:", rel_pose)
-                            objects_relative_pose.append(rel_pose)
+                    if current_lane_traffic_light_color in [3] and light_166893 in [3]:
+                        return self.predict_collision(objects_ahead, current_closest_point_to_vehicle_index, vehicle_pose)
+                    elif current_lane_traffic_light_color in [3] and light_166893 in [1,2]:
+                        pedestrians = self.get_detected_pedestrians(objects_ahead)
+                        return self.predict_collision(pedestrians, current_closest_point_to_vehicle_index, vehicle_pose)
 
-                        # Decision logic
-                        if all(pose == "NE" for pose in objects_relative_pose):
-                            print("debug, all objects NE → DO NOT PREDICT")
-                            return []
-                        elif any(pose == "NW" for pose in objects_relative_pose):
-                            print("debug, at least one NW → PREDICT")
-                            return self.predict_collision(objects_ahead, current_closest_point_to_vehicle_index, vehicle_pose)
-                        elif any(pose == "above" for pose in objects_relative_pose):
-                            print("debug, at least one above → PREDICT")
-                            return self.predict_collision(objects_ahead, current_closest_point_to_vehicle_index, vehicle_pose)
-                        else:
-                            print("debug, mixed poses but no NW or above → default to DO NOT PREDICT")
-                            return []
                 
                 if self.intersection_awareness_intersection_name == "2":
-                    light_165626 = self.get_traffic_light_color_by_id(165626)
+                    current_lane_traffic_light_color = self.get_traffic_light_color_by_id(current_lane_traffic_light_id)
                     light_166922 = self.get_traffic_light_color_by_id(166922)
                     light_166940 = self.get_traffic_light_color_by_id(166940)
                     print("DEBUG - colliision prediction in intersection #2")
-                    print(f"DEBUG, 165626: {light_165626}, 166922: {light_166922},  166940: {light_166940}")
+                    print(f"DEBUG, 165626: {current_lane_traffic_light_color}, 166922: {light_166922},  166940: {light_166940}")
 
-                    if light_165626 in [3]: # if the ego vehicle traffic light is green, other traffic lights are red.
+                    if current_lane_traffic_light_color in [3]: # if the ego vehicle traffic light is green, other traffic lights are red.
                         print("DEBUG - light_165626 is green")
                         pedestrians = self.get_detected_pedestrians(objects_ahead)
                         print(f"DEBUG - number of detected pedestrians: {len(pedestrians)}")
@@ -714,12 +697,12 @@ class BehaviorMotionPlanning(Node):
         current_lane_obj = self.get_lane_by_name(current_lane_name)
 
         # Traffic light detection
-        trafficLightTask, traffic_light_stopPoint = self.manage_traffic_lights(current_lane_obj)
+        trafficLightTask, traffic_light_stopPoint, current_lane_traffic_light_id = self.manage_traffic_lights(current_lane_obj)
         self.get_logger().info(f"DEBUG_trafficlight - trafficLightTask: {trafficLightTask} - traffic_light_stopPoint: {traffic_light_stopPoint}")
         # Collision avoidance
         objects_ahead = self.get_detected_objects_in_front()
         on_path_collision_avoidance_stopPoint = self.on_path_collision_avoidance(objects_ahead, current_closest_point_to_vehicle_index, vehicle_pose)
-        predicted_collisons_stopPoints = self.collison_prediction(objects_ahead, current_closest_point_to_vehicle_index, vehicle_pose)
+        predicted_collisons_stopPoints = self.collison_prediction(objects_ahead, current_closest_point_to_vehicle_index, vehicle_pose, current_lane_traffic_light_id)
         stop_point, stop_point_type = self.find_closest_stop_point(traffic_light_stopPoint, on_path_collision_avoidance_stopPoint, predicted_collisons_stopPoints, self.destination, vehicle_pose)
         
         self.status.data = 'Cruise'
