@@ -14,9 +14,24 @@ from simple_av_msgs.msg import PlanningPathPlanningMsg, PlanningInternalMsg, Pla
 from simple_av_msgs.msg import LocalizationMsg, LocalizationIntersectionStatus
 from simple_av_msgs.msg import Portal, DetectedObjectsArray
 import numpy as np
+from typing import List, Tuple
+from dataclasses import dataclass
 from simple_av_msgs.srv import TriggerMissionPlan
 from rclpy.qos import QoSProfile, QoSHistoryPolicy, QoSReliabilityPolicy, QoSDurabilityPolicy
 from scipy.spatial.transform import Rotation as R
+
+# ---------------------------------------
+#              DATACLASSES
+# ---------------------------------------
+
+@dataclass
+class PolygonRegion:
+    """Any polygon region from YAML (inside, sidewalks, lanes, etc.)"""
+    name: str
+    polygon_type: str               # 'inside', 'sw', 'lane', 'lanes'
+    intersection_id: str
+    polygon_id: str
+    points: List[Tuple[float, float, float]]
 
 
 class BehaviorPathPlanner(Node):
@@ -67,11 +82,11 @@ class BehaviorPathPlanner(Node):
         self.intersection_points = self.intersection_profiles['intersection_points']
         self.intersection2_scenario2_points = self.intersection_profiles['intersection_points']['2']['2']
         # Load YAML sidewalk data
-        self.layout_data = self.load_intersection_layout()
+        self.intersections_layouts = self.load_intersection_layout()
 
         # Create subscriber to simple_av/localization/intersection_status topic
         self.subscriptionIntersectionAwareness = self.create_subscription(LocalizationIntersectionStatus, 'simple_av/localization/intersection_status', self.intersectionAwareness_callback, 10)
-        self.intersection_awareness_intersection_name = None
+        self.intersection_awareness_intersection_id = None
         self.intersection_awareness_status = None
 
         # Subscribe topics
@@ -157,34 +172,58 @@ class BehaviorPathPlanner(Node):
         else:
             raise ValueError(f"Vehicle type '{vehicle_model}' not found in the configuration.")
         
-    # ---- parse into structured sidewalks ----
-    def load_intersection_layout(self):
-        package_share_directory = get_package_share_directory('common')
-        intersections_danger_zones_path = os.path.join(package_share_directory, "zones", 'intersections_danger_zones.yaml')
+
+    def load_intersection_layout(self) -> List[PolygonRegion]:
+        package_dir = get_package_share_directory("common")
+        yaml_path = os.path.join(package_dir, "zones", "intersections_danger_zones.yaml")
 
         try:
-            with open(intersections_danger_zones_path, 'r') as f:
-                intersections_danger_zones = yaml.safe_load(f)
-
-            # Validate that the file has the expected structure
-            if intersections_danger_zones and 'intersections' in intersections_danger_zones:
-                num_intersections = len(intersections_danger_zones['intersections'])
-                self.get_logger().info(f"Loaded danger zones for {num_intersections} intersection(s)")
-            else:
-                self.get_logger().warning("Danger zones YAML file loaded but has unexpected structure")
-                intersections_danger_zones = {'intersections': {}}
-
-        except FileNotFoundError:
-            self.get_logger().error(f"Danger zones file not found: {intersections_danger_zones_path}")
-            intersections_danger_zones = {'intersections': {}}
-        except yaml.YAMLError as e:
-            self.get_logger().error(f"YAML parsing error in danger zones file: {e}")
-            intersections_danger_zones = {'intersections': {}}
+            with open(yaml_path, "r") as f:
+                data = yaml.safe_load(f)
         except Exception as e:
-            self.get_logger().error(f"Failed to load danger zones YAML file: {e}")
-            intersections_danger_zones = {'intersections': {}}
+            self.get_logger().error(f"❌ Failed to read YAML: {e}")
+            return []
 
-        return intersections_danger_zones
+        if "intersections" not in data:
+            self.get_logger().error("❌ YAML missing 'intersections' root key.")
+            return []
+
+        parsed_polygons = []
+
+        # Iterate through intersections
+        for inter_id, inter_data in data["intersections"].items():
+
+            # Example categories: inside, sw, lane, lanes
+            for category_name, category_value in inter_data.items():
+
+                # Category that directly contains "points" (ex: inside)
+                if isinstance(category_value, dict) and "points" in category_value:
+                    parsed_polygons.append(
+                        PolygonRegion(
+                            name=f"{category_name}",
+                            polygon_type=category_name,
+                            intersection_id=str(inter_id),
+                            polygon_id=str(0),
+                            points=[tuple(p) for p in category_value["points"]]
+                        )
+                    )
+                    continue
+
+                # Categories containing multiple numbered polygons (sw / lane sets)
+                if isinstance(category_value, dict):
+                    for poly_id, poly_data in category_value.items():
+                        if "points" in poly_data:
+                            parsed_polygons.append(
+                                PolygonRegion(
+                                    name=f"{category_name}_{poly_id}",
+                                    polygon_type=category_name,
+                                    intersection_id=str(inter_id),
+                                    polygon_id=str(poly_id),
+                                    points=[tuple(p) for p in poly_data["points"]]
+                                )
+                            )
+
+        return parsed_polygons
 
     def load_map_data(self, vehicle_model):
         """
@@ -215,7 +254,7 @@ class BehaviorPathPlanner(Node):
         self.detectedObjects = msg
 
     def intersectionAwareness_callback(self, msg):
-        self.intersection_awareness_intersection_name = msg.intersection_name
+        self.intersection_awareness_intersection_id = msg.intersection_name
         self.intersection_awareness_status = msg.status
 
     def portal_callback(self, msg):
@@ -491,7 +530,7 @@ class BehaviorPathPlanner(Node):
             p1x, p1y = p2x, p2y
         return inside
 
-    def is_object_detected_on_intersection_danger_zones(self, intersection_name):
+    def is_object_detected_on_intersection_danger_zones(self, intersection_id):
         self.get_logger().debug(f"insde is_object_detected_on_intersection_danger_zones ")
         # Validate that we have pose data
         if not self.pose or not self.pose.pose:
@@ -513,14 +552,18 @@ class BehaviorPathPlanner(Node):
             return False
 
         # Validate layout data exists
-        if not self.layout_data or "intersections" not in self.layout_data:
+        if not self.intersections_layouts:
             self.get_logger().warning("No intersection layout data loaded")
             return False
 
-        intersection = self.layout_data["intersections"].get(str(intersection_name))
-        if not intersection:
-            self.get_logger().warning(f"No intersection data for intersection '{intersection_name}'")
+        if not any(p.intersection_id == intersection_id for p in self.intersections_layouts):
+            self.get_logger().warning(f"No intersection data for intersection '{intersection_id}'")
             return False
+
+        danger_zones = [
+            p for p in self.intersections_layouts
+            if p.intersection_id == intersection_id and p.polygon_type == "sw"
+        ]
 
         objects_in_zones = 0
         for ped in detected_pedestrians:
@@ -528,14 +571,13 @@ class BehaviorPathPlanner(Node):
             ped_abs = self.get_object_absolute_position(vehicle_orientation, vehicle_pose, ped.position)
             self.get_logger().debug(f"Checking pedestrian at absolute position: ({ped_abs.x:.2f}, {ped_abs.y:.2f})")
 
-            for zone_name, zone_data in intersection.items():
-                if zone_name == 'sw3':
+            for p in danger_zones:
+                if p.polygon_id == '3': #skipping sw3 for this scenario TODO: change thsi later
                     continue
-                polygon = zone_data["points"]
-                if self.is_point_in_polygon(ped_abs, polygon):
+                if self.is_point_in_polygon(ped_abs, p.points):
                     objects_in_zones += 1
                     self.get_logger().info(
-                        f"Pedestrian detected at ({ped_abs.x:.2f}, {ped_abs.y:.2f}) in {zone_name} of intersection {intersection_name}"
+                        f"Pedestrian detected at ({ped_abs.x:.2f}, {ped_abs.y:.2f}) at intersection {p.intersection_id} inside: {p.polygon_type}{p.polygon_id}"
                     )
 
         if objects_in_zones > 0:
@@ -550,13 +592,13 @@ class BehaviorPathPlanner(Node):
 
         # Only check danger zones if we're at intersection 2 and have intersection awareness data
         is_object_in_danger_zone = False
-        self.get_logger().info(f"intersection_awareness_intersection_name: {self.intersection_awareness_intersection_name} ")
+        self.get_logger().info(f"intersection_awareness_intersection_id: {self.intersection_awareness_intersection_id} ")
         self.get_logger().info(f"intersection_awareness_status: {self.intersection_awareness_status} ")
-        if self.intersection_awareness_intersection_name == '2' and self.intersection_awareness_status is not None:
+        if self.intersection_awareness_intersection_id == '2' and self.intersection_awareness_status is not None:
             is_object_in_danger_zone = self.is_object_detected_on_intersection_danger_zones('2')
             self.get_logger().info(f"At intersection 2, checking danger zones: {is_object_in_danger_zone}")
         else:
-            self.get_logger().info(f"Not at intersection 2 (current: {self.intersection_awareness_intersection_name}), skipping danger zone check")
+            self.get_logger().info(f"Not at intersection 2 (current: {self.intersection_awareness_intersection_id}), skipping danger zone check")
 
         self.get_logger().info(f"is_RSU_enabled: {self.is_RSU_enabled}, Danger: {is_object_in_danger_zone}")
         if self.is_RSU_enabled and not is_object_in_danger_zone:
