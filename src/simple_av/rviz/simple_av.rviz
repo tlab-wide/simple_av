@@ -5,9 +5,10 @@ Panels:
     Property Tree Widget:
       Expanded:
         - /Sensing1/LiDAR1/ConcatenatePointCloud1/Autocompute Value Bounds1
-        - /laneletmap1/Topic1
         - /LookAheadPoint1/Topic1
         - /Stop reason1/Topic1
+        - /intersection layouts1
+        - /intersection layouts1/Topic1
       Splitter Ratio: 0.557669460773468
     Tree Height: 269
   - Class: rviz_common/Selection
@@ -4286,17 +4287,17 @@ Visualization Manager:
       Enabled: false
       Name: Debug
     - Class: rviz_default_plugins/MarkerArray
-      Enabled: false
+      Enabled: true
       Name: laneletmap
       Namespaces:
         {}
       Topic:
         Depth: 5
         Durability Policy: Transient Local
-        History Policy: Keep Last
+        History Policy: Keep All
         Reliability Policy: Reliable
         Value: lanelet_map_markers
-      Value: false
+      Value: true
     - Alpha: 1
       Axes Length: 1
       Axes Radius: 0.10000000149011612
@@ -4484,13 +4485,7 @@ Visualization Manager:
         Color: 119; 11; 32
       Name: RSU2 PO
       Namespaces:
-        acceleration: true
-        label: true
-        position covariance: true
-        shape: true
-        twist: true
-        uuid: true
-        velocity: true
+        {}
       Object Fill Type: Fill
       PEDESTRIAN:
         Alpha: 0.9990000128746033
@@ -4625,7 +4620,7 @@ Visualization Manager:
       Enabled: true
       Name: LookAheadPoint
       Namespaces:
-        lookahead: true
+        {}
       Topic:
         Depth: 5
         Durability Policy: Volatile
@@ -4638,7 +4633,7 @@ Visualization Manager:
       Enabled: true
       Name: StopPoint
       Namespaces:
-        stop_point: true
+        {}
       Topic:
         Depth: 5
         Durability Policy: Volatile
@@ -4651,7 +4646,7 @@ Visualization Manager:
       Enabled: true
       Name: Stop reason
       Namespaces:
-        text_display: true
+        {}
       Topic:
         Depth: 5
         Durability Policy: Volatile

@@ -28,13 +28,13 @@ class LaneletMapPublisher(Node):
         self._parse_map(map_path)
 
         # Publisher
-        qos = rclpy.qos.QoSProfile(
-            depth=1,
-            durability=rclpy.qos.QoSDurabilityPolicy.TRANSIENT_LOCAL,
-            reliability=rclpy.qos.QoSReliabilityPolicy.RELIABLE
+        qos = QoSProfile(
+            durability=QoSDurabilityPolicy.TRANSIENT_LOCAL,
+            reliability=QoSReliabilityPolicy.RELIABLE,
+            history=QoSHistoryPolicy.KEEP_ALL
         )
         self.publisher = self.create_publisher(MarkerArray, 'lanelet_map_markers', qos)
-        self.timer = self.create_timer(1.0, self.timer_callback)
+        self.timer = self.create_timer(10.0, self.publish_lanelet_map)
 
         self.get_logger().info(f"Loaded lanelet map from: {map_path}")
         self.get_logger().info(f"Parsed {len(self.nodes_dict)} nodes and {len(self.ways)} ways.")
@@ -102,12 +102,15 @@ class LaneletMapPublisher(Node):
 
         return marker
 
-    def timer_callback(self):
+    def publish_lanelet_map(self):
         marker_array = MarkerArray()
         for i, way_refs in enumerate(self.ways):
             marker = self.create_marker(way_refs, i)
             marker_array.markers.append(marker)
         self.publisher.publish(marker_array)
+        self.destroy_timer(self.timer)
+        self.timer = None
+        self.get_logger().info("Done. Timer destroyed, no more publishing.")
 
 
 def main(args=None):

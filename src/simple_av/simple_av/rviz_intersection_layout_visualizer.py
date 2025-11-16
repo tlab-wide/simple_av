@@ -52,8 +52,6 @@ class IntersectionVisualizer(Node):
         else:
             self.get_logger().info(f"✔ Loaded {len(self.polygons)} polygons from YAML.")
 
-
-        self.counter = 0
         # Publish once
         self.timer = self.create_timer(5.0, self.publish_polygons)
 
@@ -163,35 +161,11 @@ class IntersectionVisualizer(Node):
             except Exception as e:
                 self.get_logger().error(f"❌ Failed to publish polygon {poly.name}: {e}")
         
-        self.test()
         # 🔥 disable timer after first publish
         self.destroy_timer(self.timer)
         self.timer = None
         self.get_logger().info("Done. Timer destroyed, no more publishing.")
-
-
-    def test(self):
-        result = []
-        for p in self.polygons:
-            if p.intersection_id == '2' and p.polygon_type == "sw":
-                result.append(p)
-        
-        print(len(result))
-        for p in result:
-            print(f"intersection_{p.intersection_id}_{p.polygon_type}_{p.polygon_id}")
-            print(type(p.points))
-        
-        sw1 = result[0].points
-
-        n = len(sw1)
-        print("n: ", n)
-        p1x, p1y = sw1[0][0], sw1[0][1]
-        print(f"p1x, p1y: {p1x}, {p1y}")
-        for i in range(n + 1):
-            px, py = sw1[i % n][0], sw1[i % n][1]
-            print(f"i: {i}, px: {px}, py: {py}")
     
-
 
 
 def main(args=None):
