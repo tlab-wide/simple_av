@@ -80,6 +80,12 @@ def generate_launch_description():
         ),
         Node(
             package='simple_av',
+            executable='rviz_intersection_layout_visualizer',
+            name='rviz_intersection_layout_visualizer_node',
+            output='screen'
+        ),
+        Node(
+            package='simple_av',
             executable='rviz_status_publisher',
             name='rviz_status_publisher_node',
             output='screen'
