@@ -8,7 +8,7 @@ import os
 from dataclasses import dataclass
 from typing import List, Tuple
 from ament_index_python.packages import get_package_share_directory
-from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy
+from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy, QoSDurabilityPolicy
 
 
 # ---------------------------------------
@@ -21,6 +21,7 @@ class PolygonRegion:
     name: str
     polygon_type: str               # 'inside', 'sw', 'lane', 'lanes'
     intersection_id: str
+    polygon_id: str
     points: List[Tuple[float, float, float]]
 
 
@@ -34,25 +35,30 @@ class IntersectionVisualizer(Node):
 
         # QoS for static map layout
         qos = QoSProfile(
+            durability=QoSDurabilityPolicy.TRANSIENT_LOCAL,
             reliability=QoSReliabilityPolicy.RELIABLE,
-            history=QoSHistoryPolicy.KEEP_LAST,
-            depth=1,
-            durability=rclpy.qos.QoSDurabilityPolicy.TRANSIENT_LOCAL
+            history=QoSHistoryPolicy.KEEP_ALL
         )
 
-        # self.pub = self.create_publisher(Marker, "/intersection_layouts", qos)
-        self.pub = self.create_publisher(Marker, "/sidewalk_marker", qos)
+        self.pub = self.create_publisher(Marker, "/intersection_layouts", qos)
+        # self.pub = self.create_publisher(Marker, "/intersection_layouts", 10)
+
 
         # Load data
         self.polygons = self.load_yaml()
+        print("debug")
+        for polygon in self.polygons:
+            print("-- ", polygon.name, polygon.polygon_type, polygon.intersection_id)
 
         if not self.polygons:
             self.get_logger().error("❌ No polygons parsed from YAML.")
         else:
             self.get_logger().info(f"✔ Loaded {len(self.polygons)} polygons from YAML.")
 
-        # Publish periodically
-        self.timer = self.create_timer(1.0, self.publish_polygons)
+
+        self.counter = 0
+        # Publish once
+        self.timer = self.create_timer(5.0, self.publish_polygons)
 
 
     # ---------------------------------------
@@ -89,6 +95,7 @@ class IntersectionVisualizer(Node):
                             name=f"{category_name}",
                             polygon_type=category_name,
                             intersection_id=str(inter_id),
+                            polygon_id=str(0),
                             points=[tuple(p) for p in category_value["points"]]
                         )
                     )
@@ -103,6 +110,7 @@ class IntersectionVisualizer(Node):
                                     name=f"{category_name}_{poly_id}",
                                     polygon_type=category_name,
                                     intersection_id=str(inter_id),
+                                    polygon_id=str(poly_id),
                                     points=[tuple(p) for p in poly_data["points"]]
                                 )
                             )
@@ -117,13 +125,13 @@ class IntersectionVisualizer(Node):
     def publish_polygons(self):
         if not self.polygons:
             return
-
         for idx, poly in enumerate(self.polygons):
             try:
+                print(f"publishing : intersection_{poly.intersection_id}_{poly.polygon_type}_{poly.polygon_id}")
                 marker = Marker()
                 marker.header.frame_id = "map"
-                marker.header.stamp = self.get_clock().now().to_msg()
-                marker.ns = f"intersection_{poly.intersection_id}_{poly.polygon_type}"
+                marker.header.stamp = rclpy.time.Time().to_msg()
+                marker.ns = f"intersection_{poly.intersection_id}_{poly.polygon_type}_{poly.polygon_id}"
                 marker.id = idx
                 marker.type = Marker.LINE_STRIP
                 marker.action = Marker.ADD
@@ -152,11 +160,19 @@ class IntersectionVisualizer(Node):
                     marker.points.append(Point(x=first[0], y=first[1], z=first[2]))
 
                 marker.lifetime.sec = 0  # forever
-
+                
+                print(f"publishing : intersection_{poly.intersection_id}_{poly.polygon_type}_{poly.polygon_id}")
+                print(f"marker ns: {marker.ns}")
+                print(f"marker id: {marker.id}")
                 self.pub.publish(marker)
 
             except Exception as e:
                 self.get_logger().error(f"❌ Failed to publish polygon {poly.name}: {e}")
+        
+        # 🔥 disable timer after first publish
+        self.destroy_timer(self.timer)
+        self.timer = None
+        self.get_logger().info("Done. Timer destroyed, no more publishing.")
 
 
 def main(args=None):

@@ -7,6 +7,7 @@ import os
 from builtin_interfaces.msg import Duration
 from geometry_msgs.msg import Point
 from ament_index_python.packages import get_package_share_directory
+from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy, QoSDurabilityPolicy
 
 
 class LaneletMapPublisher(Node):
