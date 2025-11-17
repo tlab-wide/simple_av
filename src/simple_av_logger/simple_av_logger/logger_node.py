@@ -43,27 +43,21 @@ class Logger(Node):
 
         # Write header
         self.writer.writerow([
-            'timestamp', 'linear_speed', 'x', 'y',
-            'is_in_intersection', 'does_danger_detected',
-            'traffic_light_state', 'traffic_light_id', 'round_number'
+            'timestamp', 'linear_speed', 'x', 'y', 'is_in_intersection', 'does_danger_detected', 'traffic_light_state', 'traffic_light_id', 'round_number'
         ])
 
         # Subscriptions
-        self.subscriptionPose = self.create_subscription(
-            PoseStamped, '/sensing/gnss/pose', self.pose_callback, 10)
+        self.subscriptionPose = self.create_subscription(PoseStamped, '/sensing/gnss/pose', self.pose_callback, 10)
         self.pose = PoseStamped()
 
-        self.subscriptionVelocityReport = self.create_subscription(
-            VelocityReport, '/vehicle/status/velocity_status', self.velocity_report_callback, 10)
+        self.subscriptionVelocityReport = self.create_subscription(VelocityReport, '/vehicle/status/velocity_status', self.velocity_report_callback, 10)
         self.velocity_report = VelocityReport()
 
-        self.subscriptionSimMonitor = self.create_subscription(
-            SimMonitor, 'simple_av/sim_monitor', self.sim_monitor_callback, 100)
+        self.subscriptionSimMonitor = self.create_subscription(SimMonitor, 'simple_av/sim_monitor', self.sim_monitor_callback, 100)
         self.sim_time = 0
         self.sim_clock_rate = 0
 
-        self.subscriptionPortal = self.create_subscription(
-            Portal, 'simple_av/portal', self.portal_callback, 10)
+        self.subscriptionPortal = self.create_subscription(Portal, 'simple_av/portal', self.portal_callback, 10)
         self.reset = False
         self.finished = False
 
@@ -79,6 +73,7 @@ class Logger(Node):
     def sim_monitor_callback(self, msg):
         self.sim_time = msg.sim_time
         self.sim_clock_rate = msg.sim_clock_rate
+        self.simulation_snapshot()
 
     def portal_callback(self, msg):
         self.reset = msg.reset
@@ -89,7 +84,14 @@ class Logger(Node):
 
     def velocity_report_callback(self, msg):
         self.velocity_report = msg
-    
+
+    def simulation_snapshot(self):
+        print("snapshot ...", self.sim_time)
+        current_speed = self.velocity_report.longitudinal_velocity
+        x = self.pose.pose.position.x
+        y = self.pose.pose.position.y
+        self.writer.writerow([self.sim_time, current_speed, x, y, False, False, 0, 0, 0])
+
     def destroy_node(self):
         self.get_logger().info("Closing CSV file")
         if self.csv:
