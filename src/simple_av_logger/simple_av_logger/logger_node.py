@@ -59,6 +59,7 @@ class Logger(Node):
 
         self.subscriptionPortal = self.create_subscription(Portal, 'simple_av/portal', self.portal_callback, 10)
         self.reset = False
+        self.round_number = 0
         self.finished = False
 
     def config_file_loader(self, file_name):
@@ -77,6 +78,7 @@ class Logger(Node):
 
     def portal_callback(self, msg):
         self.reset = msg.reset
+        self.round_number = msg.round_number
         self.finished = msg.finished
 
     def pose_callback(self, msg):
@@ -90,7 +92,7 @@ class Logger(Node):
         current_speed = self.velocity_report.longitudinal_velocity
         x = self.pose.pose.position.x
         y = self.pose.pose.position.y
-        self.writer.writerow([self.sim_time, current_speed, x, y, False, False, 0, 0, 0])
+        self.writer.writerow([self.sim_time, current_speed, x, y, False, False, 0, 0, self.round_number])
 
     def destroy_node(self):
         self.get_logger().info("Closing CSV file")

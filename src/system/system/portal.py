@@ -90,6 +90,7 @@ class portal(Node):
         portal_reset = Portal()
         portal_reset.reset = self.isPortalReached
         portal_reset.finished = self.finished
+        portal_reset.round_number = self.repeat_counter
         self.portal_publisher.publish(portal_reset)
         self.isPortalReached = False
 
