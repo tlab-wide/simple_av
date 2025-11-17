@@ -51,6 +51,12 @@ def generate_launch_description():
             )
         ),
 
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(
+                os.path.join(get_package_share_directory('simple_av_logger'), 'launch', 'logger_launcher.py')
+            )
+        ),
+
         # 👉 Lanelet2 Map Publisher
         Node(
             package='simple_av',

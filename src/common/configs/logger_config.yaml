@@ -1,0 +1,8 @@
+# Logger module configuration
+
+logger_module:
+  state: ON # ON/OFF
+  log_speed: True
+  log_traffic_signal_state: False
+  log_position: False
+  log_other_vehicles: False

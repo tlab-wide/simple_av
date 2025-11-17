@@ -10,20 +10,19 @@ motion:
     base: 2.0 # Multiplier based on vehicle speed
 
 behavior:
-  
   range_low_pass_gain: 0.90
 
   collision_avoidance:
     prediction: 
       safety_distance: 16.0  # Minimum stopping distance behind an object (meters)
-      reaction_time_threshold: 6.0  # Time delay before reacting to an event (seconds)
+      reaction_time_threshold: 5.0  # Time delay before reacting to an event (seconds)
       reaction_range:
         coefficient: 10.0  # Scaling factor for reaction distance
-        base: 150.0         # Base reaction distance (meters)
+        base: 75.0         # Base reaction distance (meters)
 
       detection_range:
         coefficient: 10.0  # Scaling factor for detection radius
-        base: 150.0      # Base detection radius (meters)
+        base: 100.0      # Base detection radius (meters)
     
     on_path:
       safety_distance: 4.0  # Minimum stopping distance behind an object (meters)
