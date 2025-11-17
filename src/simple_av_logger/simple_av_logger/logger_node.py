@@ -12,7 +12,7 @@ import numpy as np
 import yaml
 import os
 from ament_index_python.packages import get_package_share_directory
-from simple_av_msgs.msg import Portal
+from simple_av_msgs.msg import Portal, DetectedObjectsArray
 from rclpy.parameter import Parameter
 import time
 import csv
@@ -52,7 +52,7 @@ class Logger(Node):
         
         self.intersection2_scenario2_exit_point = self.intersection_profiles['intersection_points']['2']['2']['2']
         self.intersection2_exit_geometry_point = Point(x = self.intersection2_scenario2_exit_point['x'], y = self.intersection2_scenario2_exit_point['y'], z = self.intersection2_scenario2_exit_point['z'])
-        self.is_in_intersection = False
+        self.is_vehicle_inside_intersection = False
         self.has_exited_intersection = False
         
         
@@ -88,6 +88,13 @@ class Logger(Node):
         self.reset = False
         self.round_number = 0
         self.finished = False
+
+        self.subscriptionDetectedObjects = self.create_subscription(DetectedObjectsArray, 'simple_av/perception/detected_objects', self.detectedObjects_callback, 10)
+        self.detectedObjects = DetectedObjectsArray()
+
+        self.has_danger_detection_completed = False
+        self.number_of_objects_in_zones = -1
+        self.last_round_number = 0
 
     def config_file_loader(self, file_name):
         # Path to the YAML file
@@ -174,6 +181,9 @@ class Logger(Node):
     def velocity_report_callback(self, msg):
         self.velocity_report = msg
     
+    def detectedObjects_callback(self, msg):
+        self.detectedObjects = msg
+
     def calculate_distance(self, point1, point2, z=False):
         """
         Calculate the Euclidean distance between two points.
@@ -190,25 +200,154 @@ class Logger(Node):
         else:
             return np.sqrt((point1.x - point2.x)**2 + (point1.y - point2.y)**2)
     
-    def check_intersection_start_and_exit(self, current_pose, treshold = 3.0):
+    def get_detected_pedestrians(self):
+        """
+        Get detected pedestrians and cyclists from perception data.
+        Returns a list of detected objects with labels:
+        - 7: Cyclist/Bicycle & Pedestrian
+        """
+        if not self.detectedObjects or not self.detectedObjects.objects:
+            self.get_logger().debug("No perception data or no objects detected")
+            return []  # Return empty list instead of None
+
+        detected_pedestrians = []
+        for obj in self.detectedObjects.objects:
+            object_type = obj.label
+            # Label is int32, check for pedestrian and cyclist (7)
+            if object_type in [7]:
+                detected_pedestrians.append(obj)
+
+        if detected_pedestrians:
+            self.get_logger().debug(f"Found {len(detected_pedestrians)} pedestrians/cyclists")
+
+        return detected_pedestrians
+
+    def is_point_in_polygon(self, point, polygon_points):
+        """
+        Check if a 2D point is inside a polygon (ray casting algorithm).
+        polygon_points: list of [x, y, z]
+        """
+        x, y = point.x, point.y
+        inside = False
+        n = len(polygon_points)
+        p1x, p1y = polygon_points[0][0], polygon_points[0][1]
+        for i in range(n + 1):
+            p2x, p2y = polygon_points[i % n][0], polygon_points[i % n][1]
+            if y > min(p1y, p2y):
+                if y <= max(p1y, p2y):
+                    if x <= max(p1x, p2x):
+                        if p1y != p2y:
+                            xinters = (y - p1y) * (p2x - p1x) / (p2y - p1y) + p1x
+                        if p1x == p2x or x <= xinters:
+                            inside = not inside
+            p1x, p1y = p2x, p2y
+        return inside
+
+    def get_object_absolute_position(self, vehicle_orientation, vehicle_pose, vector):
+        """
+        Converts an object's relative position back to its absolute position using the vehicle's pose.
+        """
+        # Apply the quaternion rotation (forward rotation)
+        rotated_vector = self.apply_quaternion_rotation(vehicle_orientation, vector)
+
+        # Add the rotated vector to the vehicle's position
+        obj_x = vehicle_pose.x + rotated_vector.x
+        obj_y = vehicle_pose.y + rotated_vector.y
+        obj_z = vehicle_pose.z + rotated_vector.z
+
+        # Create the absolute position
+        object_absolute_pose = Point(x=obj_x, y=obj_y, z=obj_z)
+        return object_absolute_pose
+
+    def is_object_detected_at_intersection_danger_zones(self, intersection_id):
+
+        vehicle_pose = self.pose.pose.position
+        vehicle_orientation = self.pose.pose.orientation
+
+        self.get_logger().debug("Checking intersection danger zones...")
+        detected_pedestrians = self.get_detected_pedestrians()
+        if not detected_pedestrians:
+            self.get_logger().debug("No pedestrians detected")
+            return False
+
+        # Validate layout data exists
+        if not self.intersections_layouts:
+            self.get_logger().warning("No intersection layout data loaded")
+            return False
+
+        if not any(p.intersection_id == intersection_id for p in self.intersections_layouts):
+            self.get_logger().warning(f"No intersection data for intersection '{intersection_id}'")
+            return False
+
+        danger_zones = [
+            p for p in self.intersections_layouts
+            if p.intersection_id == intersection_id and p.polygon_type == "sw"
+        ]
+
+        objects_in_zones = 0
+        for ped in detected_pedestrians:
+            # Convert relative position to absolute position
+            ped_abs = self.get_object_absolute_position(vehicle_orientation, vehicle_pose, ped.position)
+            self.get_logger().debug(f"Checking pedestrian at absolute position: ({ped_abs.x:.2f}, {ped_abs.y:.2f})")
+
+            for p in danger_zones:
+                if p.polygon_id == '3': #skipping sw3 for this scenario TODO: change this later
+                    continue
+                if self.is_point_in_polygon(ped_abs, p.points):
+                    objects_in_zones += 1
+                    self.get_logger().info(
+                        f"Pedestrian detected at ({ped_abs.x:.2f}, {ped_abs.y:.2f}) at intersection {p.intersection_id} inside: {p.polygon_type}{p.polygon_id}"
+                    )
+
+        if objects_in_zones > 0:
+            self.get_logger().info(f"Total pedestrians in danger zones: {objects_in_zones}")
+        else:
+            self.get_logger().debug("No pedestrians in danger zones")
+        return objects_in_zones > 0
+    
+    def update_is_vehicle_inside_intersection_state(self, current_pose, treshold = 3.0):
         
-        if not self.is_in_intersection:
+        if not self.is_vehicle_inside_intersection:
             if self.calculate_distance(current_pose, self.intersection2_start_geometry_point) < treshold:
-                self.is_in_intersection = True
+                self.is_vehicle_inside_intersection = True
         else:
             if self.calculate_distance(current_pose, self.intersection2_exit_geometry_point) < treshold:
-                self.is_in_intersection = False
+                self.is_vehicle_inside_intersection = False
+                self.number_of_objects_in_zones = -1
         
 
+    def new_round_parameter_rest(self):
+        if self.round_number > self.last_round_number:
+            self.has_danger_detection_completed = False
+            self.is_vehicle_inside_intersection = False
+            self.number_of_objects_in_zones = -1
+            self.last_round_number = self.round_number
+
+
     def simulation_snapshot(self):
+        # ------- Data Evaluation -------
+        if not self.pose or not self.pose.pose:
+            self.get_logger().warning("No pose data available for danger zone detection")
+            return
+
+        if self.pose.pose.position.x == 0.0 and self.pose.pose.position.y == 0.0 and self.pose.pose.position.z == 0.0:
+            self.get_logger().warning("Vehicle pose at origin")
+            return
+        # ------- ------- ------- -------
+        
         print("snapshot ...", self.sim_time)
+        self.new_round_parameter_rest()
         current_speed = self.velocity_report.longitudinal_velocity
-        x = self.pose.pose.position.x
-        y = self.pose.pose.position.y
-        self.check_intersection_start_and_exit(self.pose.pose.position)
+        vehicle_pose = self.pose.pose.position
+        x = vehicle_pose.x
+        y = vehicle_pose.y
+        self.update_is_vehicle_inside_intersection_state(self.pose.pose.position)
+        if self.is_vehicle_inside_intersection and not self.has_danger_detection_completed:
+            self.number_of_objects_in_zones = self.is_object_detected_at_intersection_danger_zones('2')
+            self.has_danger_detection_completed = True
         
         # 'timestamp', 'linear_speed', 'x', 'y', 'is_in_intersection', 'does_danger_detected', 'traffic_light_state', 'traffic_light_id', 'round_number'
-        self.writer.writerow([self.sim_time, current_speed, x, y, self.is_in_intersection, False, 0, 0, self.round_number])
+        self.writer.writerow([self.sim_time, current_speed, x, y, self.is_vehicle_inside_intersection, self.number_of_objects_in_zones, 0, 0, self.round_number])
 
     def destroy_node(self):
         self.get_logger().info("Closing CSV file")
