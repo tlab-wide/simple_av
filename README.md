@@ -92,7 +92,9 @@ ros_ws/
       ├── planning/
       ├── perception/
       ├── visualization/
+      ├── simple_av_logger/
       └── simple_av/
+          ├── simple_av/
           ├── package.xml
           ├── resource/
           ├── setup.cfg
@@ -140,6 +142,8 @@ ros2 run control controller
 - <b>motion_behavior_config</b>: In this file the motion and behavioral configs such as threshold time for collision prediction, safety distance and speed limits are set.
 
 - <b>av_features</b>: On/Off features like traffic light detection and object detection
+
+- <b>logger_config</b>: On/Off logger module.
 
 
 
