@@ -1,23 +1,17 @@
 import rclpy
 from rclpy.node import Node
-from rclpy.qos import QoSProfile, DurabilityPolicy, HistoryPolicy, ReliabilityPolicy
-from simple_av_msgs.msg import PlanningPathPlanningMsg, PlanningMotionPlanningMsg
 from geometry_msgs.msg import PoseStamped, Point
-from autoware_vehicle_msgs.msg import GearCommand, VelocityReport
+from autoware_vehicle_msgs.msg import VelocityReport
 from simple_av_msgs.msg import SimMonitor
-import time
-import math
-from collections import deque
 import numpy as np
 import yaml
 import os
 from ament_index_python.packages import get_package_share_directory
 from simple_av_msgs.msg import Portal, DetectedObjectsArray
-from rclpy.parameter import Parameter
-import time
 import csv
 from typing import List, Tuple
 from dataclasses import dataclass
+from scipy.spatial.transform import Rotation as R
 
 @dataclass
 class PolygonRegion:
@@ -93,7 +87,7 @@ class Logger(Node):
         self.detectedObjects = DetectedObjectsArray()
 
         self.has_danger_detection_completed = False
-        self.number_of_objects_in_zones = -1
+        self.has_pedesrian_Detected_at_danger_zones = -1
         self.last_round_number = 0
 
     def config_file_loader(self, file_name):
@@ -199,6 +193,14 @@ class Logger(Node):
                         (point1.z - point2.z)**2)
         else:
             return np.sqrt((point1.x - point2.x)**2 + (point1.y - point2.y)**2)
+    
+    def apply_quaternion_rotation(self, quaternion, vector):
+        """
+        Applies a quaternion rotation to a given vector.
+        """
+        rotation = R.from_quat(np.array([quaternion.x, quaternion.y, quaternion.z, quaternion.w]))
+        transformed_vector = rotation.apply(np.array([vector.x, vector.y, vector.z]))
+        return Point(x=transformed_vector[0], y=transformed_vector[1], z=transformed_vector[2])
     
     def get_detected_pedestrians(self):
         """
@@ -313,14 +315,14 @@ class Logger(Node):
         else:
             if self.calculate_distance(current_pose, self.intersection2_exit_geometry_point) < treshold:
                 self.is_vehicle_inside_intersection = False
-                self.number_of_objects_in_zones = -1
+                self.has_pedesrian_Detected_at_danger_zones = -1
         
 
     def new_round_parameter_rest(self):
         if self.round_number > self.last_round_number:
             self.has_danger_detection_completed = False
             self.is_vehicle_inside_intersection = False
-            self.number_of_objects_in_zones = -1
+            self.has_pedesrian_Detected_at_danger_zones = -1
             self.last_round_number = self.round_number
 
 
@@ -343,11 +345,11 @@ class Logger(Node):
         y = vehicle_pose.y
         self.update_is_vehicle_inside_intersection_state(self.pose.pose.position)
         if self.is_vehicle_inside_intersection and not self.has_danger_detection_completed:
-            self.number_of_objects_in_zones = self.is_object_detected_at_intersection_danger_zones('2')
+            self.has_pedesrian_Detected_at_danger_zones = self.is_object_detected_at_intersection_danger_zones('2')
             self.has_danger_detection_completed = True
         
         # 'timestamp', 'linear_speed', 'x', 'y', 'is_in_intersection', 'does_danger_detected', 'traffic_light_state', 'traffic_light_id', 'round_number'
-        self.writer.writerow([self.sim_time, current_speed, x, y, self.is_vehicle_inside_intersection, self.number_of_objects_in_zones, 0, 0, self.round_number])
+        self.writer.writerow([self.sim_time, current_speed, x, y, self.is_vehicle_inside_intersection, self.has_pedesrian_Detected_at_danger_zones, 0, 0, self.round_number])
 
     def destroy_node(self):
         self.get_logger().info("Closing CSV file")
