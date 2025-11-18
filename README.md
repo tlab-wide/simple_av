@@ -143,7 +143,10 @@ ros2 run control controller
 
 - <b>av_features</b>: On/Off features like traffic light detection and object detection
 
-- <b>logger_config</b>: On/Off logger module.
+- <b>logger_config</b>: On/Off logger module and set log_time_interval.
+
+
+- The log files will be stored in this address ros_ws/install/simple_av_logger/share/simple_av_logger/data
 
 
 

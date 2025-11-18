@@ -61,7 +61,7 @@ class Logger(Node):
         data_dir = os.path.join(pkg_share, 'data')
         os.makedirs(data_dir, exist_ok=True)
 
-        csv_path = os.path.join(data_dir, 'test.csv')
+        csv_path = os.path.join(data_dir, 'simple_av_record_log.csv')
         self.csv = open(csv_path, 'w')
         self.writer = csv.writer(self.csv)
 

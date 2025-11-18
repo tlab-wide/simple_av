@@ -1,5 +1,5 @@
 Stable Version
-Version 2.20.21
+Version 2.21.21
 
 new architecture of Modules
 Modules:
@@ -27,3 +27,6 @@ Modules:
         - stores maps and config files and generally all the common files that the modules may use
     simple_av:
         - One Package to launch them All!
+    simple_av_logger:
+        - This module runs alongside other modules and nodes to log the states such as speed, traffic light state, position and others
+        and save them in a CSV file (in this address ros_ws/install/simple_av_logger/share/simple_av_logger/data) in real time
