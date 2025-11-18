@@ -383,21 +383,12 @@ class Logger(Node):
             self.has_pedesrian_Detected_at_danger_zones = self.is_object_detected_at_intersection_danger_zones('2')
             self.has_danger_detection_completed = True
 
-        v2i_traffic_signals_id = list(self.trafficSignal.v2i_traffic_signals_id)
-        v2i_traffic_signals_colors = list(self.trafficSignal.v2i_traffic_signals_colors)
-        
-        self.writer.writerow([
-            'timestamp', 'speed', 
-            'lane_id', 'x', 'y', 
-            'is_in_intersection', 'does_danger_detected', 
-            'traffic_light_state', 'traffic_light_id', 
-            'round_number'
-        ])
+        light_165626 = self.get_traffic_light_color_by_id(165626)
         
         self.writer.writerow([self.sim_time, current_speed, 
                               self.location.closest_lane_names, x, y, 
                               self.is_vehicle_inside_intersection, self.has_pedesrian_Detected_at_danger_zones, 
-                              0, 0, 
+                              light_165626, 165626, 
                               self.round_number])
 
     def destroy_node(self):
