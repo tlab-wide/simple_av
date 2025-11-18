@@ -82,7 +82,7 @@ class BehaviorPathPlanner(Node):
         self.intersection_points = self.intersection_profiles['intersection_points']
         self.intersection2_scenario2_points = self.intersection_profiles['intersection_points']['2']['2']
         # Load YAML sidewalk data
-        self.intersections_layouts = self.load_intersection_layout()
+        self.intersections_layouts = self.load_intersections_layouts()
 
         # Create subscriber to simple_av/localization/intersection_status topic
         self.subscriptionIntersectionAwareness = self.create_subscription(LocalizationIntersectionStatus, 'simple_av/localization/intersection_status', self.intersectionAwareness_callback, 10)
@@ -173,7 +173,7 @@ class BehaviorPathPlanner(Node):
             raise ValueError(f"Vehicle type '{vehicle_model}' not found in the configuration.")
         
 
-    def load_intersection_layout(self) -> List[PolygonRegion]:
+    def load_intersections_layouts(self) -> List[PolygonRegion]:
         package_dir = get_package_share_directory("common")
         yaml_path = os.path.join(package_dir, "zones", "intersections_danger_zones.yaml")
 

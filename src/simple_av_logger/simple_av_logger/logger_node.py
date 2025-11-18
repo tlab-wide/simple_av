@@ -16,7 +16,7 @@ from scipy.spatial.transform import Rotation as R
 class PolygonRegion:
     """Any polygon region from YAML (inside, sidewalks, lanes, etc.)"""
     name: str
-    polygon_type: str               # 'inside', 'sw', 'lane', 'lanes'
+    polygon_type: str               # 'inside', 'sw', 'cw', 'lane', 'lanes'
     intersection_id: str
     polygon_id: str
     points: List[Tuple[float, float, float]]
@@ -50,7 +50,8 @@ class Logger(Node):
         
         
         # Load YAML sidewalk data
-        self.intersections_layouts = self.load_intersection_layout()
+        self.intersections_layouts = self.load_intersections_layouts()
+        self.intersection2_cw_areas = self.get_cros_walk_areas('2') # get cross walk areas of the Kakaiken intersection
 
         # ---- CSV PATH FIX ----
         pkg_share = get_package_share_directory('simple_av_logger')
@@ -120,7 +121,7 @@ class Logger(Node):
             intersection_profiles = yaml.safe_load(file)
         return intersection_profiles
 
-    def load_intersection_layout(self) -> List[PolygonRegion]:
+    def load_intersections_layouts(self) -> List[PolygonRegion]:
         package_dir = get_package_share_directory("common")
         yaml_path = os.path.join(package_dir, "zones", "intersections_danger_zones.yaml")
 
@@ -325,15 +326,34 @@ class Logger(Node):
             self.get_logger().debug("No pedestrians in danger zones")
         return objects_in_zones > 0
     
-    def update_is_vehicle_inside_intersection_state(self, current_pose, treshold = 2.0):
+    def update_is_vehicle_inside_intersection_state(self, vehicle_pose, treshold = 2.0):
         
+        enter_cw = None
+        exit_cw = None
+        for cw in self.intersection2_cw_areas:
+            if cw.polygon_id == '3':
+                enter_cw = cw
+            elif cw.polygon_id == '2':
+                exit_cw = cw
+            else:
+                continue
+
         if not self.is_vehicle_inside_intersection:
-            if self.calculate_distance(current_pose, self.intersection2_start_geometry_point) < treshold:
+            if self.is_point_in_polygon(vehicle_pose, enter_cw.points):
                 self.is_vehicle_inside_intersection = True
         else:
-            if self.calculate_distance(current_pose, self.intersection2_exit_geometry_point) < treshold:
+            if self.is_point_in_polygon(vehicle_pose, exit_cw.points):
                 self.is_vehicle_inside_intersection = False
                 self.has_pedesrian_Detected_at_danger_zones = -1
+        
+
+        # if not self.is_vehicle_inside_intersection:
+        #     if self.calculate_distance(vehicle_pose, self.intersection2_start_geometry_point) < treshold:
+        #         self.is_vehicle_inside_intersection = True
+        # else:
+        #     if self.calculate_distance(vehicle_pose, self.intersection2_exit_geometry_point) < treshold:
+        #         self.is_vehicle_inside_intersection = False
+        #         self.has_pedesrian_Detected_at_danger_zones = -1
         
 
     def get_traffic_light_color_by_id(self, traffic_light_id):
@@ -351,6 +371,13 @@ class Logger(Node):
             self.is_vehicle_inside_intersection = False
             self.has_pedesrian_Detected_at_danger_zones = -1
             self.last_round_number = self.round_number
+    
+    def get_cros_walk_areas(self, intersection_id):
+        cw_zones = [
+                p for p in self.intersections_layouts
+                if p.intersection_id == intersection_id and p.polygon_type == "cw"
+            ]
+        return cw_zones
 
     def sim_monitor_callback(self, msg):
         self.sim_time = msg.sim_time
@@ -378,7 +405,7 @@ class Logger(Node):
         vehicle_pose = self.pose.pose.position
         x = vehicle_pose.x
         y = vehicle_pose.y
-        self.update_is_vehicle_inside_intersection_state(self.pose.pose.position)
+        self.update_is_vehicle_inside_intersection_state(vehicle_pose)
         if self.is_vehicle_inside_intersection and not self.has_danger_detection_completed:
             self.has_pedesrian_Detected_at_danger_zones = self.is_object_detected_at_intersection_danger_zones('2')
             self.has_danger_detection_completed = True
