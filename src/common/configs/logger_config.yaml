@@ -4,6 +4,7 @@ logger_module:
   state: ON # ON/OFF
   intersection: '2' # Kakaiken: 2 - Ganken: 1
   scenario: '2' # scenario number
+  log_time_interval: 0.1
   # log_speed: None
   # log_traffic_signal_state: None
   # log_position: None

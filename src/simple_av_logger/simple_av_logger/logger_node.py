@@ -30,6 +30,9 @@ class Logger(Node):
         self.logger_config = self.config_file_loader("logger_config.yaml")
         self.logger_state = self.logger_config['logger_module']['state']
 
+        self.last_log_time = 0.0
+        self.logging_interval = self.logger_config['logger_module']['log_time_interval']  # seconds
+
         # Handle logger off
         if not self.logger_state:
             self.get_logger().warn("Logger OFF → shutting down logger node")
@@ -377,6 +380,12 @@ class Logger(Node):
         self.simulation_snapshot()
 
     def simulation_snapshot(self):
+
+        # ---- Time-based logging throttle ----
+        if (self.sim_time - self.last_log_time) < self.logging_interval:
+            return
+        self.last_log_time = self.sim_time
+        
         # ------- Data Evaluation -------
         if not self.pose or not self.pose.pose:
             self.get_logger().warning("No pose data available for danger zone detection")
@@ -412,7 +421,10 @@ class Logger(Node):
         else:
             light_165626 = 'Unknown'
         
-        self.writer.writerow([f"{self.sim_time:.5f}", f"{current_speed:.2f}", 
+        if self.location.closest_lane_names.data is None or self.location.closest_lane_names.data == '':
+            return
+        
+        self.writer.writerow([f"{self.sim_time:.2f}", f"{current_speed:.2f}", 
                               self.location.closest_lane_names.data, x, y, 
                               self.is_vehicle_inside_intersection, self.has_pedesrian_detected_at_danger_zones, 
                               light_165626, '165626', 
