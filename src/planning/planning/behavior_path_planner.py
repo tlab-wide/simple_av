@@ -82,7 +82,7 @@ class BehaviorPathPlanner(Node):
         self.intersection_points = self.intersection_profiles['intersection_points']
         self.intersection2_scenario2_points = self.intersection_profiles['intersection_points']['2']['2']
         # Load YAML sidewalk data
-        self.intersections_layouts = self.load_intersection_layout()
+        self.intersections_layouts = self.load_intersections_layouts()
 
         # Create subscriber to simple_av/localization/intersection_status topic
         self.subscriptionIntersectionAwareness = self.create_subscription(LocalizationIntersectionStatus, 'simple_av/localization/intersection_status', self.intersectionAwareness_callback, 10)
@@ -173,7 +173,7 @@ class BehaviorPathPlanner(Node):
             raise ValueError(f"Vehicle type '{vehicle_model}' not found in the configuration.")
         
 
-    def load_intersection_layout(self) -> List[PolygonRegion]:
+    def load_intersections_layouts(self) -> List[PolygonRegion]:
         package_dir = get_package_share_directory("common")
         yaml_path = os.path.join(package_dir, "zones", "intersections_danger_zones.yaml")
 
@@ -572,7 +572,7 @@ class BehaviorPathPlanner(Node):
             self.get_logger().debug(f"Checking pedestrian at absolute position: ({ped_abs.x:.2f}, {ped_abs.y:.2f})")
 
             for p in danger_zones:
-                if p.polygon_id == '3': #skipping sw3 for this scenario TODO: change thsi later
+                if p.polygon_id == '3': #skipping sw3 for this scenario TODO: change this later
                     continue
                 if self.is_point_in_polygon(ped_abs, p.points):
                     objects_in_zones += 1
@@ -594,11 +594,9 @@ class BehaviorPathPlanner(Node):
         is_object_in_danger_zone = False
         self.get_logger().info(f"intersection_awareness_intersection_id: {self.intersection_awareness_intersection_id} ")
         self.get_logger().info(f"intersection_awareness_status: {self.intersection_awareness_status} ")
-        if self.intersection_awareness_intersection_id == '2' and self.intersection_awareness_status is not None:
-            is_object_in_danger_zone = self.is_object_detected_on_intersection_danger_zones('2')
-            self.get_logger().info(f"At intersection 2, checking danger zones: {is_object_in_danger_zone}")
-        else:
-            self.get_logger().info(f"Not at intersection 2 (current: {self.intersection_awareness_intersection_id}), skipping danger zone check")
+        
+        is_object_in_danger_zone = self.is_object_detected_on_intersection_danger_zones('2')
+        self.get_logger().info(f"At intersection 2, checking danger zones: {is_object_in_danger_zone}")
 
         self.get_logger().info(f"is_RSU_enabled: {self.is_RSU_enabled}, Danger: {is_object_in_danger_zone}")
         if self.is_RSU_enabled and not is_object_in_danger_zone:
@@ -641,12 +639,13 @@ class BehaviorPathPlanner(Node):
                 self.speeds_on_path[exit_idx:end_idx] = accel_profile
 
     def check_cool4_speed_profile_trigger(self, vehicle_pose, threshold=6.0):
-        if self.is_cool4_speed_profile_enable and self.intersection_points and not self.cool4_triggered:
-            trigger_point_index = self.intersection_points[0]
-            if self.calculate_distance(vehicle_pose, self.path[trigger_point_index].waypoint) <= threshold:
-                self.get_logger().info("Reached Cool4 trigger waypoint — adjusting speed profile...")
-                self.cool4_speed_profile_adjustment(self.intersection_points)
-                self.cool4_triggered = True
+        if self.is_cool4_speed_profile_enable and self.intersection_awareness_intersection_id == '2' and self.intersection_awareness_status is not None:
+            if self.intersection_points and not self.cool4_triggered:
+                trigger_point_index = self.intersection_points[0]
+                if self.calculate_distance(vehicle_pose, self.path[trigger_point_index].waypoint) <= threshold:
+                    self.get_logger().info("Reached Cool4 trigger waypoint — adjusting speed profile...")
+                    self.cool4_speed_profile_adjustment(self.intersection_points)
+                    self.cool4_triggered = True
 
 
     def find_intersection_start_and_exit_using_config(self, path):

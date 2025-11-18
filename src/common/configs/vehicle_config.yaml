@@ -27,7 +27,7 @@ vehicles:
       wheel_base: 4.8 # Distance between front and rear axles (meters)
       front_overhang: 2.3 # Distance from front axle to vehicle front (meters)
       rear_overhang: 3.2  # Distance from rear axle to vehicle back (meters)
-    weight: 10000  # Vehicle weight (kg)
+    weight: 7000  # Vehicle weight (kg)
     performance:
       max_speed: 8.34         # Maximum speed (m/s)
       min_speed: 0.84          # Minimum speed (m/s)

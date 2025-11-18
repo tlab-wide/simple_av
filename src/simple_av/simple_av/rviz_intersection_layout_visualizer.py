@@ -45,7 +45,7 @@ class IntersectionVisualizer(Node):
 
 
         # Load data
-        self.polygons = self.load_yaml()
+        self.polygons = self.load_intersections_layouts()
         
         if not self.polygons:
             self.get_logger().error("❌ No polygons parsed from YAML.")
@@ -60,7 +60,7 @@ class IntersectionVisualizer(Node):
     #              LOAD YAML
     # ---------------------------------------
 
-    def load_yaml(self) -> List[PolygonRegion]:
+    def load_intersections_layouts(self) -> List[PolygonRegion]:
         package_dir = get_package_share_directory("common")
         yaml_path = os.path.join(package_dir, "zones", "intersections_danger_zones.yaml")
 
@@ -137,6 +137,8 @@ class IntersectionVisualizer(Node):
                     marker.color.r, marker.color.g, marker.color.b = (1.0, 0.5, 0.0)  # orange
                 elif poly.polygon_type == "sw":
                     marker.color.r, marker.color.g, marker.color.b = (0.0, 1.0, 0.0)  # green
+                elif poly.polygon_type == "cw":
+                    marker.color.r, marker.color.g, marker.color.b = (1.0, 0.9, 0.0)  # yellow
                 elif poly.polygon_type in ("lane", "lanes"):
                     marker.color.r, marker.color.g, marker.color.b = (0.0, 0.6, 1.0)  # blue
                 else:
