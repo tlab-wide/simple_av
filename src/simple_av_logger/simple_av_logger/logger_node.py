@@ -309,21 +309,20 @@ class Logger(Node):
         for ped in detected_pedestrians:
             # Convert relative position to absolute position
             ped_abs = self.get_object_absolute_position(vehicle_orientation, vehicle_pose, ped.position)
-            self.get_logger().debug(f"Checking pedestrian at absolute position: ({ped_abs.x:.2f}, {ped_abs.y:.2f})")
 
             for p in danger_zones:
                 if p.polygon_id == '3': #skipping sw3 for this scenario TODO: change this later
                     continue
                 if self.is_point_in_polygon(ped_abs, p.points):
                     objects_in_zones += 1
-                    self.get_logger().info(
-                        f"Pedestrian detected at ({ped_abs.x:.2f}, {ped_abs.y:.2f}) at intersection {p.intersection_id} inside: {p.polygon_type}{p.polygon_id}"
-                    )
+                    # self.get_logger().info(
+                    #     f"Pedestrian detected at ({ped_abs.x:.2f}, {ped_abs.y:.2f}) at intersection {p.intersection_id} inside: {p.polygon_type}{p.polygon_id}"
+                    # )
 
-        if objects_in_zones > 0:
-            self.get_logger().info(f"Total pedestrians in danger zones: {objects_in_zones}")
-        else:
-            self.get_logger().debug("No pedestrians in danger zones")
+        # if objects_in_zones > 0:
+        #     self.get_logger().info(f"Total pedestrians in danger zones: {objects_in_zones}")
+        # else:
+        #     self.get_logger().debug("No pedestrians in danger zones")
         return objects_in_zones > 0
     
     def update_is_vehicle_inside_intersection_state(self, vehicle_pose, treshold = 2.0):
@@ -341,12 +340,12 @@ class Logger(Node):
         if not self.is_vehicle_inside_intersection:
             if self.is_point_in_polygon(vehicle_pose, enter_cw.points):
                 self.is_vehicle_inside_intersection = True
-                self.get_logger().error(f"Vehicle entered the intersection")
+                # self.get_logger().error(f"Vehicle entered the intersection")
         else:
             if self.is_point_in_polygon(vehicle_pose, exit_cw.points):
                 self.is_vehicle_inside_intersection = False
                 self.has_pedesrian_detected_at_danger_zones = -1
-                self.get_logger().error(f"Vehicle Exited the intersection")
+                # self.get_logger().error(f"Vehicle Exited the intersection")
         
 
     def get_traffic_light_color_by_id(self, traffic_light_id):
@@ -413,7 +412,7 @@ class Logger(Node):
         else:
             light_165626 = 'Unknown'
         
-        self.writer.writerow([self.sim_time, current_speed, 
+        self.writer.writerow([f"{self.sim_time:.5f}", f"{current_speed:.2f}", 
                               self.location.closest_lane_names.data, x, y, 
                               self.is_vehicle_inside_intersection, self.has_pedesrian_detected_at_danger_zones, 
                               light_165626, '165626', 
