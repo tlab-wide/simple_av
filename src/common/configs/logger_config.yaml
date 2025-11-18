@@ -2,7 +2,9 @@
 
 logger_module:
   state: ON # ON/OFF
-  log_speed: True
-  log_traffic_signal_state: False
-  log_position: False
-  log_other_vehicles: False
+  intersection: '2' # Kakaiken: 2 - Ganken: 1
+  scenario: '2' # scenario number
+  # log_speed: None
+  # log_traffic_signal_state: None
+  # log_position: None
+  # log_other_vehicles: None

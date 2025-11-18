@@ -101,7 +101,7 @@ class Logger(Node):
         self.detectedObjects = DetectedObjectsArray()
 
         self.has_danger_detection_completed = False
-        self.has_pedesrian_Detected_at_danger_zones = -1
+        self.has_pedesrian_detected_at_danger_zones = -1
         self.last_round_number = 0
 
     def config_file_loader(self, file_name):
@@ -341,19 +341,12 @@ class Logger(Node):
         if not self.is_vehicle_inside_intersection:
             if self.is_point_in_polygon(vehicle_pose, enter_cw.points):
                 self.is_vehicle_inside_intersection = True
+                self.get_logger().error(f"Vehicle entered the intersection")
         else:
             if self.is_point_in_polygon(vehicle_pose, exit_cw.points):
                 self.is_vehicle_inside_intersection = False
-                self.has_pedesrian_Detected_at_danger_zones = -1
-        
-
-        # if not self.is_vehicle_inside_intersection:
-        #     if self.calculate_distance(vehicle_pose, self.intersection2_start_geometry_point) < treshold:
-        #         self.is_vehicle_inside_intersection = True
-        # else:
-        #     if self.calculate_distance(vehicle_pose, self.intersection2_exit_geometry_point) < treshold:
-        #         self.is_vehicle_inside_intersection = False
-        #         self.has_pedesrian_Detected_at_danger_zones = -1
+                self.has_pedesrian_detected_at_danger_zones = -1
+                self.get_logger().error(f"Vehicle Exited the intersection")
         
 
     def get_traffic_light_color_by_id(self, traffic_light_id):
@@ -369,7 +362,7 @@ class Logger(Node):
         if self.round_number > self.last_round_number:
             self.has_danger_detection_completed = False
             self.is_vehicle_inside_intersection = False
-            self.has_pedesrian_Detected_at_danger_zones = -1
+            self.has_pedesrian_detected_at_danger_zones = -1
             self.last_round_number = self.round_number
     
     def get_cros_walk_areas(self, intersection_id):
@@ -399,7 +392,7 @@ class Logger(Node):
             return
         # ------- ------- ------- -------
         
-        print("snapshot ...", self.sim_time)
+        # print("snapshot ...", self.sim_time)
         self.new_round_parameter_rest()
         current_speed = self.velocity_report.longitudinal_velocity
         vehicle_pose = self.pose.pose.position
@@ -407,14 +400,22 @@ class Logger(Node):
         y = vehicle_pose.y
         self.update_is_vehicle_inside_intersection_state(vehicle_pose)
         if self.is_vehicle_inside_intersection and not self.has_danger_detection_completed:
-            self.has_pedesrian_Detected_at_danger_zones = self.is_object_detected_at_intersection_danger_zones('2')
+            self.has_pedesrian_detected_at_danger_zones = self.is_object_detected_at_intersection_danger_zones('2')
             self.has_danger_detection_completed = True
 
         light_165626 = self.get_traffic_light_color_by_id(165626)
+        if light_165626 == 1:
+            light_165626 = 'Red'
+        elif light_165626 == 2:
+            light_165626 = 'Yellow'
+        elif light_165626 == 3:
+            light_165626 = 'Green'
+        else:
+            light_165626 = 'Unknown'
         
         self.writer.writerow([self.sim_time, current_speed, 
                               self.location.closest_lane_names.data, x, y, 
-                              self.is_vehicle_inside_intersection, self.has_pedesrian_Detected_at_danger_zones, 
+                              self.is_vehicle_inside_intersection, self.has_pedesrian_detected_at_danger_zones, 
                               light_165626, '165626', 
                               self.round_number])
 
