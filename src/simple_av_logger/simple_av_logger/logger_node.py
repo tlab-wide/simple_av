@@ -386,9 +386,9 @@ class Logger(Node):
         light_165626 = self.get_traffic_light_color_by_id(165626)
         
         self.writer.writerow([self.sim_time, current_speed, 
-                              self.location.closest_lane_names, x, y, 
+                              self.location.closest_lane_names.data, x, y, 
                               self.is_vehicle_inside_intersection, self.has_pedesrian_Detected_at_danger_zones, 
-                              light_165626, 165626, 
+                              light_165626, '165626', 
                               self.round_number])
 
     def destroy_node(self):
