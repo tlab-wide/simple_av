@@ -2,12 +2,11 @@ import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import PoseStamped, Point
 from autoware_vehicle_msgs.msg import VelocityReport
-from simple_av_msgs.msg import SimMonitor
 import numpy as np
 import yaml
 import os
 from ament_index_python.packages import get_package_share_directory
-from simple_av_msgs.msg import Portal, DetectedObjectsArray
+from simple_av_msgs.msg import Portal, DetectedObjectsArray, TrafficSignalsArray, SimMonitor, LocalizationIntersectionStatus, LocalizationMsg
 import csv
 from typing import List, Tuple
 from dataclasses import dataclass
@@ -64,7 +63,11 @@ class Logger(Node):
 
         # Write header
         self.writer.writerow([
-            'timestamp', 'linear_speed', 'x', 'y', 'is_in_intersection', 'does_danger_detected', 'traffic_light_state', 'traffic_light_id', 'round_number'
+            'timestamp', 'speed', 
+            'lane_id', 'x', 'y', 
+            'is_in_intersection', 'does_danger_detected', 
+            'traffic_light_state', 'traffic_light_id', 
+            'round_number'
         ])
 
         # Subscriptions
@@ -74,6 +77,13 @@ class Logger(Node):
         self.subscriptionVelocityReport = self.create_subscription(VelocityReport, '/vehicle/status/velocity_status', self.velocity_report_callback, 10)
         self.velocity_report = VelocityReport()
 
+        self.subscriptionLocation = self.create_subscription(LocalizationMsg, 'simple_av/localization/location', self.location_callback, 10)
+        self.location = LocalizationMsg()
+
+        self.subscriptionIntersectionAwareness = self.create_subscription(LocalizationIntersectionStatus, 'simple_av/localization/intersection_status', self.intersectionAwareness_callback, 10)
+        self.intersection_awareness_intersection_name = None
+        self.intersection_awareness_status = None
+
         self.subscriptionSimMonitor = self.create_subscription(SimMonitor, 'simple_av/sim_monitor', self.sim_monitor_callback, 100)
         self.sim_time = 0
         self.sim_clock_rate = 0
@@ -82,6 +92,9 @@ class Logger(Node):
         self.reset = False
         self.round_number = 0
         self.finished = False
+
+        self.subscriptionTrafficSignal = self.create_subscription(TrafficSignalsArray, 'simple_av/perception/traffic_signals', self.trafficSignal_callback, 10)
+        self.trafficSignal = TrafficSignalsArray()
 
         self.subscriptionDetectedObjects = self.create_subscription(DetectedObjectsArray, 'simple_av/perception/detected_objects', self.detectedObjects_callback, 10)
         self.detectedObjects = DetectedObjectsArray()
@@ -158,11 +171,6 @@ class Logger(Node):
                             )
 
         return parsed_polygons
-    
-    def sim_monitor_callback(self, msg):
-        self.sim_time = msg.sim_time
-        self.sim_clock_rate = msg.sim_clock_rate
-        self.simulation_snapshot()
 
     def portal_callback(self, msg):
         self.reset = msg.reset
@@ -174,6 +182,16 @@ class Logger(Node):
 
     def velocity_report_callback(self, msg):
         self.velocity_report = msg
+    
+    def location_callback(self, msg):
+        self.location = msg
+    
+    def intersectionAwareness_callback(self, msg):
+        self.intersection_awareness_intersection_name = msg.intersection_name
+        self.intersection_awareness_status = msg.status
+    
+    def trafficSignal_callback(self, msg):
+        self.trafficSignal = msg
     
     def detectedObjects_callback(self, msg):
         self.detectedObjects = msg
@@ -307,7 +325,7 @@ class Logger(Node):
             self.get_logger().debug("No pedestrians in danger zones")
         return objects_in_zones > 0
     
-    def update_is_vehicle_inside_intersection_state(self, current_pose, treshold = 3.0):
+    def update_is_vehicle_inside_intersection_state(self, current_pose, treshold = 2.0):
         
         if not self.is_vehicle_inside_intersection:
             if self.calculate_distance(current_pose, self.intersection2_start_geometry_point) < treshold:
@@ -318,6 +336,15 @@ class Logger(Node):
                 self.has_pedesrian_Detected_at_danger_zones = -1
         
 
+    def get_traffic_light_color_by_id(self, traffic_light_id):
+        if self.intersection_awareness_intersection_name is not None:
+            v2i_traffic_signals_id = list(self.trafficSignal.v2i_traffic_signals_id)
+            v2i_traffic_signals_colors = list(self.trafficSignal.v2i_traffic_signals_colors)
+            if traffic_light_id in v2i_traffic_signals_id:
+                return v2i_traffic_signals_colors[v2i_traffic_signals_id.index(traffic_light_id)]
+        return None
+    
+
     def new_round_parameter_rest(self):
         if self.round_number > self.last_round_number:
             self.has_danger_detection_completed = False
@@ -325,6 +352,10 @@ class Logger(Node):
             self.has_pedesrian_Detected_at_danger_zones = -1
             self.last_round_number = self.round_number
 
+    def sim_monitor_callback(self, msg):
+        self.sim_time = msg.sim_time
+        self.sim_clock_rate = msg.sim_clock_rate
+        self.simulation_snapshot()
 
     def simulation_snapshot(self):
         # ------- Data Evaluation -------
@@ -334,6 +365,10 @@ class Logger(Node):
 
         if self.pose.pose.position.x == 0.0 and self.pose.pose.position.y == 0.0 and self.pose.pose.position.z == 0.0:
             self.get_logger().warning("Vehicle pose at origin")
+            return
+        
+        # only log when in the intersection #2 - Kakaiken - area
+        if self.intersection_awareness_intersection_name is None or self.intersection_awareness_intersection_name != '2':
             return
         # ------- ------- ------- -------
         
@@ -347,9 +382,23 @@ class Logger(Node):
         if self.is_vehicle_inside_intersection and not self.has_danger_detection_completed:
             self.has_pedesrian_Detected_at_danger_zones = self.is_object_detected_at_intersection_danger_zones('2')
             self.has_danger_detection_completed = True
+
+        v2i_traffic_signals_id = list(self.trafficSignal.v2i_traffic_signals_id)
+        v2i_traffic_signals_colors = list(self.trafficSignal.v2i_traffic_signals_colors)
         
-        # 'timestamp', 'linear_speed', 'x', 'y', 'is_in_intersection', 'does_danger_detected', 'traffic_light_state', 'traffic_light_id', 'round_number'
-        self.writer.writerow([self.sim_time, current_speed, x, y, self.is_vehicle_inside_intersection, self.has_pedesrian_Detected_at_danger_zones, 0, 0, self.round_number])
+        self.writer.writerow([
+            'timestamp', 'speed', 
+            'lane_id', 'x', 'y', 
+            'is_in_intersection', 'does_danger_detected', 
+            'traffic_light_state', 'traffic_light_id', 
+            'round_number'
+        ])
+        
+        self.writer.writerow([self.sim_time, current_speed, 
+                              self.location.closest_lane_names, x, y, 
+                              self.is_vehicle_inside_intersection, self.has_pedesrian_Detected_at_danger_zones, 
+                              0, 0, 
+                              self.round_number])
 
     def destroy_node(self):
         self.get_logger().info("Closing CSV file")
