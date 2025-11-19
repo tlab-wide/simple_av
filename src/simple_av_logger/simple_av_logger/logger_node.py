@@ -69,7 +69,7 @@ class Logger(Node):
         self.writer.writerow([
             'timestamp', 'speed', 
             'lane_id', 'x', 'y', 
-            'is_in_intersection', 'does_danger_detected', 
+            'is_in_intersection', 'does_danger_detected', 'rsu_detection', 'obu_detection',
             'traffic_light_state', 'traffic_light_id', 
             'round_number'
         ])
@@ -105,6 +105,8 @@ class Logger(Node):
 
         self.has_danger_detection_completed = False
         self.has_pedesrian_detected_at_danger_zones = -1
+        self.rsu_detected = False
+        self.obu_detected = False
         self.last_round_number = 0
 
     def config_file_loader(self, file_name):
@@ -288,45 +290,47 @@ class Logger(Node):
         vehicle_pose = self.pose.pose.position
         vehicle_orientation = self.pose.pose.orientation
 
-        self.get_logger().debug("Checking intersection danger zones...")
         detected_pedestrians = self.get_detected_pedestrians()
         if not detected_pedestrians:
-            self.get_logger().debug("No pedestrians detected")
-            return False
+            return False, False, False   # nobody detected at all
 
-        # Validate layout data exists
+        # Validate intersection layout exists
         if not self.intersections_layouts:
-            self.get_logger().warning("No intersection layout data loaded")
-            return False
-
-        if not any(p.intersection_id == intersection_id for p in self.intersections_layouts):
-            self.get_logger().warning(f"No intersection data for intersection '{intersection_id}'")
-            return False
+            return False, False, False
 
         danger_zones = [
             p for p in self.intersections_layouts
             if p.intersection_id == intersection_id and p.polygon_type == "sw"
         ]
 
-        objects_in_zones = 0
+        any_detected = False
+        rsu_detected = False
+        obu_detected = False
+
         for ped in detected_pedestrians:
-            # Convert relative position to absolute position
-            ped_abs = self.get_object_absolute_position(vehicle_orientation, vehicle_pose, ped.position)
 
-            for p in danger_zones:
-                if p.polygon_id == '3': #skipping sw3 for this scenario TODO: change this later
+            # Convert from relative → absolute position
+            ped_abs = self.get_object_absolute_position(
+                vehicle_orientation, vehicle_pose, ped.position
+            )
+
+            for polygon in danger_zones:
+                if polygon.polygon_id == '3':  # skip zone 3
                     continue
-                if self.is_point_in_polygon(ped_abs, p.points):
-                    objects_in_zones += 1
-                    # self.get_logger().info(
-                    #     f"Pedestrian detected at ({ped_abs.x:.2f}, {ped_abs.y:.2f}) at intersection {p.intersection_id} inside: {p.polygon_type}{p.polygon_id}"
-                    # )
+                if self.is_point_in_polygon(ped_abs, polygon.points):
 
-        # if objects_in_zones > 0:
-        #     self.get_logger().info(f"Total pedestrians in danger zones: {objects_in_zones}")
-        # else:
-        #     self.get_logger().debug("No pedestrians in danger zones")
-        return objects_in_zones > 0
+                    any_detected = True
+
+                    if ped.is_from_rsu:
+                        rsu_detected = True
+                    else:
+                        obu_detected = True
+
+                    # No need to check more polygons for this pedestrian
+                    break
+
+        return any_detected, rsu_detected, obu_detected
+
     
     def update_is_vehicle_inside_intersection_state(self, vehicle_pose, treshold = 2.0):
         
@@ -348,6 +352,8 @@ class Logger(Node):
             if self.is_point_in_polygon(vehicle_pose, exit_cw.points):
                 self.is_vehicle_inside_intersection = False
                 self.has_pedesrian_detected_at_danger_zones = -1
+                self.rsu_detected = False
+                self.obu_detected = False
                 # self.get_logger().error(f"Vehicle Exited the intersection")
         
 
@@ -365,6 +371,8 @@ class Logger(Node):
             self.has_danger_detection_completed = False
             self.is_vehicle_inside_intersection = False
             self.has_pedesrian_detected_at_danger_zones = -1
+            self.rsu_detected = False
+            self.obu_detected = False
             self.last_round_number = self.round_number
     
     def get_cros_walk_areas(self, intersection_id):
@@ -408,27 +416,40 @@ class Logger(Node):
         y = vehicle_pose.y
         self.update_is_vehicle_inside_intersection_state(vehicle_pose)
         if self.is_vehicle_inside_intersection and not self.has_danger_detection_completed:
-            self.has_pedesrian_detected_at_danger_zones = self.is_object_detected_at_intersection_danger_zones('2')
+            # self.has_pedesrian_detected_at_danger_zones = self.is_object_detected_at_intersection_danger_zones('2')
+            (any_detected, rsu_detected, obu_detected) = self.is_object_detected_at_intersection_danger_zones('2')
+            self.has_pedesrian_detected_at_danger_zones = any_detected
+            self.rsu_detected = rsu_detected
+            self.obu_detected = obu_detected
             self.has_danger_detection_completed = True
 
         light_165626 = self.get_traffic_light_color_by_id(165626)
         if light_165626 == 1:
-            light_165626 = 'Red'
+            light_165626 = 'red'
         elif light_165626 == 2:
-            light_165626 = 'Yellow'
+            light_165626 = 'yellow'
         elif light_165626 == 3:
-            light_165626 = 'Green'
+            light_165626 = 'green'
         else:
-            light_165626 = 'Unknown'
+            light_165626 = 'unknown'
         
         if self.location.closest_lane_names.data is None or self.location.closest_lane_names.data == '':
             return
+
+        self.writer.writerow([
+            f"{self.sim_time:.1f}",
+            f"{current_speed:.2f}",
+            self.location.closest_lane_names.data,
+            x, y,
+            self.is_vehicle_inside_intersection,
+            self.has_pedesrian_detected_at_danger_zones,
+            self.rsu_detected,
+            self.obu_detected,
+            light_165626,
+            '165626',
+            self.round_number
+        ])
         
-        self.writer.writerow([f"{self.sim_time:.2f}", f"{current_speed:.2f}", 
-                              self.location.closest_lane_names.data, x, y, 
-                              self.is_vehicle_inside_intersection, self.has_pedesrian_detected_at_danger_zones, 
-                              light_165626, '165626', 
-                              self.round_number])
 
     def destroy_node(self):
         self.get_logger().info("Closing CSV file")
