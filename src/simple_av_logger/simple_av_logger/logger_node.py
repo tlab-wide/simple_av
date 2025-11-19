@@ -437,7 +437,7 @@ class Logger(Node):
             return
 
         self.writer.writerow([
-            f"{self.sim_time:.2f}",
+            f"{self.sim_time:.1f}",
             f"{current_speed:.2f}",
             self.location.closest_lane_names.data,
             x, y,
