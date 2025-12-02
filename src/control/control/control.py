@@ -125,7 +125,8 @@ class VehicleControl(Node):
         self.gear_publisher = self.create_publisher(GearCommand, '/control/command/gear_cmd', qos_profile)
         # self.turn_indicator_publisher = self.create_publisher(TurnIndicatorsCommand, '/control/command/turn_indicators_cmd', qos_profile)
 
-        self.pid_controller = PIDController(p_gain=2.8, i_gain=25.0, d_gain=1.5)
+        # self.pid_controller = PIDController(p_gain=2.8, i_gain=25.0, d_gain=1.5)
+        self.pid_controller = PIDController(p_gain=10.0, i_gain=25.0, d_gain=1.5)
 
         self.node_shut = False
     

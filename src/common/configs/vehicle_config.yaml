@@ -33,7 +33,7 @@ vehicles:
       min_speed: 0.84          # Minimum speed (m/s)
       middle_speed: 3.34          # Middle speed (m/s)
       acceleration_rate: 0.5     # Acceleration rate (m/s²)
-      normal_deceleration_rate: -0.15 # Normal deceleration (m/s²)
+      normal_deceleration_rate: -0.165 # Normal deceleration (m/s²)
       normal_braking_deceleration_rate: -0.6 # Maximum braking deceleration (m/s²)
       max_braking_deceleration_rate: -1.5 # Maximum braking deceleration (m/s²)
       emergency_braking_deceleration_rate: -2.5 # Maximum braking deceleration (m/s²)

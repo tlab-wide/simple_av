@@ -1,4 +1,4 @@
 scenario:
-  destination: 'lanelet1181' # End of the main route lanelet40, intersection2 scenario2 end: lanelet1181
+  destination: 'lanelet1050' # End of the main route lanelet40, intersection2 scenario2 end: lanelet1181
   repeat_count: 100  # Number of times to repeat the scenario for testing
   vehicle_model: 'bus' # Selecting vehicle model based on what model is loaded on AWSIM: Lexus/bus or custom vehicle
