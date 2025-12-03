@@ -477,7 +477,7 @@ class BehaviorMotionPlanning(Node):
         return Point(x=(p1[0] + p2[0])/2, y=(p1[1] + p2[1])/2, z=(p1[2] + p2[2])/2)
     
     
-    def find_intersection(self, object_pose, object_forward_vector, waypoint1, waypoint2):
+    def find_intersection_point(self, object_pose, object_forward_vector, waypoint1, waypoint2):
         # Extract components
         x1, y1 = object_pose.x, object_pose.y
         a1, b1 = object_forward_vector
@@ -610,7 +610,7 @@ class BehaviorMotionPlanning(Node):
             for j in range(1, len(waypoints) - 1):
 
                 forward_vector = self.get_forward_vector(obj.orientation)
-                collide_point = self.find_intersection(objects_absolute_positions[i],forward_vector,waypoints[j],waypoints[j+1])
+                collide_point = self.find_intersection_point(objects_absolute_positions[i],forward_vector,waypoints[j],waypoints[j+1])
 
                 if collide_point:
                     if self.is_point_on_segment(objects_absolute_positions[i],collide_point,waypoints[j],waypoints[j+1],forward_vector):

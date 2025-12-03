@@ -7,10 +7,12 @@ import yaml
 import os
 from ament_index_python.packages import get_package_share_directory
 from simple_av_msgs.msg import Portal, DetectedObjectsArray, TrafficSignalsArray, SimMonitor, LocalizationIntersectionStatus, LocalizationMsg
+from autoware_control_msgs.msg import Control, Lateral, Longitudinal
 import csv
 from typing import List, Tuple
 from dataclasses import dataclass
 from scipy.spatial.transform import Rotation as R
+from datetime import datetime
 
 @dataclass
 class PolygonRegion:
@@ -33,6 +35,9 @@ class Logger(Node):
         self.last_log_time = 0.0
         self.logging_interval = self.logger_config['logger_module']['log_time_interval']  # seconds
 
+        # Load av features configs
+        self.av_features = self.config_file_loader("av_features.yaml")
+    
         # Handle logger off
         if not self.logger_state:
             self.get_logger().warn("Logger OFF → shutting down logger node")
@@ -43,35 +48,64 @@ class Logger(Node):
         # Load intersection data
         self.intersection_profiles = self.load_intersections()
         
-        self.intersection2_scenario2_enter_point = self.intersection_profiles['intersection_points']['2']['2']['1']
-        self.intersection2_start_geometry_point = Point(x = self.intersection2_scenario2_enter_point['x'], y = self.intersection2_scenario2_enter_point['y'], z = self.intersection2_scenario2_enter_point['z'])
+        # self.intersection2_scenario2_enter_point = self.intersection_profiles['intersection_points']['2']['2']['1']
+        # self.intersection2_start_geometry_point = Point(x = self.intersection2_scenario2_enter_point['x'], y = self.intersection2_scenario2_enter_point['y'], z = self.intersection2_scenario2_enter_point['z'])
+        # self.intersection2_scenario2_exit_point = self.intersection_profiles['intersection_points']['2']['2']['2']
+        # self.intersection2_exit_geometry_point = Point(x = self.intersection2_scenario2_exit_point['x'], y = self.intersection2_scenario2_exit_point['y'], z = self.intersection2_scenario2_exit_point['z'])
         
-        self.intersection2_scenario2_exit_point = self.intersection_profiles['intersection_points']['2']['2']['2']
-        self.intersection2_exit_geometry_point = Point(x = self.intersection2_scenario2_exit_point['x'], y = self.intersection2_scenario2_exit_point['y'], z = self.intersection2_scenario2_exit_point['z'])
         self.is_vehicle_inside_intersection = False
         self.has_exited_intersection = False
         
-        
         # Load YAML sidewalk data
         self.intersections_layouts = self.load_intersections_layouts()
-        self.intersection2_cw_areas = self.get_cros_walk_areas('2') # get cross walk areas of the Kakaiken intersection
+        self.intersection2_cw_areas = self.get_cross_walk_areas('2') # get cross walk areas of the Kakaiken intersection
 
         # ---- CSV PATH FIX ----
         pkg_share = get_package_share_directory('simple_av_logger')
         data_dir = os.path.join(pkg_share, 'data')
         os.makedirs(data_dir, exist_ok=True)
 
-        csv_path = os.path.join(data_dir, 'simple_av_record_log.csv')
+        self.intersection_id = self.logger_config['logger_module']['intersection']
+        log_scenario = self.logger_config['logger_module']['scenario']
+
+        # Speed profile
+        if self.av_features['cool4_speed_profile_test']['enable']:
+            speed_profile = 'cool4_SpeedProfile'
+        else:
+            speed_profile = 'SimpleAV_SpeedProfile'
+
+        # RSU mode
+        RSU = 'RSU_enabled' if self.av_features['object_detection']['use_rsu'] else 'RSU_disabled'
+
+        # --- Timestamp ---
+        now = datetime.now()
+        date_str = now.strftime("%Y%m%d")          # 20250219
+        time_str = now.strftime("%H%M%S")          # 153045
+        timestamp_str = now.strftime("%Y%m%d_%H%M%S")
+
+        # --- Final CSV File Name ---
+        csv_filename = f"Intersection{self.intersection_id}_Scenario{log_scenario}_{speed_profile}_{RSU}_{timestamp_str}.csv"
+
+        csv_path = os.path.join(data_dir, csv_filename)
         self.csv = open(csv_path, 'w')
         self.writer = csv.writer(self.csv)
 
         # Write header
         self.writer.writerow([
-            'timestamp', 'speed', 
-            'lane_id', 'x', 'y', 
-            'is_in_intersection', 'does_danger_detected', 'rsu_detection', 'obu_detection',
-            'traffic_light_state', 'traffic_light_id', 
-            'round_number'
+            'round_number',
+            'timestamp', 
+            'speed', 
+            'acceleration',
+            'lane_id', 
+            'pose_x', 
+            'pose_y', 
+            'is_in_intersection', 
+            'does_danger_detected', 
+            'rsu_detection_box_occupied', # previous rsu_detection - check when enter to the intersection 
+            'rsu_objects', # format: [(ObjectID,type,BoxID,X,Y),(ObjectID,type,BoxID,X,Y), …]
+            'obu_detection_box_occupied', # previous obu_detection - check when enter to the intersection 
+            'obu_objects', # format: [(ObjectID,type,BoxID,X,Y),(ObjectID,type,BoxID,X,Y), …]
+            'traffic_light_state'
         ])
 
         # Subscriptions
@@ -103,11 +137,23 @@ class Logger(Node):
         self.subscriptionDetectedObjects = self.create_subscription(DetectedObjectsArray, 'simple_av/perception/detected_objects', self.detectedObjects_callback, 10)
         self.detectedObjects = DetectedObjectsArray()
 
+        self.subscription = self.create_subscription(
+            Control,
+            '/control/command/control_cmd',
+            self.control_callback,
+            10
+        )
+        self.acceleration = None
+
         self.has_danger_detection_completed = False
         self.has_pedesrian_detected_at_danger_zones = -1
         self.rsu_detected = False
         self.obu_detected = False
         self.last_round_number = 0
+
+        self.last_speed = 0
+        self.visited_lanes = []          # ordered list of visited lane names/IDs
+        self.last_lane = None            # to detect lane changes
 
     def config_file_loader(self, file_name):
         # Path to the YAML file
@@ -177,6 +223,10 @@ class Logger(Node):
                             )
 
         return parsed_polygons
+
+    def control_callback(self, msg):
+        # Extract longitudinal acceleration
+        self.acceleration = msg.longitudinal.acceleration
 
     def portal_callback(self, msg):
         self.reset = msg.reset
@@ -375,7 +425,7 @@ class Logger(Node):
             self.obu_detected = False
             self.last_round_number = self.round_number
     
-    def get_cros_walk_areas(self, intersection_id):
+    def get_cross_walk_areas(self, intersection_id):
         cw_zones = [
                 p for p in self.intersections_layouts
                 if p.intersection_id == intersection_id and p.polygon_type == "cw"
@@ -386,6 +436,74 @@ class Logger(Node):
         self.sim_time = msg.sim_time
         self.sim_clock_rate = msg.sim_clock_rate
         self.simulation_snapshot()
+            
+    def update_lane_history(self, lane):
+        if lane != self.last_lane:
+            self.last_lane = lane
+            if lane not in self.visited_lanes:
+                self.visited_lanes.append(lane)
+
+    def get_detected_objects(self, rsu_check, intersection_id):
+        vehicle_pose = self.pose.pose.position
+        vehicle_orientation = self.pose.pose.orientation
+
+        detected_pedestrians = self.get_detected_pedestrians()
+        if not detected_pedestrians:
+            return []
+        
+        # Validate intersection layout exists
+        if not self.intersections_layouts:
+            return []
+
+        sw_danger_zones = [
+            p for p in self.intersections_layouts
+            if p.intersection_id == intersection_id and p.polygon_type == "sw"
+        ]
+
+        cw_danger_zones = [
+            p for p in self.intersections_layouts
+            if p.intersection_id == intersection_id and p.polygon_type == "cw"
+        ]
+
+        objects = []
+
+        for ped in detected_pedestrians:
+            if rsu_check:
+                if ped.is_from_rsu:
+                    # Convert from relative → absolute position
+                    ped_abs = self.get_object_absolute_position(
+                        vehicle_orientation, vehicle_pose, ped.position
+                    )
+
+                    for polygon in sw_danger_zones:
+                        if polygon.polygon_id == '3':  # skip zone 3
+                            continue
+                        if self.is_point_in_polygon(ped_abs, polygon.points):
+                            objects.append((ped.label,'sw',polygon.polygon_id,f"{ped_abs.x:.4f}",f"{ped_abs.y:.4f}"))
+                    
+                    for polygon in cw_danger_zones:
+                        if self.is_point_in_polygon(ped_abs, polygon.points):
+                            objects.append((ped.label,'cw',polygon.polygon_id,f"{ped_abs.x:.4f}",f"{ped_abs.y:.4f}"))
+            else:
+                if not ped.is_from_rsu:
+                    # Convert from relative → absolute position
+                    ped_abs = self.get_object_absolute_position(
+                        vehicle_orientation, vehicle_pose, ped.position
+                    )
+
+                    for polygon in sw_danger_zones:
+                        if polygon.polygon_id == '3':  # skip zone 3
+                            continue
+                        if self.is_point_in_polygon(ped_abs, polygon.points):
+                            objects.append((ped.label,'sw',polygon.polygon_id,ped_abs.x,ped_abs.y))
+                    
+                    for polygon in cw_danger_zones:
+                        if self.is_point_in_polygon(ped_abs, polygon.points):
+                            objects.append((ped.label,'cw',polygon.polygon_id,f"{ped_abs.x:.4f}",f"{ped_abs.y:.4f}"))
+                        
+                        
+        return objects
+
 
     def simulation_snapshot(self):
 
@@ -410,6 +528,7 @@ class Logger(Node):
         
         # print("snapshot ...", self.sim_time)
         self.new_round_parameter_rest()
+        self.update_lane_history(self.location.closest_lane_names.data)
         current_speed = self.velocity_report.longitudinal_velocity
         vehicle_pose = self.pose.pose.position
         x = vehicle_pose.x
@@ -417,11 +536,24 @@ class Logger(Node):
         self.update_is_vehicle_inside_intersection_state(vehicle_pose)
         if self.is_vehicle_inside_intersection and not self.has_danger_detection_completed:
             # self.has_pedesrian_detected_at_danger_zones = self.is_object_detected_at_intersection_danger_zones('2')
-            (any_detected, rsu_detected, obu_detected) = self.is_object_detected_at_intersection_danger_zones('2')
+            (any_detected, rsu_detected, obu_detected) = self.is_object_detected_at_intersection_danger_zones(self.intersection_id)
             self.has_pedesrian_detected_at_danger_zones = any_detected
             self.rsu_detected = rsu_detected
             self.obu_detected = obu_detected
             self.has_danger_detection_completed = True
+        
+        # rsu_objects = []
+        # # '[(ObjectID,type,BoxID,X,Y),(ObjectID,type,BoxID,X,Y)]'
+        # if not self.is_vehicle_inside_intersection and not self.has_danger_detection_completed: # RSU
+        #     rsu_objects = self.get_detected_objects(True, self.intersection_id)
+
+
+        # obu_objects = []
+        # if self.is_vehicle_inside_intersection: # OBU
+        #     obu_objects = self.get_detected_objects(False, self.intersection_id)
+
+        rsu_objects = self.get_detected_objects(True, self.intersection_id)
+        obu_objects = self.get_detected_objects(False, self.intersection_id)
 
         light_165626 = self.get_traffic_light_color_by_id(165626)
         if light_165626 == 1:
@@ -436,21 +568,26 @@ class Logger(Node):
         if self.location.closest_lane_names.data is None or self.location.closest_lane_names.data == '':
             return
 
+        if (self.location.closest_lane_names.data == 'lanelet1118' and current_speed <= 0.2) or (self.location.closest_lane_names.data == 'lanelet1156' and current_speed <= 0.05):
+            return
+
         self.writer.writerow([
+            self.round_number,
             f"{self.sim_time:.1f}",
-            f"{current_speed:.2f}",
-            self.location.closest_lane_names.data,
-            x, y,
+            f"{current_speed:.2f}", 
+            self.acceleration,
+            self.location.closest_lane_names.data, 
+            x, 
+            y,
             self.is_vehicle_inside_intersection,
             self.has_pedesrian_detected_at_danger_zones,
             self.rsu_detected,
+            rsu_objects,
             self.obu_detected,
-            light_165626,
-            '165626',
-            self.round_number
+            obu_objects,
+            light_165626
         ])
         
-
     def destroy_node(self):
         self.get_logger().info("Closing CSV file")
         if self.csv:

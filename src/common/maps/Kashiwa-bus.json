@@ -125419,8 +125419,12 @@
             "nextLanes": [
                 "lanelet1030"
             ],
-            "trafficlightsWayIDs": [],
-            "trafficlightsRelationID": [],
+            "trafficlightsWayIDs": [
+                166953
+            ],
+            "trafficlightsRelationID": [
+                165626
+            ],
             "stopLinePoseP1": [],
             "stopLinePoseP2": [],
             "dense_waypoints": [
