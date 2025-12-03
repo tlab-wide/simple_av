@@ -11,6 +11,7 @@ import csv
 from typing import List, Tuple
 from dataclasses import dataclass
 from scipy.spatial.transform import Rotation as R
+from datetime import datetime
 
 @dataclass
 class PolygonRegion:
@@ -33,6 +34,9 @@ class Logger(Node):
         self.last_log_time = 0.0
         self.logging_interval = self.logger_config['logger_module']['log_time_interval']  # seconds
 
+        # Load av features configs
+        self.av_features = self.config_file_loader("av_features.yaml")
+    
         # Handle logger off
         if not self.logger_state:
             self.get_logger().warn("Logger OFF → shutting down logger node")
@@ -43,14 +47,13 @@ class Logger(Node):
         # Load intersection data
         self.intersection_profiles = self.load_intersections()
         
-        self.intersection2_scenario2_enter_point = self.intersection_profiles['intersection_points']['2']['2']['1']
-        self.intersection2_start_geometry_point = Point(x = self.intersection2_scenario2_enter_point['x'], y = self.intersection2_scenario2_enter_point['y'], z = self.intersection2_scenario2_enter_point['z'])
+        # self.intersection2_scenario2_enter_point = self.intersection_profiles['intersection_points']['2']['2']['1']
+        # self.intersection2_start_geometry_point = Point(x = self.intersection2_scenario2_enter_point['x'], y = self.intersection2_scenario2_enter_point['y'], z = self.intersection2_scenario2_enter_point['z'])
+        # self.intersection2_scenario2_exit_point = self.intersection_profiles['intersection_points']['2']['2']['2']
+        # self.intersection2_exit_geometry_point = Point(x = self.intersection2_scenario2_exit_point['x'], y = self.intersection2_scenario2_exit_point['y'], z = self.intersection2_scenario2_exit_point['z'])
         
-        self.intersection2_scenario2_exit_point = self.intersection_profiles['intersection_points']['2']['2']['2']
-        self.intersection2_exit_geometry_point = Point(x = self.intersection2_scenario2_exit_point['x'], y = self.intersection2_scenario2_exit_point['y'], z = self.intersection2_scenario2_exit_point['z'])
         self.is_vehicle_inside_intersection = False
         self.has_exited_intersection = False
-        
         
         # Load YAML sidewalk data
         self.intersections_layouts = self.load_intersections_layouts()
@@ -61,9 +64,31 @@ class Logger(Node):
         data_dir = os.path.join(pkg_share, 'data')
         os.makedirs(data_dir, exist_ok=True)
 
-        csv_path = os.path.join(data_dir, 'simple_av_record_log.csv')
+        log_intersection = self.logger_config['logger_module']['intersection']
+        log_scenario = self.logger_config['logger_module']['scenario']
+
+        # Speed profile
+        if self.av_features['cool4_speed_profile_test']['enable']:
+            speed_profile = 'cool4_SpeedProfile'
+        else:
+            speed_profile = 'SimpleAV_SpeedProfile'
+
+        # RSU mode
+        RSU = 'RSU_enabled' if self.av_features['object_detection']['use_rsu'] else 'RSU_disabled'
+
+        # --- Timestamp ---
+        now = datetime.now()
+        date_str = now.strftime("%Y%m%d")          # 20250219
+        time_str = now.strftime("%H%M%S")          # 153045
+        timestamp_str = now.strftime("%Y%m%d_%H%M%S")
+
+        # --- Final CSV File Name ---
+        csv_filename = f"Intersection{log_intersection}_Scenario{log_scenario}_{speed_profile}_{RSU}_{timestamp_str}.csv"
+
+        csv_path = os.path.join(data_dir, csv_filename)
         self.csv = open(csv_path, 'w')
         self.writer = csv.writer(self.csv)
+
 
         # Write header
         self.writer.writerow([
