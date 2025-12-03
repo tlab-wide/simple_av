@@ -65,7 +65,7 @@ class Logger(Node):
         data_dir = os.path.join(pkg_share, 'data')
         os.makedirs(data_dir, exist_ok=True)
 
-        log_intersection = self.logger_config['logger_module']['intersection']
+        self.intersection_id = self.logger_config['logger_module']['intersection']
         log_scenario = self.logger_config['logger_module']['scenario']
 
         # Speed profile
@@ -84,7 +84,7 @@ class Logger(Node):
         timestamp_str = now.strftime("%Y%m%d_%H%M%S")
 
         # --- Final CSV File Name ---
-        csv_filename = f"Intersection{log_intersection}_Scenario{log_scenario}_{speed_profile}_{RSU}_{timestamp_str}.csv"
+        csv_filename = f"Intersection{self.intersection_id}_Scenario{log_scenario}_{speed_profile}_{RSU}_{timestamp_str}.csv"
 
         csv_path = os.path.join(data_dir, csv_filename)
         self.csv = open(csv_path, 'w')
@@ -443,6 +443,54 @@ class Logger(Node):
             if lane not in self.visited_lanes:
                 self.visited_lanes.append(lane)
 
+    def get_detected_objects(self, rsu_check, intersection_id):
+        vehicle_pose = self.pose.pose.position
+        vehicle_orientation = self.pose.pose.orientation
+
+        detected_pedestrians = self.get_detected_pedestrians()
+        if not detected_pedestrians:
+            return None
+        
+        # Validate intersection layout exists
+        if not self.intersections_layouts:
+            return None
+
+        danger_zones = [
+            p for p in self.intersections_layouts
+            if p.intersection_id == intersection_id and p.polygon_type == "sw"
+        ]
+
+        objects = []
+
+        for ped in detected_pedestrians:
+            if rsu_check:
+                if ped.is_from_rsu:
+                    # Convert from relative → absolute position
+                    ped_abs = self.get_object_absolute_position(
+                        vehicle_orientation, vehicle_pose, ped.position
+                    )
+
+                    for polygon in danger_zones:
+                        if polygon.polygon_id == '3':  # skip zone 3
+                            continue
+                        if self.is_point_in_polygon(ped_abs, polygon.points):
+                            objects.append((ped.label, polygon.polygon_id, ped_abs.x, ped_abs.y))
+            else:
+                if not ped.is_from_rsu:
+                    # Convert from relative → absolute position
+                    ped_abs = self.get_object_absolute_position(
+                        vehicle_orientation, vehicle_pose, ped.position
+                    )
+
+                    for polygon in danger_zones:
+                        if polygon.polygon_id == '3':  # skip zone 3
+                            continue
+                        if self.is_point_in_polygon(ped_abs, polygon.points):
+                            objects.append((ped.label, polygon.polygon_id, ped_abs.x, ped_abs.y))
+                        
+                        
+        return objects
+
 
     def simulation_snapshot(self):
 
@@ -475,11 +523,21 @@ class Logger(Node):
         self.update_is_vehicle_inside_intersection_state(vehicle_pose)
         if self.is_vehicle_inside_intersection and not self.has_danger_detection_completed:
             # self.has_pedesrian_detected_at_danger_zones = self.is_object_detected_at_intersection_danger_zones('2')
-            (any_detected, rsu_detected, obu_detected) = self.is_object_detected_at_intersection_danger_zones('2')
+            (any_detected, rsu_detected, obu_detected) = self.is_object_detected_at_intersection_danger_zones(self.intersection_id)
             self.has_pedesrian_detected_at_danger_zones = any_detected
             self.rsu_detected = rsu_detected
             self.obu_detected = obu_detected
             self.has_danger_detection_completed = True
+        
+        rsu_objects = None
+        # '[(ObjectID,type,BoxID,X,Y),(ObjectID,type,BoxID,X,Y)]'
+        if not self.is_vehicle_inside_intersection and not self.has_danger_detection_completed: # RSU
+            rsu_objects = self.get_detected_objects(True, self.intersection_id)
+
+
+        obu_objects = None
+        if self.is_vehicle_inside_intersection: # OBU
+            obu_objects = self.get_detected_objects(False, self.intersection_id)
 
         light_165626 = self.get_traffic_light_color_by_id(165626)
         if light_165626 == 1:
@@ -509,9 +567,9 @@ class Logger(Node):
             self.is_vehicle_inside_intersection,
             self.has_pedesrian_detected_at_danger_zones,
             self.rsu_detected,
-            '[(ObjectID,type,BoxID,X,Y),(ObjectID,type,BoxID,X,Y)]',
+            rsu_objects,
             self.obu_detected,
-            '[(ObjectID,type,BoxID,X,Y),(ObjectID,type,BoxID,X,Y)]',
+            obu_objects,
             light_165626
         ])
         
