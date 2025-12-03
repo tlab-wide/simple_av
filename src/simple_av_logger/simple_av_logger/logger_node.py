@@ -455,9 +455,14 @@ class Logger(Node):
         if not self.intersections_layouts:
             return None
 
-        danger_zones = [
+        sw_danger_zones = [
             p for p in self.intersections_layouts
             if p.intersection_id == intersection_id and p.polygon_type == "sw"
+        ]
+
+        cw_danger_zones = [
+            p for p in self.intersections_layouts
+            if p.intersection_id == intersection_id and p.polygon_type == "cw"
         ]
 
         objects = []
@@ -470,11 +475,15 @@ class Logger(Node):
                         vehicle_orientation, vehicle_pose, ped.position
                     )
 
-                    for polygon in danger_zones:
+                    for polygon in sw_danger_zones:
                         if polygon.polygon_id == '3':  # skip zone 3
                             continue
                         if self.is_point_in_polygon(ped_abs, polygon.points):
-                            objects.append((ped.label, polygon.polygon_id, ped_abs.x, ped_abs.y))
+                            objects.append((ped.label,'sw',polygon.polygon_id,f"{ped_abs.x:.4f}",f"{ped_abs.y:.4f}"))
+                    
+                    for polygon in cw_danger_zones:
+                        if self.is_point_in_polygon(ped_abs, polygon.points):
+                            objects.append((ped.label,'cw',polygon.polygon_id,f"{ped_abs.x:.4f}",f"{ped_abs.y:.4f}"))
             else:
                 if not ped.is_from_rsu:
                     # Convert from relative → absolute position
@@ -482,11 +491,15 @@ class Logger(Node):
                         vehicle_orientation, vehicle_pose, ped.position
                     )
 
-                    for polygon in danger_zones:
+                    for polygon in sw_danger_zones:
                         if polygon.polygon_id == '3':  # skip zone 3
                             continue
                         if self.is_point_in_polygon(ped_abs, polygon.points):
-                            objects.append((ped.label, polygon.polygon_id, ped_abs.x, ped_abs.y))
+                            objects.append((ped.label,'sw',polygon.polygon_id,ped_abs.x,ped_abs.y))
+                    
+                    for polygon in cw_danger_zones:
+                        if self.is_point_in_polygon(ped_abs, polygon.points):
+                            objects.append((ped.label,'cw',polygon.polygon_id,f"{ped_abs.x:.4f}",f"{ped_abs.y:.4f}"))
                         
                         
         return objects
@@ -529,13 +542,13 @@ class Logger(Node):
             self.obu_detected = obu_detected
             self.has_danger_detection_completed = True
         
-        rsu_objects = None
+        rsu_objects = []
         # '[(ObjectID,type,BoxID,X,Y),(ObjectID,type,BoxID,X,Y)]'
         if not self.is_vehicle_inside_intersection and not self.has_danger_detection_completed: # RSU
             rsu_objects = self.get_detected_objects(True, self.intersection_id)
 
 
-        obu_objects = None
+        obu_objects = []
         if self.is_vehicle_inside_intersection: # OBU
             obu_objects = self.get_detected_objects(False, self.intersection_id)
 
