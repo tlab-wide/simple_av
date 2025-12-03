@@ -542,15 +542,18 @@ class Logger(Node):
             self.obu_detected = obu_detected
             self.has_danger_detection_completed = True
         
-        rsu_objects = []
-        # '[(ObjectID,type,BoxID,X,Y),(ObjectID,type,BoxID,X,Y)]'
-        if not self.is_vehicle_inside_intersection and not self.has_danger_detection_completed: # RSU
-            rsu_objects = self.get_detected_objects(True, self.intersection_id)
+        # rsu_objects = []
+        # # '[(ObjectID,type,BoxID,X,Y),(ObjectID,type,BoxID,X,Y)]'
+        # if not self.is_vehicle_inside_intersection and not self.has_danger_detection_completed: # RSU
+        #     rsu_objects = self.get_detected_objects(True, self.intersection_id)
 
 
-        obu_objects = []
-        if self.is_vehicle_inside_intersection: # OBU
-            obu_objects = self.get_detected_objects(False, self.intersection_id)
+        # obu_objects = []
+        # if self.is_vehicle_inside_intersection: # OBU
+        #     obu_objects = self.get_detected_objects(False, self.intersection_id)
+
+        rsu_objects = self.get_detected_objects(True, self.intersection_id)
+        obu_objects = self.get_detected_objects(False, self.intersection_id)
 
         light_165626 = self.get_traffic_light_color_by_id(165626)
         if light_165626 == 1:
@@ -567,7 +570,6 @@ class Logger(Node):
 
         if (self.location.closest_lane_names.data == 'lanelet1118' and current_speed <= 0.2) or (self.location.closest_lane_names.data == 'lanelet1156' and current_speed <= 0.05):
             return
-
 
         self.writer.writerow([
             self.round_number,
