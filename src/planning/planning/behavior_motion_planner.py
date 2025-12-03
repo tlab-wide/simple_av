@@ -550,7 +550,7 @@ class BehaviorMotionPlanning(Node):
 
     def will_collide_on_path_in_threshold(self, object_type, object_speed, object_pose, vehicle_pose, collison_point, corresponding_waypoint):
         current_vehicle_speed = self.velocity_report.longitudinal_velocity if self.velocity_report else 0.0   
-        current_vehicle_speed = current_vehicle_speed if current_vehicle_speed > self.turning_speed else self.turning_speed
+        current_vehicle_speed = current_vehicle_speed if current_vehicle_speed > 1.5 else 1.5
         t_vehicle = self.get_time_to_collison(vehicle_pose, collison_point, current_vehicle_speed)
 
         t_object = self.get_time_to_collison(object_pose, collison_point, object_speed)
@@ -648,7 +648,7 @@ class BehaviorMotionPlanning(Node):
                     if self.is_point_on_segment(objects_absolute_positions[i],collide_point,waypoints[j],waypoints[j+1],forward_vector):
                         
                         current_vehicle_speed = self.velocity_report.longitudinal_velocity if self.velocity_report else 0.0   
-                        current_vehicle_speed = current_vehicle_speed if current_vehicle_speed > self.turning_speed else self.turning_speed
+                        current_vehicle_speed = current_vehicle_speed if current_vehicle_speed > 1.5 else 1.5
                         t_vehicle = self.get_time_to_collison(vehicle_pose, collide_point, current_vehicle_speed)
                         t_object = self.get_time_to_collison(objects_absolute_positions[i], collide_point, obj.velocity)
                         ttc_diff = abs(t_vehicle - t_object)
