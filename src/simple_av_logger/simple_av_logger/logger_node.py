@@ -449,11 +449,11 @@ class Logger(Node):
 
         detected_pedestrians = self.get_detected_pedestrians()
         if not detected_pedestrians:
-            return None
+            return []
         
         # Validate intersection layout exists
         if not self.intersections_layouts:
-            return None
+            return []
 
         sw_danger_zones = [
             p for p in self.intersections_layouts
