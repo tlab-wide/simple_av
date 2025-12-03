@@ -94,8 +94,11 @@ class Logger(Node):
         self.writer.writerow([
             'round_number',
             'timestamp', 
-            'speed', 'acceleration' 
-            'lane_id', 'pose_x', 'pose_y', 
+            'speed', 
+            'acceleration',
+            'lane_id', 
+            'pose_x', 
+            'pose_y', 
             'is_in_intersection', 
             'does_danger_detected', 
             'rsu_detection_box_occupied', # previous rsu_detection - check when enter to the intersection 
@@ -500,7 +503,9 @@ class Logger(Node):
             f"{self.sim_time:.1f}",
             f"{current_speed:.2f}", 
             self.acceleration,
-            self.location.closest_lane_names.data, x, y,
+            self.location.closest_lane_names.data, 
+            x, 
+            y,
             self.is_vehicle_inside_intersection,
             self.has_pedesrian_detected_at_danger_zones,
             self.rsu_detected,
@@ -509,10 +514,7 @@ class Logger(Node):
             '[(ObjectID,type,BoxID,X,Y),(ObjectID,type,BoxID,X,Y)]',
             light_165626
         ])
-
-        self.last_speed = current_speed
         
-
     def destroy_node(self):
         self.get_logger().info("Closing CSV file")
         if self.csv:
