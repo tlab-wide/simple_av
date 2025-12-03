@@ -7,6 +7,7 @@ import yaml
 import os
 from ament_index_python.packages import get_package_share_directory
 from simple_av_msgs.msg import Portal, DetectedObjectsArray, TrafficSignalsArray, SimMonitor, LocalizationIntersectionStatus, LocalizationMsg
+from autoware_control_msgs.msg import Control, Lateral, Longitudinal
 import csv
 from typing import List, Tuple
 from dataclasses import dataclass
@@ -89,14 +90,19 @@ class Logger(Node):
         self.csv = open(csv_path, 'w')
         self.writer = csv.writer(self.csv)
 
-
         # Write header
         self.writer.writerow([
-            'timestamp', 'speed', 
-            'lane_id', 'x', 'y', 
-            'is_in_intersection', 'does_danger_detected', 'rsu_detection', 'obu_detection',
-            'traffic_light_state', 'traffic_light_id', 
-            'round_number'
+            'round_number',
+            'timestamp', 
+            'speed', 'acceleration' 
+            'lane_id', 'pose_x', 'pose_y', 
+            'is_in_intersection', 
+            'does_danger_detected', 
+            'rsu_detection_box_occupied', # previous rsu_detection - check when enter to the intersection 
+            'rsu_objects', # format: [(ObjectID,type,BoxID,X,Y),(ObjectID,type,BoxID,X,Y), …]
+            'obu_detection_box_occupied', # previous obu_detection - check when enter to the intersection 
+            'obu_objects', # format: [(ObjectID,type,BoxID,X,Y),(ObjectID,type,BoxID,X,Y), …]
+            'traffic_light_state'
         ])
 
         # Subscriptions
@@ -127,6 +133,14 @@ class Logger(Node):
 
         self.subscriptionDetectedObjects = self.create_subscription(DetectedObjectsArray, 'simple_av/perception/detected_objects', self.detectedObjects_callback, 10)
         self.detectedObjects = DetectedObjectsArray()
+
+        self.subscription = self.create_subscription(
+            Control,
+            '/control/command/control_cmd',
+            self.control_callback,
+            10
+        )
+        self.acceleration = None
 
         self.has_danger_detection_completed = False
         self.has_pedesrian_detected_at_danger_zones = -1
@@ -206,6 +220,10 @@ class Logger(Node):
                             )
 
         return parsed_polygons
+
+    def control_callback(self, msg):
+        # Extract longitudinal acceleration
+        self.acceleration = msg.longitudinal.acceleration
 
     def portal_callback(self, msg):
         self.reset = msg.reset
@@ -478,17 +496,18 @@ class Logger(Node):
 
 
         self.writer.writerow([
+            self.round_number,
             f"{self.sim_time:.1f}",
-            f"{current_speed:.2f}",
-            self.location.closest_lane_names.data,
-            x, y,
+            f"{current_speed:.2f}", 
+            self.acceleration,
+            self.location.closest_lane_names.data, x, y,
             self.is_vehicle_inside_intersection,
             self.has_pedesrian_detected_at_danger_zones,
             self.rsu_detected,
+            '[(ObjectID,type,BoxID,X,Y),(ObjectID,type,BoxID,X,Y)]',
             self.obu_detected,
-            light_165626,
-            '165626',
-            self.round_number
+            '[(ObjectID,type,BoxID,X,Y),(ObjectID,type,BoxID,X,Y)]',
+            light_165626
         ])
 
         self.last_speed = current_speed
