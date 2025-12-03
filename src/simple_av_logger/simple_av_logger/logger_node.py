@@ -57,7 +57,7 @@ class Logger(Node):
         
         # Load YAML sidewalk data
         self.intersections_layouts = self.load_intersections_layouts()
-        self.intersection2_cw_areas = self.get_cros_walk_areas('2') # get cross walk areas of the Kakaiken intersection
+        self.intersection2_cw_areas = self.get_cross_walk_areas('2') # get cross walk areas of the Kakaiken intersection
 
         # ---- CSV PATH FIX ----
         pkg_share = get_package_share_directory('simple_av_logger')
@@ -133,6 +133,10 @@ class Logger(Node):
         self.rsu_detected = False
         self.obu_detected = False
         self.last_round_number = 0
+
+        self.last_speed = 0
+        self.visited_lanes = []          # ordered list of visited lane names/IDs
+        self.last_lane = None            # to detect lane changes
 
     def config_file_loader(self, file_name):
         # Path to the YAML file
@@ -400,7 +404,7 @@ class Logger(Node):
             self.obu_detected = False
             self.last_round_number = self.round_number
     
-    def get_cros_walk_areas(self, intersection_id):
+    def get_cross_walk_areas(self, intersection_id):
         cw_zones = [
                 p for p in self.intersections_layouts
                 if p.intersection_id == intersection_id and p.polygon_type == "cw"
@@ -411,6 +415,13 @@ class Logger(Node):
         self.sim_time = msg.sim_time
         self.sim_clock_rate = msg.sim_clock_rate
         self.simulation_snapshot()
+            
+    def update_lane_history(self, lane):
+        if lane != self.last_lane:
+            self.last_lane = lane
+            if lane not in self.visited_lanes:
+                self.visited_lanes.append(lane)
+
 
     def simulation_snapshot(self):
 
@@ -435,6 +446,7 @@ class Logger(Node):
         
         # print("snapshot ...", self.sim_time)
         self.new_round_parameter_rest()
+        self.update_lane_history(self.location.closest_lane_names.data)
         current_speed = self.velocity_report.longitudinal_velocity
         vehicle_pose = self.pose.pose.position
         x = vehicle_pose.x
@@ -461,6 +473,10 @@ class Logger(Node):
         if self.location.closest_lane_names.data is None or self.location.closest_lane_names.data == '':
             return
 
+        if (self.location.closest_lane_names.data == 'lanelet1118' and current_speed <= 0.2) or (self.location.closest_lane_names.data == 'lanelet1156' and current_speed <= 0.05):
+            return
+
+
         self.writer.writerow([
             f"{self.sim_time:.1f}",
             f"{current_speed:.2f}",
@@ -474,6 +490,8 @@ class Logger(Node):
             '165626',
             self.round_number
         ])
+
+        self.last_speed = current_speed
         
 
     def destroy_node(self):
