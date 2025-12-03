@@ -6,7 +6,7 @@ import numpy as np
 import yaml
 import os
 from ament_index_python.packages import get_package_share_directory
-from simple_av_msgs.msg import Portal, DetectedObjectsArray, TrafficSignalsArray, SimMonitor, LocalizationIntersectionStatus, LocalizationMsg
+from simple_av_msgs.msg import Portal, DetectedObjectsArray, TrafficSignalsArray, SimMonitor, LocalizationIntersectionStatus, LocalizationMsg, CollisionPredictionInfo
 from autoware_control_msgs.msg import Control, Lateral, Longitudinal
 import csv
 from typing import List, Tuple
@@ -105,6 +105,7 @@ class Logger(Node):
             'rsu_objects', # format: [(ObjectID,type,BoxID,X,Y),(ObjectID,type,BoxID,X,Y), …]
             'obu_detection_box_occupied', # previous obu_detection - check when enter to the intersection 
             'obu_objects', # format: [(ObjectID,type,BoxID,X,Y),(ObjectID,type,BoxID,X,Y), …]
+            'collision_prediction', # format: [(ObjectID,type,BoxID,X,Y)]
             'traffic_light_state'
         ])
 
@@ -144,6 +145,15 @@ class Logger(Node):
             10
         )
         self.acceleration = None
+
+        # Subscribe to the collision prediction topic
+        self.subscription_collision = self.create_subscription(
+            CollisionPredictionInfo,
+            "simple_av/planning/collision_prediction_info",
+            self.collision_callback,
+            10
+        )
+        self.collision_prediction_info = None
 
         self.has_danger_detection_completed = False
         self.has_pedesrian_detected_at_danger_zones = -1
@@ -223,6 +233,9 @@ class Logger(Node):
                             )
 
         return parsed_polygons
+    
+    def collision_callback(self, msg):
+        self.collision_prediction_info = msg
 
     def control_callback(self, msg):
         # Extract longitudinal acceleration
@@ -443,6 +456,59 @@ class Logger(Node):
             if lane not in self.visited_lanes:
                 self.visited_lanes.append(lane)
 
+
+    def get_collision_prediction_info(self, intersection_id):
+        """
+        Returns a list of collision predictions with detected box info.
+        Each entry: (object_label, polygon_type, polygon_id, x, y, ttc)
+        """
+        collision_prediction = []
+
+        # No collision info or no collision detected
+        if not self.collision_prediction_info or not self.collision_prediction_info.collision_detected:
+            return collision_prediction
+
+        obj_abs_pose = self.collision_prediction_info.object_position
+        ttc = self.collision_prediction_info.time_to_collision
+        object_label = self.collision_prediction_info.object_label
+
+        # Validate intersection layout exists
+        if not self.intersections_layouts:
+            return collision_prediction
+
+        # Define danger zones
+        sw_danger_zones = [
+            p for p in self.intersections_layouts
+            if p.intersection_id == intersection_id and p.polygon_type == "sw"
+        ]
+        cw_danger_zones = [
+            p for p in self.intersections_layouts
+            if p.intersection_id == intersection_id and p.polygon_type == "cw"
+        ]
+
+        # Find which polygon the object belongs to
+        found_box = False
+        for polygon in sw_danger_zones:
+            if polygon.polygon_id == '3':  # skip zone 3
+                continue
+            if self.is_point_in_polygon(obj_abs_pose, polygon.points):
+                collision_prediction.append((object_label,'sw',polygon.polygon_id,ttc,round(obj_abs_pose.x, 4),round(obj_abs_pose.y, 4)))
+                found_box = True
+                break
+
+        if not found_box:
+            for polygon in cw_danger_zones:
+                if self.is_point_in_polygon(obj_abs_pose, polygon.points):
+                    collision_prediction.append((object_label,'sw',polygon.polygon_id,ttc,round(obj_abs_pose.x, 4),round(obj_abs_pose.y, 4)))
+                    break
+
+        # If object is not in any polygon, still return basic info
+        if not collision_prediction:
+            collision_prediction.append((object_label,'none','none',ttc,round(obj_abs_pose.x, 4),round(obj_abs_pose.y, 4)))
+
+        return collision_prediction
+
+
     def get_detected_objects(self, rsu_check, intersection_id):
         vehicle_pose = self.pose.pose.position
         vehicle_orientation = self.pose.pose.orientation
@@ -571,6 +637,8 @@ class Logger(Node):
         if (self.location.closest_lane_names.data == 'lanelet1118' and current_speed <= 0.2) or (self.location.closest_lane_names.data == 'lanelet1156' and current_speed <= 0.05):
             return
 
+        collision_predicted = self.get_collision_prediction_info(self.intersection_id)
+
         self.writer.writerow([
             self.round_number,
             f"{self.sim_time:.1f}",
@@ -585,6 +653,7 @@ class Logger(Node):
             rsu_objects,
             self.obu_detected,
             obu_objects,
+            collision_predicted,
             light_165626
         ])
         
