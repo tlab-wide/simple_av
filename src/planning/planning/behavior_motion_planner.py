@@ -11,7 +11,7 @@ from std_msgs.msg import String
 import math
 from collections import deque
 from simple_av_msgs.msg import TrafficSignalsArray, DetectedObjectsArray
-from simple_av_msgs.msg import PlanningInternalMsg, PlanningInternalMissionPlanMsg, PlanningMotionPlanningMsg
+from simple_av_msgs.msg import PlanningInternalMsg, PlanningInternalMissionPlanMsg, PlanningMotionPlanningMsg, CollisionPredictionInfo
 from simple_av_msgs.msg import LocalizationMsg, LocalizationIntersectionStatus
 from simple_av_msgs.msg import SimMonitor, Portal
 import numpy as np
@@ -117,6 +117,12 @@ class BehaviorMotionPlanning(Node):
         self.pub = self.create_publisher(
             TrafficLightGroup,
             '/planning/scenario_planning/lane_driving/behavior_planning/debug/traffic_signal',
+            10
+        )
+
+        self.collision_info_pub = self.create_publisher(
+            CollisionPredictionInfo,
+            "simple_av/planning/collision_prediction_info",
             10
         )
 
@@ -542,7 +548,7 @@ class BehaviorMotionPlanning(Node):
         time_to_collision = time_to_collision * self.sim_clock_rate
         return time_to_collision
 
-    def will_collide_on_path(self, object_type, object_speed, object_pose, vehicle_pose, collison_point, corresponding_waypoint):
+    def will_collide_on_path_in_threshold(self, object_type, object_speed, object_pose, vehicle_pose, collison_point, corresponding_waypoint):
         current_vehicle_speed = self.velocity_report.longitudinal_velocity if self.velocity_report else 0.0   
         current_vehicle_speed = current_vehicle_speed if current_vehicle_speed > self.turning_speed else self.turning_speed
         t_vehicle = self.get_time_to_collison(vehicle_pose, collison_point, current_vehicle_speed)
@@ -581,12 +587,41 @@ class BehaviorMotionPlanning(Node):
         self.get_logger().info("Imediate threat. Objects ahead in danger zone")
         return self.get_stop_point_by_safety_distance(closest_object_info['waypoint'], vehicle_pose, 'on_path')
     
+    def publish_collision_info(self, abs_pos, ttc, label, velocity):
+        msg = CollisionPredictionInfo()
+        msg.object_position = Point(
+            x=abs_pos.x,
+            y=abs_pos.y,
+            z=abs_pos.z
+        )
+        msg.time_to_collision = ttc
+        msg.object_label = label
+        msg.object_velocity = velocity
+        msg.collision_detected = True
+
+        self.collision_info_pub.publish(msg)
+    
+    def publish_empty_collision_info(self):
+        msg = CollisionPredictionInfo()
+        msg.header.stamp = self.get_clock().now().to_msg()
+
+        # Empty / default values
+        msg.object_position = Point(0.0, 0.0, 0.0)
+        msg.time_to_collision = 0.0
+        msg.object_label = 0
+        msg.object_velocity = 0.0
+        msg.collision_detected = False
+
+        self.collision_info_pub.publish(msg)
+
+
     def predict_nearest_collision(self, objects_ahead, current_closest_waypoint_to_vehicle_index, vehicle_pose):
         """
         Predict potential collisions with objects ahead of the vehicle.
         Returns the nearest stop point and its object_occupied_waypoint_index.
         """
         candidates = []  # store (stop_point, object_occupied_wp_index, distance_to_vehicle)
+        ttc_candidates = []   # (|t_vehicle - t_object|, abs_pos, label, velocity)
 
         # Get only objects within detection range
         objects_in_range = self.get_objects_in_range(objects_ahead, self.detection_range)
@@ -614,23 +649,51 @@ class BehaviorMotionPlanning(Node):
 
                 if collide_point:
                     if self.is_point_on_segment(objects_absolute_positions[i],collide_point,waypoints[j],waypoints[j+1],forward_vector):
-                        if self.will_collide_on_path(obj.label,obj.velocity,objects_absolute_positions[i],vehicle_pose,collide_point,waypoints[j]):
+                        
+                        current_vehicle_speed = self.velocity_report.longitudinal_velocity if self.velocity_report else 0.0   
+                        current_vehicle_speed = current_vehicle_speed if current_vehicle_speed > self.turning_speed else self.turning_speed
+                        t_vehicle = self.get_time_to_collison(vehicle_pose, collide_point, current_vehicle_speed)
+                        t_object = self.get_time_to_collison(objects_absolute_positions[i], collide_point, obj.velocity)
+                        ttc_diff = abs(t_vehicle - t_object)
+                        ttc_candidates.append((ttc_diff, objects_absolute_positions[i], obj.label, obj.velocity))
+
+                        if self.will_collide_on_path_in_threshold(obj.label,obj.velocity,objects_absolute_positions[i],vehicle_pose,collide_point,waypoints[j]):
                             self.get_logger().warning('P - Collide predicted!!!')
                             stop_point, event_waypoint = self.get_stop_point_by_safety_distance(waypoints[j], vehicle_pose, 'prediction')
 
                             # compute distance to vehicle for nearest selection
                             distance = self.calculate_distance(stop_point, vehicle_pose)
+                            candidates.append((
+                                stop_point,
+                                event_waypoint,
+                                distance,
+                                ttc_diff,
+                                objects_absolute_positions[i],
+                                obj.label,
+                                obj.velocity
+                            ))
 
-                            candidates.append((stop_point, event_waypoint, distance))
                             break
 
-        # Return None if no collisions predicted
+        # No collision candidates → publish smallest time-to-collision
         if not candidates:
+            if ttc_candidates:
+                # Smallest TTC object (closest timing collision)
+                best_ttc, abs_pos, label, velocity = min(ttc_candidates, key=lambda x: x[0])
+                self.publish_collision_info(abs_pos, best_ttc, label, velocity)
+            else:
+                # No TTC objects → publish empty message
+                self.publish_empty_collision_info()
+
             return None
 
         # Pick nearest collision stop point
-        nearest = min(candidates, key=lambda x: x[2])  # smallest distance
-        stop_point, event_waypoint, _ = nearest
+        nearest = min(candidates, key=lambda x: x[2])  # x[2] = distance
+        stop_point, event_waypoint, distance, best_ttc, abs_pos, label, velocity = nearest
+
+        # Publish TTC information of the *nearest collision object*
+        self.publish_collision_info(abs_pos, best_ttc, label, velocity)
+
 
         return (stop_point, event_waypoint)
 

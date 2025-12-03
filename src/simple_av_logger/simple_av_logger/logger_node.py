@@ -6,7 +6,7 @@ import numpy as np
 import yaml
 import os
 from ament_index_python.packages import get_package_share_directory
-from simple_av_msgs.msg import Portal, DetectedObjectsArray, TrafficSignalsArray, SimMonitor, LocalizationIntersectionStatus, LocalizationMsg
+from simple_av_msgs.msg import Portal, DetectedObjectsArray, TrafficSignalsArray, SimMonitor, LocalizationIntersectionStatus, LocalizationMsg, CollisionPredictionInfo
 from autoware_control_msgs.msg import Control, Lateral, Longitudinal
 import csv
 from typing import List, Tuple
@@ -105,6 +105,7 @@ class Logger(Node):
             'rsu_objects', # format: [(ObjectID,type,BoxID,X,Y),(ObjectID,type,BoxID,X,Y), …]
             'obu_detection_box_occupied', # previous obu_detection - check when enter to the intersection 
             'obu_objects', # format: [(ObjectID,type,BoxID,X,Y),(ObjectID,type,BoxID,X,Y), …]
+            'collision_prediction' # format: [(ObjectID,type,BoxID,X,Y)]
             'traffic_light_state'
         ])
 
@@ -144,6 +145,15 @@ class Logger(Node):
             10
         )
         self.acceleration = None
+
+        # Subscribe to the collision prediction topic
+        self.subscription_collision = self.create_subscription(
+            CollisionPredictionInfo,
+            "simple_av/planning/collision_prediction_info",
+            self.collision_callback,
+            10
+        )
+        self.collision_prediction_info = None
 
         self.has_danger_detection_completed = False
         self.has_pedesrian_detected_at_danger_zones = -1
@@ -223,6 +233,9 @@ class Logger(Node):
                             )
 
         return parsed_polygons
+    
+    def collision_callback(self, msg):
+        self.collision_prediction_info = msg
 
     def control_callback(self, msg):
         # Extract longitudinal acceleration

@@ -27,6 +27,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/DetectedObjectsArray.msg"
   "msg/Portal.msg"
   "msg/SimMonitor.msg"
+  "msg/CollisionPredictionInfo.msg"
   "srv/TriggerMissionPlan.srv"
   DEPENDENCIES geometry_msgs std_msgs
 )
