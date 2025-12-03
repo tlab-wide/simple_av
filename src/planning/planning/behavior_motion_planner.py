@@ -574,7 +574,6 @@ class BehaviorMotionPlanning(Node):
         stop_point = self.path_of_waypoints[stop_point_index]
         return (Point(x=stop_point.x, y=stop_point.y, z=stop_point.z), event_waypoint)
          
-
     def on_path_collision_avoidance(self, objects_ahead, current_closest_waypoint_to_vehicle_index, vehicle_pose):
         objects_in_range = self.get_objects_in_range(objects_ahead, self.on_path_detection_range)
         if not objects_in_range:
@@ -603,10 +602,7 @@ class BehaviorMotionPlanning(Node):
     
     def publish_empty_collision_info(self):
         msg = CollisionPredictionInfo()
-        msg.header.stamp = self.get_clock().now().to_msg()
-
-        # Empty / default values
-        msg.object_position = Point(0.0, 0.0, 0.0)
+        msg.object_position = Point(x=0.0, y=0.0, z=0.0)
         msg.time_to_collision = 0.0
         msg.object_label = 0
         msg.object_velocity = 0.0
@@ -626,6 +622,7 @@ class BehaviorMotionPlanning(Node):
         # Get only objects within detection range
         objects_in_range = self.get_objects_in_range(objects_ahead, self.detection_range)
         if not objects_in_range:
+            self.publish_empty_collision_info()
             return None
 
         # Extract waypoints ahead
@@ -693,7 +690,6 @@ class BehaviorMotionPlanning(Node):
 
         # Publish TTC information of the *nearest collision object*
         self.publish_collision_info(abs_pos, best_ttc, label, velocity)
-
 
         return (stop_point, event_waypoint)
 
