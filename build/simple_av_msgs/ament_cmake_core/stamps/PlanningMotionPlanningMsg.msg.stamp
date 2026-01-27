@@ -1,3 +1,0 @@
-geometry_msgs/Point stop_point
-std_msgs/String status
-std_msgs/String stop_reason

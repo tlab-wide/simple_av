@@ -1,4 +1,0 @@
-gmake[2]: *** [CMakeFiles/test_autoware_utils_uuid.dir/build.make:76: CMakeFiles/test_autoware_utils_uuid.dir/test/cases/uuid_helper.cpp.o] Interrupt
-gmake[2]: *** [CMakeFiles/test_autoware_utils_uuid.dir/build.make:90: CMakeFiles/test_autoware_utils_uuid.dir/test/main.cpp.o] Interrupt
-gmake[1]: *** [CMakeFiles/Makefile2:156: CMakeFiles/test_autoware_utils_uuid.dir/all] Interrupt
-gmake: *** [Makefile:146: all] Interrupt

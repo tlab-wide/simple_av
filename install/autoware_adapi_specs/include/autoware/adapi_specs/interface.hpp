@@ -1,1 +1,0 @@
-/workspace/simpleav/20251204/src/simple_av/src/visualization/simulator/autoware_adapi_specs/include/autoware/adapi_specs/interface.hpp

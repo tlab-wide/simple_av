@@ -1,3 +1,0 @@
-geometry_msgs/Point closest_point
-std_msgs/String closest_lane_names
-float64 minimal_distance

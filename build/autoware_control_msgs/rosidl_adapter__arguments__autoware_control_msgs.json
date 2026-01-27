@@ -1,9 +1,0 @@
-{
-  "package_name": "autoware_control_msgs",
-  "non_idl_tuples": [
-    "/workspace/simpleav/20251204/src/simple_av/src/messages/autoware_msgs/autoware_control_msgs:msg/Control.msg",
-    "/workspace/simpleav/20251204/src/simple_av/src/messages/autoware_msgs/autoware_control_msgs:msg/ControlHorizon.msg",
-    "/workspace/simpleav/20251204/src/simple_av/src/messages/autoware_msgs/autoware_control_msgs:msg/Lateral.msg",
-    "/workspace/simpleav/20251204/src/simple_av/src/messages/autoware_msgs/autoware_control_msgs:msg/Longitudinal.msg"
-  ]
-}

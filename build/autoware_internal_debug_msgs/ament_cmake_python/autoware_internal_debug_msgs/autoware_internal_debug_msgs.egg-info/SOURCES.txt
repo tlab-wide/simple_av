@@ -1,6 +1,0 @@
-setup.py
-autoware_internal_debug_msgs/__init__.py
-autoware_internal_debug_msgs.egg-info/PKG-INFO
-autoware_internal_debug_msgs.egg-info/SOURCES.txt
-autoware_internal_debug_msgs.egg-info/dependency_links.txt
-autoware_internal_debug_msgs.egg-info/top_level.txt

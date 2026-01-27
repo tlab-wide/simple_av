@@ -1,2 +1,0 @@
-geometry_msgs/Point look_ahead_point
-float64 speed_limit

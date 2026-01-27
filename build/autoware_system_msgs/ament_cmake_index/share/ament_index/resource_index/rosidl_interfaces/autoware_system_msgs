@@ -1,6 +1,0 @@
-msg/AutowareState.idl
-msg/AutowareState.msg
-msg/HazardStatus.idl
-msg/HazardStatus.msg
-msg/HazardStatusStamped.idl
-msg/HazardStatusStamped.msg

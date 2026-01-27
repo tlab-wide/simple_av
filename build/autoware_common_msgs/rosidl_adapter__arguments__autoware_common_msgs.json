@@ -1,6 +1,0 @@
-{
-  "package_name": "autoware_common_msgs",
-  "non_idl_tuples": [
-    "/workspace/simpleav/20251204/src/simple_av/src/messages/autoware_msgs/autoware_common_msgs:msg/ResponseStatus.msg"
-  ]
-}

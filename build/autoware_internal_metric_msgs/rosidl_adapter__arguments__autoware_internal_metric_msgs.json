@@ -1,7 +1,0 @@
-{
-  "package_name": "autoware_internal_metric_msgs",
-  "non_idl_tuples": [
-    "/workspace/simpleav/20251204/src/simple_av/src/visualization/autoware_internal_msgs/autoware_internal_metric_msgs:msg/Metric.msg",
-    "/workspace/simpleav/20251204/src/simple_av/src/visualization/autoware_internal_msgs/autoware_internal_metric_msgs:msg/MetricArray.msg"
-  ]
-}

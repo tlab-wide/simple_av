@@ -1,1 +1,0 @@
-ament_cmake_symlink_install_targets("TARGET_FILES" "/workspace/simpleav/20251204/src/simple_av/build/autoware_utils_visualization/libautoware_utils_visualization.so" "TARGETS" "autoware_utils_visualization" "ARCHIVE_DESTINATION" "lib" "LIBRARY_DESTINATION" "lib" "RUNTIME_DESTINATION" "bin")

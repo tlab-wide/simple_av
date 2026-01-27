@@ -1,1 +1,0 @@
-/workspace/simpleav/20251204/src/simple_av/src/simple_av/setup.py

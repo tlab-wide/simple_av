@@ -1,5 +1,0 @@
-geometry_msgs/Point object_position
-float64 time_to_collision
-int32 object_label
-float64 object_velocity
-bool collision_detected

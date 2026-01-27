@@ -1,4 +1,0 @@
-gmake[2]: *** Deleting file 'gtest/libgtest.a'
-gmake[2]: *** [gtest/CMakeFiles/gtest.dir/build.make:98: gtest/libgtest.a] Interrupt
-gmake[1]: *** [CMakeFiles/Makefile2:182: gtest/CMakeFiles/gtest.dir/all] Interrupt
-gmake: *** [Makefile:146: all] Interrupt
