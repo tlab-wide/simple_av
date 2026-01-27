@@ -320,24 +320,31 @@ class Perception(Node):
                 intersection_n_RSU_detectedObjects = getattr(self, f"intersection{intersection_number}_RSU_detectedObjects")
                 detected_objects_list.extend(self.handle_detected_objects(intersection_n_RSU_detectedObjects, True)) # RSU data
             except AttributeError:
-                self.get_logger().warning(f"No RSU data for intersection {intersection_number}")
+                self.get_logger().debug(f"No RSU data for intersection {intersection_number}")
         # Create and publish detected objects message
         detected_objects_msg = DetectedObjectsArray()
         detected_objects_msg.objects = detected_objects_list
         self.publisher_detected_objects.publish(detected_objects_msg)
 
-        print("number of objects: ", len(detected_objects_msg.objects))
+        self.get_logger().debug(f"number of objects: {len(detected_objects_msg.objects)}")
         for obj in detected_objects_msg.objects:
             if obj.label != 8:
-                print("is RSU:", obj.is_from_rsu)
-                print("vehicle type:", obj.label)
-                print("Direction from vehicle POV: ", obj.relative_direction.data)
-                print("Object relative Position from Vehicle: ", obj.position.x, obj.position.y)
-                print("Object Orientation: ", obj.orientation.x, obj.orientation.y, obj.orientation.z, obj.orientation.w)
-                print("Object speed: ", obj.velocity)
-                print("DEBUG - min dist: ", obj.distance) 
-                print("object shape size: ", obj.shape)
-                print("---------------------")
+                self.get_logger().debug(f"is RSU: {obj.is_from_rsu}")
+                self.get_logger().debug(f"vehicle type: {obj.label}")
+                self.get_logger().debug(
+                    f"Direction from vehicle POV: {obj.relative_direction.data}"
+                )
+                self.get_logger().debug(
+                    f"Object relative Position from Vehicle: {obj.position.x} {obj.position.y}"
+                )
+                self.get_logger().debug(
+                    "Object Orientation: "
+                    f"{obj.orientation.x} {obj.orientation.y} {obj.orientation.z} {obj.orientation.w}"
+                )
+                self.get_logger().debug(f"Object speed: {obj.velocity}")
+                self.get_logger().debug(f"min dist: {obj.distance}")
+                self.get_logger().debug(f"object shape size: {obj.shape}")
+                self.get_logger().debug("---------------------")
 
 def main(args=None):
     rclpy.init(args=args)
@@ -346,6 +353,8 @@ def main(args=None):
         while rclpy.ok() and not node.node_shut:
             rclpy.spin_once(node, timeout_sec=0)  # Set timeout to 0 to avoid delay
             node.objectDetection()
+    except KeyboardInterrupt:
+        pass
     finally:
         node.destroy_node()
         rclpy.shutdown()

@@ -1,0 +1,37 @@
+file(REMOVE_RECURSE
+  "CMakeFiles/autoware_internal_debug_msgs__rosidl_generator_py.dir/rosidl_generator_py/autoware_internal_debug_msgs/msg/_bool_stamped_s.c.o"
+  "CMakeFiles/autoware_internal_debug_msgs__rosidl_generator_py.dir/rosidl_generator_py/autoware_internal_debug_msgs/msg/_bool_stamped_s.c.o.d"
+  "CMakeFiles/autoware_internal_debug_msgs__rosidl_generator_py.dir/rosidl_generator_py/autoware_internal_debug_msgs/msg/_float32_multi_array_stamped_s.c.o"
+  "CMakeFiles/autoware_internal_debug_msgs__rosidl_generator_py.dir/rosidl_generator_py/autoware_internal_debug_msgs/msg/_float32_multi_array_stamped_s.c.o.d"
+  "CMakeFiles/autoware_internal_debug_msgs__rosidl_generator_py.dir/rosidl_generator_py/autoware_internal_debug_msgs/msg/_float32_stamped_s.c.o"
+  "CMakeFiles/autoware_internal_debug_msgs__rosidl_generator_py.dir/rosidl_generator_py/autoware_internal_debug_msgs/msg/_float32_stamped_s.c.o.d"
+  "CMakeFiles/autoware_internal_debug_msgs__rosidl_generator_py.dir/rosidl_generator_py/autoware_internal_debug_msgs/msg/_float64_multi_array_stamped_s.c.o"
+  "CMakeFiles/autoware_internal_debug_msgs__rosidl_generator_py.dir/rosidl_generator_py/autoware_internal_debug_msgs/msg/_float64_multi_array_stamped_s.c.o.d"
+  "CMakeFiles/autoware_internal_debug_msgs__rosidl_generator_py.dir/rosidl_generator_py/autoware_internal_debug_msgs/msg/_float64_stamped_s.c.o"
+  "CMakeFiles/autoware_internal_debug_msgs__rosidl_generator_py.dir/rosidl_generator_py/autoware_internal_debug_msgs/msg/_float64_stamped_s.c.o.d"
+  "CMakeFiles/autoware_internal_debug_msgs__rosidl_generator_py.dir/rosidl_generator_py/autoware_internal_debug_msgs/msg/_int32_multi_array_stamped_s.c.o"
+  "CMakeFiles/autoware_internal_debug_msgs__rosidl_generator_py.dir/rosidl_generator_py/autoware_internal_debug_msgs/msg/_int32_multi_array_stamped_s.c.o.d"
+  "CMakeFiles/autoware_internal_debug_msgs__rosidl_generator_py.dir/rosidl_generator_py/autoware_internal_debug_msgs/msg/_int32_stamped_s.c.o"
+  "CMakeFiles/autoware_internal_debug_msgs__rosidl_generator_py.dir/rosidl_generator_py/autoware_internal_debug_msgs/msg/_int32_stamped_s.c.o.d"
+  "CMakeFiles/autoware_internal_debug_msgs__rosidl_generator_py.dir/rosidl_generator_py/autoware_internal_debug_msgs/msg/_int64_multi_array_stamped_s.c.o"
+  "CMakeFiles/autoware_internal_debug_msgs__rosidl_generator_py.dir/rosidl_generator_py/autoware_internal_debug_msgs/msg/_int64_multi_array_stamped_s.c.o.d"
+  "CMakeFiles/autoware_internal_debug_msgs__rosidl_generator_py.dir/rosidl_generator_py/autoware_internal_debug_msgs/msg/_int64_stamped_s.c.o"
+  "CMakeFiles/autoware_internal_debug_msgs__rosidl_generator_py.dir/rosidl_generator_py/autoware_internal_debug_msgs/msg/_int64_stamped_s.c.o.d"
+  "CMakeFiles/autoware_internal_debug_msgs__rosidl_generator_py.dir/rosidl_generator_py/autoware_internal_debug_msgs/msg/_processing_time_node_s.c.o"
+  "CMakeFiles/autoware_internal_debug_msgs__rosidl_generator_py.dir/rosidl_generator_py/autoware_internal_debug_msgs/msg/_processing_time_node_s.c.o.d"
+  "CMakeFiles/autoware_internal_debug_msgs__rosidl_generator_py.dir/rosidl_generator_py/autoware_internal_debug_msgs/msg/_processing_time_tree_s.c.o"
+  "CMakeFiles/autoware_internal_debug_msgs__rosidl_generator_py.dir/rosidl_generator_py/autoware_internal_debug_msgs/msg/_processing_time_tree_s.c.o.d"
+  "CMakeFiles/autoware_internal_debug_msgs__rosidl_generator_py.dir/rosidl_generator_py/autoware_internal_debug_msgs/msg/_service_log_s.c.o"
+  "CMakeFiles/autoware_internal_debug_msgs__rosidl_generator_py.dir/rosidl_generator_py/autoware_internal_debug_msgs/msg/_service_log_s.c.o.d"
+  "CMakeFiles/autoware_internal_debug_msgs__rosidl_generator_py.dir/rosidl_generator_py/autoware_internal_debug_msgs/msg/_string_stamped_s.c.o"
+  "CMakeFiles/autoware_internal_debug_msgs__rosidl_generator_py.dir/rosidl_generator_py/autoware_internal_debug_msgs/msg/_string_stamped_s.c.o.d"
+  "CMakeFiles/autoware_internal_debug_msgs__rosidl_generator_py.dir/rosidl_generator_py/autoware_internal_debug_msgs/srv/_string_s.c.o"
+  "CMakeFiles/autoware_internal_debug_msgs__rosidl_generator_py.dir/rosidl_generator_py/autoware_internal_debug_msgs/srv/_string_s.c.o.d"
+  "rosidl_generator_py/autoware_internal_debug_msgs/libautoware_internal_debug_msgs__rosidl_generator_py.pdb"
+  "rosidl_generator_py/autoware_internal_debug_msgs/libautoware_internal_debug_msgs__rosidl_generator_py.so"
+)
+
+# Per-language clean rules from dependency scanning.
+foreach(lang C)
+  include(CMakeFiles/autoware_internal_debug_msgs__rosidl_generator_py.dir/cmake_clean_${lang}.cmake OPTIONAL)
+endforeach()

@@ -122,7 +122,9 @@ class IntersectionVisualizer(Node):
             return
         for idx, poly in enumerate(self.polygons):
             try:
-                print(f"publishing : intersection_{poly.intersection_id}_{poly.polygon_type}_{poly.polygon_id}")
+                self.get_logger().debug(
+                    f"publishing : intersection_{poly.intersection_id}_{poly.polygon_type}_{poly.polygon_id}"
+                )
                 marker = Marker()
                 marker.header.frame_id = "map"
                 marker.header.stamp = rclpy.time.Time().to_msg()

@@ -1,0 +1,1 @@
+ament_cmake_symlink_install_targets("TARGET_FILES" "/workspace/simpleav/20251204/src/simple_av/build/autoware_utils_math/libautoware_utils_math.so" "TARGETS" "autoware_utils_math" "ARCHIVE_DESTINATION" "lib" "LIBRARY_DESTINATION" "lib" "RUNTIME_DESTINATION" "bin")

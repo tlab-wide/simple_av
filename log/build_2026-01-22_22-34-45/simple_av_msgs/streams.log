@@ -1,0 +1,127 @@
+[1.379s] Invoking command in '/workspace/simpleav/20251204/src/simple_av/build/simple_av_msgs': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/workspace/simpleav/20251204/install/system:/workspace/simpleav/20251204/install/simple_av_logger:/workspace/simpleav/20251204/install/simple_av:/workspace/simpleav/20251204/install/planning:/workspace/simpleav/20251204/install/perception:/workspace/simpleav/20251204/install/localization:/workspace/simpleav/20251204/install/control:/workspace/simpleav/20251204/install/common:/opt/ros/humble /usr/bin/cmake /workspace/simpleav/20251204/src/simple_av/src/messages/simple_av_msgs -DAMENT_CMAKE_SYMLINK_INSTALL=1 -DCMAKE_INSTALL_PREFIX=/workspace/simpleav/20251204/src/simple_av/install/simple_av_msgs
+[1.496s] -- The C compiler identification is GNU 11.4.0
+[1.615s] -- The CXX compiler identification is GNU 11.4.0
+[1.639s] -- Detecting C compiler ABI info
+[1.779s] -- Detecting C compiler ABI info - done
+[1.789s] -- Check for working C compiler: /usr/lib/ccache/gcc - skipped
+[1.789s] -- Detecting C compile features
+[1.789s] -- Detecting C compile features - done
+[1.793s] -- Detecting CXX compiler ABI info
+[1.941s] -- Detecting CXX compiler ABI info - done
+[1.951s] -- Check for working CXX compiler: /usr/lib/ccache/g++ - skipped
+[1.951s] -- Detecting CXX compile features
+[1.952s] -- Detecting CXX compile features - done
+[1.961s] -- Found ament_cmake: 1.3.11 (/opt/ros/humble/share/ament_cmake/cmake)
+[2.282s] -- Found Python3: /usr/bin/python3 (found version "3.10.12") found components: Interpreter 
+[2.398s] -- Override CMake install command with custom implementation using symlinks instead of copying resources
+[2.521s] -- Found rosidl_default_generators: 1.2.0 (/opt/ros/humble/share/rosidl_default_generators/cmake)
+[2.545s] -- Using all available rosidl_typesupport_c: rosidl_typesupport_fastrtps_c;rosidl_typesupport_introspection_c
+[2.571s] -- Found rosidl_adapter: 3.1.6 (/opt/ros/humble/share/rosidl_adapter/cmake)
+[2.682s] -- Using all available rosidl_typesupport_cpp: rosidl_typesupport_fastrtps_cpp;rosidl_typesupport_introspection_cpp
+[2.764s] -- Found geometry_msgs: 4.2.4 (/opt/ros/humble/share/geometry_msgs/cmake)
+[3.473s] -- Found ament_cmake_ros: 0.10.0 (/opt/ros/humble/share/ament_cmake_ros/cmake)
+[3.911s] -- Using all available rosidl_typesupport_c: rosidl_typesupport_fastrtps_c;rosidl_typesupport_introspection_c
+[4.588s] -- Using all available rosidl_typesupport_cpp: rosidl_typesupport_fastrtps_cpp;rosidl_typesupport_introspection_cpp
+[4.632s] -- Found PythonInterp: /usr/bin/python3 (found suitable version "3.10.12", minimum required is "3.6") 
+[4.645s] -- Found python_cmake_module: 0.10.0 (/opt/ros/humble/share/python_cmake_module/cmake)
+[4.720s] -- Found PythonLibs: /usr/lib/x86_64-linux-gnu/libpython3.10.so (found suitable version "3.10.12", minimum required is "3.5") 
+[4.720s] -- Using PYTHON_EXECUTABLE: /usr/bin/python3
+[4.723s] -- Using PYTHON_INCLUDE_DIRS: /usr/include/python3.10
+[4.724s] -- Using PYTHON_LIBRARIES: /usr/lib/x86_64-linux-gnu/libpython3.10.so
+[4.790s] -- Found PythonExtra: .so  
+[4.990s] -- Found ament_lint_auto: 0.12.11 (/opt/ros/humble/share/ament_lint_auto/cmake)
+[5.082s] -- Added test 'lint_cmake' to check CMake code style
+[5.082s] -- Added test 'xmllint' to check XML markup files
+[5.092s] -- Configuring done
+[5.190s] -- Generating done
+[5.226s] -- Build files have been written to: /workspace/simpleav/20251204/src/simple_av/build/simple_av_msgs
+[5.266s] Invoked command in '/workspace/simpleav/20251204/src/simple_av/build/simple_av_msgs' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/workspace/simpleav/20251204/install/system:/workspace/simpleav/20251204/install/simple_av_logger:/workspace/simpleav/20251204/install/simple_av:/workspace/simpleav/20251204/install/planning:/workspace/simpleav/20251204/install/perception:/workspace/simpleav/20251204/install/localization:/workspace/simpleav/20251204/install/control:/workspace/simpleav/20251204/install/common:/opt/ros/humble /usr/bin/cmake /workspace/simpleav/20251204/src/simple_av/src/messages/simple_av_msgs -DAMENT_CMAKE_SYMLINK_INSTALL=1 -DCMAKE_INSTALL_PREFIX=/workspace/simpleav/20251204/src/simple_av/install/simple_av_msgs
+[5.267s] Invoking command in '/workspace/simpleav/20251204/src/simple_av/build/simple_av_msgs': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/workspace/simpleav/20251204/install/system:/workspace/simpleav/20251204/install/simple_av_logger:/workspace/simpleav/20251204/install/simple_av:/workspace/simpleav/20251204/install/planning:/workspace/simpleav/20251204/install/perception:/workspace/simpleav/20251204/install/localization:/workspace/simpleav/20251204/install/control:/workspace/simpleav/20251204/install/common:/opt/ros/humble /usr/bin/cmake --build /workspace/simpleav/20251204/src/simple_av/build/simple_av_msgs -- -j52 -l52
+[8.436s] [  1%] [34m[1mGenerating C code for ROS interfaces[0m
+[8.436s] [  1%] [34m[1mGenerating C++ code for ROS interfaces[0m
+[8.436s] [  1%] Built target ament_cmake_python_symlink_simple_av_msgs
+[8.436s] running egg_info
+[8.436s] creating simple_av_msgs.egg-info
+[8.436s] writing simple_av_msgs.egg-info/PKG-INFO
+[8.436s] writing dependency_links to simple_av_msgs.egg-info/dependency_links.txt
+[8.436s] writing top-level names to simple_av_msgs.egg-info/top_level.txt
+[8.436s] writing manifest file 'simple_av_msgs.egg-info/SOURCES.txt'
+[8.436s] reading manifest file 'simple_av_msgs.egg-info/SOURCES.txt'
+[8.436s] writing manifest file 'simple_av_msgs.egg-info/SOURCES.txt'
+[8.436s] [  1%] Built target ament_cmake_python_build_simple_av_msgs_egg
+[8.436s] [  1%] Built target simple_av_msgs__cpp
+[8.436s] [  2%] [32mBuilding C object CMakeFiles/simple_av_msgs__rosidl_generator_c.dir/rosidl_generator_c/simple_av_msgs/msg/detail/localization_intersection_status__functions.c.o[0m
+[8.436s] [  3%] [32mBuilding C object CMakeFiles/simple_av_msgs__rosidl_generator_c.dir/rosidl_generator_c/simple_av_msgs/msg/detail/planning_path_planning_msg__functions.c.o[0m
+[8.436s] [  3%] [32mBuilding C object CMakeFiles/simple_av_msgs__rosidl_generator_c.dir/rosidl_generator_c/simple_av_msgs/msg/detail/localization_msg__functions.c.o[0m
+[8.436s] [  4%] [32mBuilding C object CMakeFiles/simple_av_msgs__rosidl_generator_c.dir/rosidl_generator_c/simple_av_msgs/msg/detail/planning_waypoint__functions.c.o[0m
+[8.436s] [  4%] [32mBuilding C object CMakeFiles/simple_av_msgs__rosidl_generator_c.dir/rosidl_generator_c/simple_av_msgs/msg/detail/planning_internal_mission_plan_msg__functions.c.o[0m
+[8.436s] [  5%] [32mBuilding C object CMakeFiles/simple_av_msgs__rosidl_generator_c.dir/rosidl_generator_c/simple_av_msgs/msg/detail/traffic_signals_array__functions.c.o[0m
+[8.436s] [  6%] [32mBuilding C object CMakeFiles/simple_av_msgs__rosidl_generator_c.dir/rosidl_generator_c/simple_av_msgs/msg/detail/planning_internal_msg__functions.c.o[0m
+[8.436s] [  6%] [32mBuilding C object CMakeFiles/simple_av_msgs__rosidl_generator_c.dir/rosidl_generator_c/simple_av_msgs/msg/detail/detected_object__functions.c.o[0m
+[8.436s] [  7%] [34m[1mGenerating C++ type support for eProsima Fast-RTPS[0m
+[8.437s] [  8%] [32mBuilding C object CMakeFiles/simple_av_msgs__rosidl_generator_c.dir/rosidl_generator_c/simple_av_msgs/msg/detail/planning_motion_planning_msg__functions.c.o[0m
+[8.437s] [  9%] [32mBuilding C object CMakeFiles/simple_av_msgs__rosidl_generator_c.dir/rosidl_generator_c/simple_av_msgs/msg/detail/detected_objects_array__functions.c.o[0m
+[8.437s] [  9%] [34m[1mGenerating C++ introspection for ROS interfaces[0m
+[8.437s] [ 10%] [32mBuilding C object CMakeFiles/simple_av_msgs__rosidl_generator_c.dir/rosidl_generator_c/simple_av_msgs/msg/detail/portal__functions.c.o[0m
+[8.437s] [ 11%] [34m[1mGenerating C++ type support dispatch for ROS interfaces[0m
+[8.437s] [ 11%] [32mBuilding C object CMakeFiles/simple_av_msgs__rosidl_generator_c.dir/rosidl_generator_c/simple_av_msgs/msg/detail/collision_prediction_info__functions.c.o[0m
+[8.437s] [ 12%] [32mBuilding C object CMakeFiles/simple_av_msgs__rosidl_generator_c.dir/rosidl_generator_c/simple_av_msgs/msg/detail/sim_monitor__functions.c.o[0m
+[8.437s] [ 13%] [32mBuilding C object CMakeFiles/simple_av_msgs__rosidl_generator_c.dir/rosidl_generator_c/simple_av_msgs/srv/detail/trigger_mission_plan__functions.c.o[0m
+[8.451s] Traceback (most recent call last):
+[8.451s]   File "/opt/ros/humble/lib/rosidl_typesupport_introspection_cpp/rosidl_typesupport_introspection_cpp", line 6, in <module>
+[8.451s]     from rosidl_typesupport_introspection_cpp import generate_cpp
+[8.451s]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rosidl_typesupport_introspection_cpp/__init__.py", line 15, in <module>
+[8.451s]     from rosidl_cmake import generate_files
+[8.451s]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rosidl_cmake/__init__.py", line 24, in <module>
+[8.451s]     from rosidl_parser.parser import parse_idl_file
+[8.452s] KeyboardInterrupt
+[8.452s] Traceback (most recent call last):
+[8.452s]   File "/opt/ros/humble/lib/rosidl_typesupport_fastrtps_cpp/rosidl_typesupport_fastrtps_cpp", line 6, in <module>
+[8.452s]     from rosidl_typesupport_fastrtps_cpp import generate_cpp
+[8.452s]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rosidl_typesupport_fastrtps_cpp/__init__.py", line 15, in <module>
+[8.452s]     from rosidl_cmake import generate_files
+[8.452s]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rosidl_cmake/__init__.py", line 24, in <module>
+[8.452s]     from rosidl_parser.parser import parse_idl_file
+[8.452s] gmake[2]: *** [CMakeFiles/simple_av_msgs__rosidl_generator_c.dir/build.make:501: CMakeFiles/simple_av_msgs__rosidl_generator_c.dir/rosidl_generator_c/simple_av_msgs/msg/detail/detected_objects_array__functions.c.o] Interrupt
+[8.452s]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rosidl_parser/parser.py", line 20, in <module>
+[8.452s] gmake[2]: *** [CMakeFiles/simple_av_msgs__rosidl_generator_c.dir/build.make:557: CMakeFiles/simple_av_msgs__rosidl_generator_c.dir/rosidl_generator_c/simple_av_msgs/srv/detail/trigger_mission_plan__functions.c.o] Interrupt
+[8.452s]     from lark import Lark
+[8.452s]   File "<frozen importlib._bootstrap>", line 1027, in _find_and_load
+[8.452s]   File "<frozen importlib._bootstrap>", line 1002, in _find_and_load_unlocked
+[8.452s]   File "<frozen importlib._bootstrap>", line 945, in _find_spec
+[8.452s]   File "<frozen importlib._bootstrap_external>", line 1439, in find_spec
+[8.452s]   File "<frozen importlib._bootstrap_external>", line 1408, in _get_spec
+[8.452s] KeyboardInterrupt
+[8.452s] gmake[2]: *** [CMakeFiles/simple_av_msgs__rosidl_generator_c.dir/build.make:375: CMakeFiles/simple_av_msgs__rosidl_generator_c.dir/rosidl_generator_c/simple_av_msgs/msg/detail/localization_msg__functions.c.o] Interrupt
+[8.452s] gmake[2]: *** [CMakeFiles/simple_av_msgs__rosidl_generator_c.dir/build.make:431: CMakeFiles/simple_av_msgs__rosidl_generator_c.dir/rosidl_generator_c/simple_av_msgs/msg/detail/planning_waypoint__functions.c.o] Interrupt
+[8.452s] gmake[2]: *** [CMakeFiles/simple_av_msgs__rosidl_generator_c.dir/build.make:487: CMakeFiles/simple_av_msgs__rosidl_generator_c.dir/rosidl_generator_c/simple_av_msgs/msg/detail/detected_object__functions.c.o] Interrupt
+[8.452s] gmake[2]: *** [CMakeFiles/simple_av_msgs__rosidl_generator_c.dir/build.make:529: CMakeFiles/simple_av_msgs__rosidl_generator_c.dir/rosidl_generator_c/simple_av_msgs/msg/detail/sim_monitor__functions.c.o] Interrupt
+[8.452s] gmake[2]: *** [CMakeFiles/simple_av_msgs__rosidl_generator_c.dir/build.make:417: CMakeFiles/simple_av_msgs__rosidl_generator_c.dir/rosidl_generator_c/simple_av_msgs/msg/detail/planning_internal_msg__functions.c.o] Interrupt
+[8.452s] gmake[2]: *** [CMakeFiles/simple_av_msgs__rosidl_generator_c.dir/build.make:543: CMakeFiles/simple_av_msgs__rosidl_generator_c.dir/rosidl_generator_c/simple_av_msgs/msg/detail/collision_prediction_info__functions.c.o] Interrupt
+[8.453s] gmake[2]: *** [CMakeFiles/simple_av_msgs__rosidl_generator_c.dir/build.make:515: CMakeFiles/simple_av_msgs__rosidl_generator_c.dir/rosidl_generator_c/simple_av_msgs/msg/detail/portal__functions.c.o] Interrupt
+[8.453s] Traceback (most recent call last):
+[8.453s] gmake[2]: *** [CMakeFiles/simple_av_msgs__rosidl_generator_c.dir/build.make:473: CMakeFiles/simple_av_msgs__rosidl_generator_c.dir/rosidl_generator_c/simple_av_msgs/msg/detail/traffic_signals_array__functions.c.o] Interrupt
+[8.453s]   File "/opt/ros/humble/lib/rosidl_typesupport_cpp/rosidl_typesupport_cpp", line 6, in <module>
+[8.453s]     from rosidl_typesupport_cpp import generate_cpp
+[8.453s]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rosidl_typesupport_cpp/__init__.py", line 15, in <module>
+[8.453s]     from rosidl_cmake import generate_files
+[8.453s]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rosidl_cmake/__init__.py", line 23, in <module>
+[8.453s]     from rosidl_parser.definition import IdlLocator
+[8.453s]   File "<frozen importlib._bootstrap>", line 1027, in _find_and_load
+[8.453s]   File "<frozen importlib._bootstrap>", line 1006, in _find_and_load_unlocked
+[8.453s]   File "<frozen importlib._bootstrap>", line 674, in _load_unlocked
+[8.453s]   File "<frozen importlib._bootstrap>", line 577, in module_from_spec
+[8.453s]   File "<frozen importlib._bootstrap>", line 556, in _init_module_attrs
+[8.453s]   File "<frozen importlib._bootstrap>", line 397, in cached
+[8.453s]   File "<frozen importlib._bootstrap_external>", line 513, in _get_cached
+[8.453s]   File "<frozen importlib._bootstrap_external>", line 423, in cache_from_source
+[8.453s] KeyboardInterrupt
+[8.453s] gmake[2]: *** [CMakeFiles/simple_av_msgs__rosidl_typesupport_fastrtps_cpp.dir/build.make:157: rosidl_typesupport_fastrtps_cpp/simple_av_msgs/msg/detail/dds_fastrtps/localization_msg__type_support.cpp] Interrupt
+[8.453s] gmake[2]: *** [CMakeFiles/simple_av_msgs__rosidl_typesupport_introspection_cpp.dir/build.make:157: rosidl_typesupport_introspection_cpp/simple_av_msgs/msg/detail/localization_msg__rosidl_typesupport_introspection_cpp.hpp] Interrupt
+[8.453s] gmake[1]: *** [CMakeFiles/Makefile2:368: CMakeFiles/simple_av_msgs__rosidl_typesupport_introspection_cpp.dir/all] Interrupt
+[8.453s] gmake[1]: *** [CMakeFiles/Makefile2:342: CMakeFiles/simple_av_msgs__rosidl_typesupport_fastrtps_cpp.dir/all] Interrupt
+[8.453s] gmake[2]: *** [CMakeFiles/simple_av_msgs__rosidl_generator_c.dir/build.make:459: CMakeFiles/simple_av_msgs__rosidl_generator_c.dir/rosidl_generator_c/simple_av_msgs/msg/detail/planning_motion_planning_msg__functions.c.o] Interrupt
+[8.453s] gmake[1]: *** [CMakeFiles/Makefile2:213: CMakeFiles/simple_av_msgs__rosidl_generator_c.dir/all] Interrupt
+[8.463s] gmake[2]: *** [CMakeFiles/simple_av_msgs__rosidl_typesupport_cpp.dir/build.make:155: rosidl_typesupport_cpp/simple_av_msgs/msg/localization_msg__type_support.cpp] Interrupt
+[8.463s] gmake[1]: *** [CMakeFiles/Makefile2:394: CMakeFiles/simple_av_msgs__rosidl_typesupport_cpp.dir/all] Interrupt
+[8.464s] gmake: *** [Makefile:146: all] Interrupt

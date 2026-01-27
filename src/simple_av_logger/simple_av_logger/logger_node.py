@@ -69,7 +69,7 @@ class Logger(Node):
         log_scenario = self.logger_config['logger_module']['scenario']
 
         # Speed profile
-        if self.av_features['cool4_speed_profile_test']['enable']:
+        if self.av_features['use_cool4_speed_profile']['enable']:
             speed_profile = 'cool4_SpeedProfile'
         else:
             speed_profile = 'SimpleAV_SpeedProfile'

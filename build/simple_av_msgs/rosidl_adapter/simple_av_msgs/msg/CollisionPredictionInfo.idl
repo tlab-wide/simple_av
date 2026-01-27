@@ -1,0 +1,21 @@
+// generated from rosidl_adapter/resource/msg.idl.em
+// with input from simple_av_msgs/msg/CollisionPredictionInfo.msg
+// generated code does not contain a copyright notice
+
+#include "geometry_msgs/msg/Point.idl"
+
+module simple_av_msgs {
+  module msg {
+    struct CollisionPredictionInfo {
+      geometry_msgs::msg::Point object_position;
+
+      double time_to_collision;
+
+      int32 object_label;
+
+      double object_velocity;
+
+      boolean collision_detected;
+    };
+  };
+};

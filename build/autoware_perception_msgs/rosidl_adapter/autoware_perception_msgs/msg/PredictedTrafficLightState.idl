@@ -1,0 +1,47 @@
+// generated from rosidl_adapter/resource/msg.idl.em
+// with input from autoware_perception_msgs/msg/PredictedTrafficLightState.msg
+// generated code does not contain a copyright notice
+
+#include "autoware_perception_msgs/msg/TrafficLightElement.idl"
+#include "builtin_interfaces/msg/Time.idl"
+
+module autoware_perception_msgs {
+  module msg {
+    module PredictedTrafficLightState_Constants {
+      const string INFORMATION_SOURCE_V2N = "V2N";
+      const string INFORMATION_SOURCE_V2I = "V2I";
+      const string INFORMATION_SOURCE_V2V = "V2V";
+      const string INFORMATION_SOURCE_LOCAL_PERCEPTION = "LOCAL_PERCEPTION";
+      const string INFORMATION_SOURCE_MANUAL_OVERRIDE = "MANUAL_OVERRIDE";
+      const string INFORMATION_SOURCE_SIMULATION = "SIMULATION";
+      const string INFORMATION_SOURCE_INTERNAL_ESTIMATION = "INTERNAL_ESTIMATION";
+    };
+    @verbatim (language="comment", text=
+      "Information source values (string constants):" "\n"
+      "- V2N: Signal data sent from a server (Internet)" "\n"
+      "- V2I: Direct from RSU (Roadside Unit)" "\n"
+      "- V2V: Signal data from another vehicle" "\n"
+      "- LOCAL_PERCEPTION: Information detected by onboard sensors" "\n"
+      "- MANUAL_OVERRIDE: Manually set signal data (for testing/debugging)" "\n"
+      "- SIMULATION: Signal data from a simulated environment" "\n"
+      "- INTERNAL_ESTIMATION: Information that was predicted by an onboard model")
+    struct PredictedTrafficLightState {
+      @verbatim (language="comment", text=
+        "Absolute time this state is expected")
+      builtin_interfaces::msg::Time predicted_stamp;
+
+      @verbatim (language="comment", text=
+        "Valid signals at this time")
+      sequence<autoware_perception_msgs::msg::TrafficLightElement> simultaneous_elements;
+
+      @verbatim (language="comment", text=
+        "Confidence level")
+      @unit (value="0.0–1.0")
+      float reliability;
+
+      @verbatim (language="comment", text=
+        "Source of information, using predefined string constants")
+      string information_source;
+    };
+  };
+};

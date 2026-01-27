@@ -1,0 +1,72 @@
+gmake[2]: *** Deleting file 'rosidl_typesupport_introspection_c/autoware_internal_debug_msgs/msg/detail/bool_stamped__rosidl_typesupport_introspection_c.h'
+gmake[2]: *** Deleting file 'rosidl_typesupport_fastrtps_c/autoware_internal_debug_msgs/msg/detail/bool_stamped__rosidl_typesupport_fastrtps_c.h'
+gmake[2]: *** Deleting file 'CMakeFiles/autoware_internal_debug_msgs__rosidl_typesupport_fastrtps_cpp.dir/rosidl_typesupport_fastrtps_cpp/autoware_internal_debug_msgs/msg/detail/dds_fastrtps/processing_time_tree__type_support.cpp.o'
+gmake[2]: *** Deleting file 'CMakeFiles/autoware_internal_debug_msgs__rosidl_typesupport_fastrtps_cpp.dir/rosidl_typesupport_fastrtps_cpp/autoware_internal_debug_msgs/msg/detail/dds_fastrtps/int32_multi_array_stamped__type_support.cpp.o'
+gmake[2]: *** Deleting file 'rosidl_typesupport_c/autoware_internal_debug_msgs/msg/int64_stamped__type_support.cpp'
+gmake[2]: *** Deleting file 'rosidl_typesupport_c/autoware_internal_debug_msgs/msg/int64_multi_array_stamped__type_support.cpp'
+gmake[2]: *** Deleting file 'rosidl_typesupport_c/autoware_internal_debug_msgs/msg/int32_stamped__type_support.cpp'
+gmake[2]: *** Deleting file 'rosidl_typesupport_c/autoware_internal_debug_msgs/msg/int32_multi_array_stamped__type_support.cpp'
+gmake[2]: *** Deleting file 'rosidl_typesupport_c/autoware_internal_debug_msgs/msg/float64_stamped__type_support.cpp'
+gmake[2]: *** Deleting file 'rosidl_typesupport_c/autoware_internal_debug_msgs/msg/float64_multi_array_stamped__type_support.cpp'
+gmake[2]: *** Deleting file 'rosidl_typesupport_c/autoware_internal_debug_msgs/msg/float32_stamped__type_support.cpp'
+Traceback (most recent call last):
+  File "/opt/ros/humble/lib/rosidl_typesupport_fastrtps_c/rosidl_typesupport_fastrtps_c", line 33, in <module>
+gmake[2]: *** Deleting file 'rosidl_typesupport_c/autoware_internal_debug_msgs/msg/float32_multi_array_stamped__type_support.cpp'
+    sys.exit(main())
+  File "/opt/ros/humble/lib/rosidl_typesupport_fastrtps_c/rosidl_typesupport_fastrtps_c", line 29, in main
+    generate_typesupport_fastrtps_c(args.generator_arguments_file)
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rosidl_typesupport_fastrtps_c/__init__.py", line 24, in generate_typesupport_fastrtps_c
+    return generate_files(generator_arguments_file, mapping)
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rosidl_cmake/__init__.py", line 74, in generate_files
+    idl_file = parse_idl_file(locator)
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rosidl_parser/parser.py", line 64, in parse_idl_file
+gmake[2]: *** [CMakeFiles/autoware_internal_debug_msgs__rosidl_typesupport_c.dir/build.make:143: rosidl_typesupport_c/autoware_internal_debug_msgs/msg/int32_multi_array_stamped__type_support.cpp] Interrupt
+gmake[2]: *** [CMakeFiles/autoware_internal_debug_msgs__rosidl_typesupport_c.dir/build.make:140: rosidl_typesupport_c/autoware_internal_debug_msgs/msg/int32_stamped__type_support.cpp] Interrupt
+    content = parse_idl_string(string, png_file=png_file)
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rosidl_parser/parser.py", line 72, in parse_idl_string
+gmake[2]: *** [CMakeFiles/autoware_internal_debug_msgs__rosidl_typesupport_c.dir/build.make:149: rosidl_typesupport_c/autoware_internal_debug_msgs/msg/int64_multi_array_stamped__type_support.cpp] Interrupt
+gmake[2]: *** [CMakeFiles/autoware_internal_debug_msgs__rosidl_typesupport_c.dir/build.make:146: rosidl_typesupport_c/autoware_internal_debug_msgs/msg/int64_stamped__type_support.cpp] Interrupt
+    tree = get_ast_from_idl_string(idl_string)
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rosidl_parser/parser.py", line 89, in get_ast_from_idl_string
+    return _parser.parse(idl_string)
+  File "/home/tlab/.local/lib/python3.10/site-packages/lark/lark.py", line 677, in parse
+    return self.parser.parse(text, start=start, on_error=on_error)
+  File "/home/tlab/.local/lib/python3.10/site-packages/lark/parser_frontends.py", line 131, in parse
+    return self.parser.parse(stream, chosen_start, **kw)
+  File "/home/tlab/.local/lib/python3.10/site-packages/lark/parsers/earley.py", line 280, in parse
+    to_scan = self._parse(lexer, columns, to_scan, start_symbol)
+  File "/home/tlab/.local/lib/python3.10/site-packages/lark/parsers/xearley.py", line 153, in _parse
+    to_scan, node_cache = scan(i, to_scan)
+  File "/home/tlab/.local/lib/python3.10/site-packages/lark/parsers/xearley.py", line 58, in scan
+    for item in self.Set(to_scan):
+  File "/home/tlab/.local/lib/python3.10/site-packages/lark/utils.py", line 394, in __init__
+gmake[2]: *** [CMakeFiles/autoware_internal_debug_msgs__rosidl_typesupport_introspection_cpp.dir/build.make:242: CMakeFiles/autoware_internal_debug_msgs__rosidl_typesupport_introspection_cpp.dir/rosidl_typesupport_introspection_cpp/autoware_internal_debug_msgs/msg/detail/float32_multi_array_stamped__type_support.cpp.o] Interrupt
+    def __init__(self, items: Iterable[T] =()):
+KeyboardInterrupt
+gmake[2]: *** [CMakeFiles/autoware_internal_debug_msgs__rosidl_typesupport_fastrtps_cpp.dir/build.make:340: CMakeFiles/autoware_internal_debug_msgs__rosidl_typesupport_fastrtps_cpp.dir/rosidl_typesupport_fastrtps_cpp/autoware_internal_debug_msgs/msg/detail/dds_fastrtps/string_stamped__type_support.cpp.o] Interrupt
+gmake[2]: *** [CMakeFiles/autoware_internal_debug_msgs__rosidl_typesupport_fastrtps_cpp.dir/build.make:270: CMakeFiles/autoware_internal_debug_msgs__rosidl_typesupport_fastrtps_cpp.dir/rosidl_typesupport_fastrtps_cpp/autoware_internal_debug_msgs/msg/detail/dds_fastrtps/float64_multi_array_stamped__type_support.cpp.o] Interrupt
+gmake[2]: *** [CMakeFiles/autoware_internal_debug_msgs__rosidl_typesupport_fastrtps_cpp.dir/build.make:326: CMakeFiles/autoware_internal_debug_msgs__rosidl_typesupport_fastrtps_cpp.dir/rosidl_typesupport_fastrtps_cpp/autoware_internal_debug_msgs/msg/detail/dds_fastrtps/int64_multi_array_stamped__type_support.cpp.o] Interrupt
+gmake[2]: *** [CMakeFiles/autoware_internal_debug_msgs__rosidl_typesupport_introspection_cpp.dir/build.make:368: CMakeFiles/autoware_internal_debug_msgs__rosidl_typesupport_introspection_cpp.dir/rosidl_typesupport_introspection_cpp/autoware_internal_debug_msgs/msg/detail/processing_time_tree__type_support.cpp.o] Interrupt
+gmake[2]: *** [CMakeFiles/autoware_internal_debug_msgs__rosidl_typesupport_c.dir/build.make:131: rosidl_typesupport_c/autoware_internal_debug_msgs/msg/float32_multi_array_stamped__type_support.cpp] Interrupt
+gmake[2]: *** [CMakeFiles/autoware_internal_debug_msgs__rosidl_typesupport_c.dir/build.make:137: rosidl_typesupport_c/autoware_internal_debug_msgs/msg/float64_multi_array_stamped__type_support.cpp] Interrupt
+gmake[2]: *** [CMakeFiles/autoware_internal_debug_msgs__rosidl_typesupport_c.dir/build.make:134: rosidl_typesupport_c/autoware_internal_debug_msgs/msg/float64_stamped__type_support.cpp] Interrupt
+gmake[2]: *** [CMakeFiles/autoware_internal_debug_msgs__rosidl_typesupport_fastrtps_cpp.dir/build.make:298: CMakeFiles/autoware_internal_debug_msgs__rosidl_typesupport_fastrtps_cpp.dir/rosidl_typesupport_fastrtps_cpp/autoware_internal_debug_msgs/msg/detail/dds_fastrtps/int32_multi_array_stamped__type_support.cpp.o] Interrupt
+gmake[1]: *** [CMakeFiles/Makefile2:342: CMakeFiles/autoware_internal_debug_msgs__rosidl_typesupport_c.dir/all] Interrupt
+gmake[2]: *** [CMakeFiles/autoware_internal_debug_msgs__rosidl_typesupport_introspection_cpp.dir/build.make:270: CMakeFiles/autoware_internal_debug_msgs__rosidl_typesupport_introspection_cpp.dir/rosidl_typesupport_introspection_cpp/autoware_internal_debug_msgs/msg/detail/float64_multi_array_stamped__type_support.cpp.o] Interrupt
+gmake[2]: *** [CMakeFiles/autoware_internal_debug_msgs__rosidl_typesupport_fastrtps_cpp.dir/build.make:256: CMakeFiles/autoware_internal_debug_msgs__rosidl_typesupport_fastrtps_cpp.dir/rosidl_typesupport_fastrtps_cpp/autoware_internal_debug_msgs/msg/detail/dds_fastrtps/float64_stamped__type_support.cpp.o] Interrupt
+gmake[2]: *** [CMakeFiles/autoware_internal_debug_msgs__rosidl_typesupport_introspection_cpp.dir/build.make:298: CMakeFiles/autoware_internal_debug_msgs__rosidl_typesupport_introspection_cpp.dir/rosidl_typesupport_introspection_cpp/autoware_internal_debug_msgs/msg/detail/int32_multi_array_stamped__type_support.cpp.o] Interrupt
+gmake[2]: *** [CMakeFiles/autoware_internal_debug_msgs__rosidl_typesupport_introspection_c.dir/build.make:127: rosidl_typesupport_introspection_c/autoware_internal_debug_msgs/msg/detail/bool_stamped__rosidl_typesupport_introspection_c.h] Interrupt
+gmake[1]: *** [CMakeFiles/Makefile2:316: CMakeFiles/autoware_internal_debug_msgs__rosidl_typesupport_introspection_c.dir/all] Interrupt
+gmake[2]: *** [CMakeFiles/autoware_internal_debug_msgs__rosidl_typesupport_fastrtps_cpp.dir/build.make:284: CMakeFiles/autoware_internal_debug_msgs__rosidl_typesupport_fastrtps_cpp.dir/rosidl_typesupport_fastrtps_cpp/autoware_internal_debug_msgs/msg/detail/dds_fastrtps/int32_stamped__type_support.cpp.o] Interrupt
+gmake[2]: *** wait: No child processes.  Stop.
+gmake[2]: *** Waiting for unfinished jobs....
+gmake[2]: *** wait: No child processes.  Stop.
+gmake[2]: *** [CMakeFiles/autoware_internal_debug_msgs__rosidl_typesupport_introspection_cpp.dir/build.make:284: CMakeFiles/autoware_internal_debug_msgs__rosidl_typesupport_introspection_cpp.dir/rosidl_typesupport_introspection_cpp/autoware_internal_debug_msgs/msg/detail/int32_stamped__type_support.cpp.o] Interrupt
+gmake[2]: *** [CMakeFiles/autoware_internal_debug_msgs__rosidl_typesupport_introspection_cpp.dir/build.make:214: CMakeFiles/autoware_internal_debug_msgs__rosidl_typesupport_introspection_cpp.dir/rosidl_typesupport_introspection_cpp/autoware_internal_debug_msgs/msg/detail/bool_stamped__type_support.cpp.o] Interrupt
+gmake[1]: *** [CMakeFiles/Makefile2:369: CMakeFiles/autoware_internal_debug_msgs__rosidl_typesupport_introspection_cpp.dir/all] Interrupt
+gmake[1]: *** [CMakeFiles/Makefile2:291: CMakeFiles/autoware_internal_debug_msgs__rosidl_typesupport_fastrtps_cpp.dir/all] Error 2
+gmake[2]: *** [CMakeFiles/autoware_internal_debug_msgs__rosidl_typesupport_cpp.dir/build.make:405: libautoware_internal_debug_msgs__rosidl_typesupport_cpp.so] Interrupt
+gmake[1]: *** [CMakeFiles/Makefile2:395: CMakeFiles/autoware_internal_debug_msgs__rosidl_typesupport_cpp.dir/all] Interrupt
+gmake[2]: *** [CMakeFiles/autoware_internal_debug_msgs__rosidl_typesupport_fastrtps_c.dir/build.make:127: rosidl_typesupport_fastrtps_c/autoware_internal_debug_msgs/msg/detail/bool_stamped__rosidl_typesupport_fastrtps_c.h] Interrupt
+gmake[1]: *** [CMakeFiles/Makefile2:238: CMakeFiles/autoware_internal_debug_msgs__rosidl_typesupport_fastrtps_c.dir/all] Interrupt
+gmake: *** [Makefile:146: all] Interrupt

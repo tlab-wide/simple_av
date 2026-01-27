@@ -62,7 +62,7 @@ class RVizTextPublisher(Node):
         marker.text = self.current_text
 
         self.marker_pub.publish(marker)
-        self.get_logger().info(f"Displayed text '{self.current_text}' at ({self.stop_point.x:.2f}, {self.stop_point.y:.2f})")
+        # self.get_logger().info(f"Displayed text '{self.current_text}' at ({self.stop_point.x:.2f}, {self.stop_point.y:.2f})")
 
 
 def main(args=None):

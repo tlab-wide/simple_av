@@ -1,0 +1,16 @@
+// generated from rosidl_adapter/resource/srv.idl.em
+// with input from tier4_external_api_msgs/srv/SetRosbagRecord.srv
+// generated code does not contain a copyright notice
+
+#include "tier4_external_api_msgs/msg/ResponseStatus.idl"
+
+module tier4_external_api_msgs {
+  module srv {
+    struct SetRosbagRecord_Request {
+      boolean record;
+    };
+    struct SetRosbagRecord_Response {
+      tier4_external_api_msgs::msg::ResponseStatus status;
+    };
+  };
+};

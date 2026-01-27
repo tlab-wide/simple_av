@@ -1,0 +1,22 @@
+// generated from rosidl_adapter/resource/msg.idl.em
+// with input from autoware_map_msgs/msg/LaneletMapCellMetaData.msg
+// generated code does not contain a copyright notice
+
+
+module autoware_map_msgs {
+  module msg {
+    @verbatim (language="comment", text=
+      "Metadata of lanelet map cell")
+    struct LaneletMapCellMetaData {
+      string cell_id;
+
+      double min_x;
+
+      double max_x;
+
+      double min_y;
+
+      double max_y;
+    };
+  };
+};

@@ -1,0 +1,10 @@
+/workspace/simpleav/20251204/src/simple_av/build/autoware_planning_msgs/rosidl_adapter/autoware_planning_msgs:msg/LaneletPrimitive.idl
+/workspace/simpleav/20251204/src/simple_av/build/autoware_planning_msgs/rosidl_adapter/autoware_planning_msgs:msg/LaneletRoute.idl
+/workspace/simpleav/20251204/src/simple_av/build/autoware_planning_msgs/rosidl_adapter/autoware_planning_msgs:msg/LaneletSegment.idl
+/workspace/simpleav/20251204/src/simple_av/build/autoware_planning_msgs/rosidl_adapter/autoware_planning_msgs:msg/PoseWithUuidStamped.idl
+/workspace/simpleav/20251204/src/simple_av/build/autoware_planning_msgs/rosidl_adapter/autoware_planning_msgs:msg/Trajectory.idl
+/workspace/simpleav/20251204/src/simple_av/build/autoware_planning_msgs/rosidl_adapter/autoware_planning_msgs:msg/TrajectoryPoint.idl
+/workspace/simpleav/20251204/src/simple_av/build/autoware_planning_msgs/rosidl_adapter/autoware_planning_msgs:msg/Path.idl
+/workspace/simpleav/20251204/src/simple_av/build/autoware_planning_msgs/rosidl_adapter/autoware_planning_msgs:msg/PathPoint.idl
+/workspace/simpleav/20251204/src/simple_av/build/autoware_planning_msgs/rosidl_adapter/autoware_planning_msgs:msg/PathWithLaneId.idl
+/workspace/simpleav/20251204/src/simple_av/build/autoware_planning_msgs/rosidl_adapter/autoware_planning_msgs:msg/PathPointWithLaneId.idl

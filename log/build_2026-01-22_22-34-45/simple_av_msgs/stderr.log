@@ -1,0 +1,58 @@
+Traceback (most recent call last):
+  File "/opt/ros/humble/lib/rosidl_typesupport_introspection_cpp/rosidl_typesupport_introspection_cpp", line 6, in <module>
+    from rosidl_typesupport_introspection_cpp import generate_cpp
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rosidl_typesupport_introspection_cpp/__init__.py", line 15, in <module>
+    from rosidl_cmake import generate_files
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rosidl_cmake/__init__.py", line 24, in <module>
+    from rosidl_parser.parser import parse_idl_file
+KeyboardInterrupt
+Traceback (most recent call last):
+  File "/opt/ros/humble/lib/rosidl_typesupport_fastrtps_cpp/rosidl_typesupport_fastrtps_cpp", line 6, in <module>
+    from rosidl_typesupport_fastrtps_cpp import generate_cpp
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rosidl_typesupport_fastrtps_cpp/__init__.py", line 15, in <module>
+    from rosidl_cmake import generate_files
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rosidl_cmake/__init__.py", line 24, in <module>
+    from rosidl_parser.parser import parse_idl_file
+gmake[2]: *** [CMakeFiles/simple_av_msgs__rosidl_generator_c.dir/build.make:501: CMakeFiles/simple_av_msgs__rosidl_generator_c.dir/rosidl_generator_c/simple_av_msgs/msg/detail/detected_objects_array__functions.c.o] Interrupt
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rosidl_parser/parser.py", line 20, in <module>
+gmake[2]: *** [CMakeFiles/simple_av_msgs__rosidl_generator_c.dir/build.make:557: CMakeFiles/simple_av_msgs__rosidl_generator_c.dir/rosidl_generator_c/simple_av_msgs/srv/detail/trigger_mission_plan__functions.c.o] Interrupt
+    from lark import Lark
+  File "<frozen importlib._bootstrap>", line 1027, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1002, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 945, in _find_spec
+  File "<frozen importlib._bootstrap_external>", line 1439, in find_spec
+  File "<frozen importlib._bootstrap_external>", line 1408, in _get_spec
+KeyboardInterrupt
+gmake[2]: *** [CMakeFiles/simple_av_msgs__rosidl_generator_c.dir/build.make:375: CMakeFiles/simple_av_msgs__rosidl_generator_c.dir/rosidl_generator_c/simple_av_msgs/msg/detail/localization_msg__functions.c.o] Interrupt
+gmake[2]: *** [CMakeFiles/simple_av_msgs__rosidl_generator_c.dir/build.make:431: CMakeFiles/simple_av_msgs__rosidl_generator_c.dir/rosidl_generator_c/simple_av_msgs/msg/detail/planning_waypoint__functions.c.o] Interrupt
+gmake[2]: *** [CMakeFiles/simple_av_msgs__rosidl_generator_c.dir/build.make:487: CMakeFiles/simple_av_msgs__rosidl_generator_c.dir/rosidl_generator_c/simple_av_msgs/msg/detail/detected_object__functions.c.o] Interrupt
+gmake[2]: *** [CMakeFiles/simple_av_msgs__rosidl_generator_c.dir/build.make:529: CMakeFiles/simple_av_msgs__rosidl_generator_c.dir/rosidl_generator_c/simple_av_msgs/msg/detail/sim_monitor__functions.c.o] Interrupt
+gmake[2]: *** [CMakeFiles/simple_av_msgs__rosidl_generator_c.dir/build.make:417: CMakeFiles/simple_av_msgs__rosidl_generator_c.dir/rosidl_generator_c/simple_av_msgs/msg/detail/planning_internal_msg__functions.c.o] Interrupt
+gmake[2]: *** [CMakeFiles/simple_av_msgs__rosidl_generator_c.dir/build.make:543: CMakeFiles/simple_av_msgs__rosidl_generator_c.dir/rosidl_generator_c/simple_av_msgs/msg/detail/collision_prediction_info__functions.c.o] Interrupt
+gmake[2]: *** [CMakeFiles/simple_av_msgs__rosidl_generator_c.dir/build.make:515: CMakeFiles/simple_av_msgs__rosidl_generator_c.dir/rosidl_generator_c/simple_av_msgs/msg/detail/portal__functions.c.o] Interrupt
+Traceback (most recent call last):
+gmake[2]: *** [CMakeFiles/simple_av_msgs__rosidl_generator_c.dir/build.make:473: CMakeFiles/simple_av_msgs__rosidl_generator_c.dir/rosidl_generator_c/simple_av_msgs/msg/detail/traffic_signals_array__functions.c.o] Interrupt
+  File "/opt/ros/humble/lib/rosidl_typesupport_cpp/rosidl_typesupport_cpp", line 6, in <module>
+    from rosidl_typesupport_cpp import generate_cpp
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rosidl_typesupport_cpp/__init__.py", line 15, in <module>
+    from rosidl_cmake import generate_files
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rosidl_cmake/__init__.py", line 23, in <module>
+    from rosidl_parser.definition import IdlLocator
+  File "<frozen importlib._bootstrap>", line 1027, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1006, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 674, in _load_unlocked
+  File "<frozen importlib._bootstrap>", line 577, in module_from_spec
+  File "<frozen importlib._bootstrap>", line 556, in _init_module_attrs
+  File "<frozen importlib._bootstrap>", line 397, in cached
+  File "<frozen importlib._bootstrap_external>", line 513, in _get_cached
+  File "<frozen importlib._bootstrap_external>", line 423, in cache_from_source
+KeyboardInterrupt
+gmake[2]: *** [CMakeFiles/simple_av_msgs__rosidl_typesupport_fastrtps_cpp.dir/build.make:157: rosidl_typesupport_fastrtps_cpp/simple_av_msgs/msg/detail/dds_fastrtps/localization_msg__type_support.cpp] Interrupt
+gmake[2]: *** [CMakeFiles/simple_av_msgs__rosidl_typesupport_introspection_cpp.dir/build.make:157: rosidl_typesupport_introspection_cpp/simple_av_msgs/msg/detail/localization_msg__rosidl_typesupport_introspection_cpp.hpp] Interrupt
+gmake[1]: *** [CMakeFiles/Makefile2:368: CMakeFiles/simple_av_msgs__rosidl_typesupport_introspection_cpp.dir/all] Interrupt
+gmake[1]: *** [CMakeFiles/Makefile2:342: CMakeFiles/simple_av_msgs__rosidl_typesupport_fastrtps_cpp.dir/all] Interrupt
+gmake[2]: *** [CMakeFiles/simple_av_msgs__rosidl_generator_c.dir/build.make:459: CMakeFiles/simple_av_msgs__rosidl_generator_c.dir/rosidl_generator_c/simple_av_msgs/msg/detail/planning_motion_planning_msg__functions.c.o] Interrupt
+gmake[1]: *** [CMakeFiles/Makefile2:213: CMakeFiles/simple_av_msgs__rosidl_generator_c.dir/all] Interrupt
+gmake[2]: *** [CMakeFiles/simple_av_msgs__rosidl_typesupport_cpp.dir/build.make:155: rosidl_typesupport_cpp/simple_av_msgs/msg/localization_msg__type_support.cpp] Interrupt
+gmake[1]: *** [CMakeFiles/Makefile2:394: CMakeFiles/simple_av_msgs__rosidl_typesupport_cpp.dir/all] Interrupt
+gmake: *** [Makefile:146: all] Interrupt

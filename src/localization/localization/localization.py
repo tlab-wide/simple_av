@@ -121,9 +121,9 @@ class Localization(Node):
     # Prints the given Lanelet from the Json map file
     def display_lane(self, lanelet):
         if lanelet is None:
-            self.get_logger().info("Lane Not exists")
+            self.get_logger().warning("Lane Not exists")
         else:
-            self.get_logger().info(
+            self.get_logger().debug(
                 f"Lanelet Name: {lanelet['name']}\n"
                 "Waypoints:\n" +
                 ''.join(f"  x: {waypoint['x']}, y: {waypoint['y']}, z: {waypoint['z']}\n" for waypoint in lanelet['waypoints']) +
@@ -135,7 +135,7 @@ class Localization(Node):
             )
 
     def display_vehicle_position(self, msg_pose, closest_point, closest_lane_name, min_distance):
-        self.get_logger().info(
+        self.get_logger().debug(
                 f'localization\n'
                 f'curr Position:  {msg_pose.pose.position.x}, {msg_pose.pose.position.y}, {msg_pose.pose.position.z}\n'
                 f'Closest point: {closest_point.get_point()}\n'
@@ -332,10 +332,12 @@ class Localization(Node):
         if self.reset:
             self.get_logger().warning("RESET")
             self.isGlobalPositioningDone = False
+            self.isInitialPoseSampled = False
+            self.reset = False
             return
 
         if not self.isInitialPoseSampled:
-            self.get_logger().warning("GLOBAL POSITIONING INITIALIZATION")
+            self.get_logger().info("GLOBAL POSITIONING INITIALIZATION")
             self.closest_point, self.closest_lane_name, self.min_distance, self.current_position = self.global_positioning()
             if self.closest_point is None:
                 self.get_logger().warning("INITIALIZATION - NO DATA")
@@ -345,12 +347,12 @@ class Localization(Node):
             self.initial_closest_point = self.closest_point
             self.initial_closest_lane_name = self.closest_lane_name
             self.isInitialPoseSampled = True
-            self.get_logger().warning("GLOBAL POSITIONING INITIALIZATION Completed")
+            self.get_logger().info("GLOBAL POSITIONING INITIALIZATION Completed")
             self.publish_vehicle_location(self.closest_point, self.closest_lane_name, self.min_distance)
             return
 
         if self.finished:
-            self.get_logger().warning("Test has finished - Localization stopped")
+            self.get_logger().info("Experiment finished - Localization stopped")
             self.node_shut = True
             return
         
@@ -362,13 +364,13 @@ class Localization(Node):
             return
 
         if not self.isGlobalPositioningDone:
-            self.get_logger().warning("GLOBAL POSITIONING")
+            self.get_logger().debug("GLOBAL POSITIONING")
             # self.get_logger().info(f"global positioning, {self.isGlobalPositioningDone}")
             self.closest_point, self.closest_lane_name, self.min_distance, self.current_position = self.global_positioning()
         else:
-            self.get_logger().info("LOCAL POSITIONING")
+            self.get_logger().debug("LOCAL POSITIONING")
             if self.min_distance > 10.0:
-                self.get_logger().warning("Threshold - global positioning")
+                self.get_logger().debug("Threshold - global positioning")
                 self.isGlobalPositioningDone = False
                 return
             
@@ -390,20 +392,25 @@ class Localization(Node):
         localization_result.closest_lane_names.data = closest_lane_name
         localization_result.minimal_distance = min_distance
         self.localization_publisher.publish(localization_result)
+        self.get_logger().debug(
+            f"Localization publish lane={closest_lane_name} "
+            f"closest_point=({closest_point.x:.2f}, {closest_point.y:.2f}, {closest_point.z:.2f}) "
+            f"min_distance={min_distance:.2f}"
+        )
 
 def main(args=None):
-    print("Localization node started...")
     rclpy.init(args=args)
     node = Localization()
+    node.get_logger().info("Localization node started...")
     try:
         while rclpy.ok() and not node.node_shut:
-            rclpy.spin_once(node, timeout_sec=None)# Set timeout to 0 to avoid delay
+            rclpy.spin_once(node, timeout_sec=0.1)# Set timeout to 0 to avoid delay
             node.localization()
+    except KeyboardInterrupt:
+        pass
     finally:
         node.destroy_node()
         rclpy.shutdown()
-    node.destroy_node()
-    rclpy.shutdown()
 
 if __name__ == '__main__':
     main()

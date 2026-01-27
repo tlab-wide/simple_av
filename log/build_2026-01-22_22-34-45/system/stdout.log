@@ -1,0 +1,25 @@
+running develop
+running egg_info
+creating system.egg-info
+writing system.egg-info/PKG-INFO
+writing dependency_links to system.egg-info/dependency_links.txt
+writing entry points to system.egg-info/entry_points.txt
+writing requirements to system.egg-info/requires.txt
+writing top-level names to system.egg-info/top_level.txt
+writing manifest file 'system.egg-info/SOURCES.txt'
+reading manifest file 'system.egg-info/SOURCES.txt'
+writing manifest file 'system.egg-info/SOURCES.txt'
+running build_ext
+Creating /workspace/simpleav/20251204/src/simple_av/install/system/lib/python3.10/site-packages/system.egg-link (link to .)
+Installing portal script to /workspace/simpleav/20251204/src/simple_av/install/system/lib/system
+Installing sim_monitor script to /workspace/simpleav/20251204/src/simple_av/install/system/lib/system
+
+Installed /workspace/simpleav/20251204/src/simple_av/build/system
+running symlink_data
+creating /workspace/simpleav/20251204/src/simple_av/install/system/share/ament_index
+creating /workspace/simpleav/20251204/src/simple_av/install/system/share/ament_index/resource_index
+creating /workspace/simpleav/20251204/src/simple_av/install/system/share/ament_index/resource_index/packages
+symbolically linking /workspace/simpleav/20251204/src/simple_av/build/system/resource/system -> /workspace/simpleav/20251204/src/simple_av/install/system/share/ament_index/resource_index/packages
+symbolically linking /workspace/simpleav/20251204/src/simple_av/build/system/package.xml -> /workspace/simpleav/20251204/src/simple_av/install/system/share/system
+creating /workspace/simpleav/20251204/src/simple_av/install/system/share/system/launch
+symbolically linking /workspace/simpleav/20251204/src/simple_av/build/system/launch/system_launcher.py -> /workspace/simpleav/20251204/src/simple_av/install/system/share/system/launch

@@ -1,0 +1,13 @@
+/workspace/simpleav/20251204/src/simple_av/build/autoware_map_msgs/rosidl_adapter/autoware_map_msgs:msg/AreaInfo.idl
+/workspace/simpleav/20251204/src/simple_av/build/autoware_map_msgs/rosidl_adapter/autoware_map_msgs:msg/LaneletMapBin.idl
+/workspace/simpleav/20251204/src/simple_av/build/autoware_map_msgs/rosidl_adapter/autoware_map_msgs:msg/LaneletMapMetaData.idl
+/workspace/simpleav/20251204/src/simple_av/build/autoware_map_msgs/rosidl_adapter/autoware_map_msgs:msg/LaneletMapCellMetaData.idl
+/workspace/simpleav/20251204/src/simple_av/build/autoware_map_msgs/rosidl_adapter/autoware_map_msgs:msg/MapProjectorInfo.idl
+/workspace/simpleav/20251204/src/simple_av/build/autoware_map_msgs/rosidl_adapter/autoware_map_msgs:msg/PointCloudMapCellWithID.idl
+/workspace/simpleav/20251204/src/simple_av/build/autoware_map_msgs/rosidl_adapter/autoware_map_msgs:msg/PointCloudMapCellMetaData.idl
+/workspace/simpleav/20251204/src/simple_av/build/autoware_map_msgs/rosidl_adapter/autoware_map_msgs:msg/PointCloudMapCellMetaDataWithID.idl
+/workspace/simpleav/20251204/src/simple_av/build/autoware_map_msgs/rosidl_adapter/autoware_map_msgs:msg/PointCloudMapMetaData.idl
+/workspace/simpleav/20251204/src/simple_av/build/autoware_map_msgs/rosidl_adapter/autoware_map_msgs:srv/GetPartialPointCloudMap.idl
+/workspace/simpleav/20251204/src/simple_av/build/autoware_map_msgs/rosidl_adapter/autoware_map_msgs:srv/GetDifferentialPointCloudMap.idl
+/workspace/simpleav/20251204/src/simple_av/build/autoware_map_msgs/rosidl_adapter/autoware_map_msgs:srv/GetSelectedPointCloudMap.idl
+/workspace/simpleav/20251204/src/simple_av/build/autoware_map_msgs/rosidl_adapter/autoware_map_msgs:srv/GetSelectedLanelet2Map.idl

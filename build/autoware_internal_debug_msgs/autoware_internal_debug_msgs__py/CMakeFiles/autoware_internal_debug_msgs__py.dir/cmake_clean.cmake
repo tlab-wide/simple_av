@@ -1,0 +1,41 @@
+file(REMOVE_RECURSE
+  "../rosidl_generator_py/autoware_internal_debug_msgs/_autoware_internal_debug_msgs_s.ep.rosidl_typesupport_c.c"
+  "../rosidl_generator_py/autoware_internal_debug_msgs/_autoware_internal_debug_msgs_s.ep.rosidl_typesupport_fastrtps_c.c"
+  "../rosidl_generator_py/autoware_internal_debug_msgs/_autoware_internal_debug_msgs_s.ep.rosidl_typesupport_introspection_c.c"
+  "../rosidl_generator_py/autoware_internal_debug_msgs/msg/__init__.py"
+  "../rosidl_generator_py/autoware_internal_debug_msgs/msg/_bool_stamped.py"
+  "../rosidl_generator_py/autoware_internal_debug_msgs/msg/_bool_stamped_s.c"
+  "../rosidl_generator_py/autoware_internal_debug_msgs/msg/_float32_multi_array_stamped.py"
+  "../rosidl_generator_py/autoware_internal_debug_msgs/msg/_float32_multi_array_stamped_s.c"
+  "../rosidl_generator_py/autoware_internal_debug_msgs/msg/_float32_stamped.py"
+  "../rosidl_generator_py/autoware_internal_debug_msgs/msg/_float32_stamped_s.c"
+  "../rosidl_generator_py/autoware_internal_debug_msgs/msg/_float64_multi_array_stamped.py"
+  "../rosidl_generator_py/autoware_internal_debug_msgs/msg/_float64_multi_array_stamped_s.c"
+  "../rosidl_generator_py/autoware_internal_debug_msgs/msg/_float64_stamped.py"
+  "../rosidl_generator_py/autoware_internal_debug_msgs/msg/_float64_stamped_s.c"
+  "../rosidl_generator_py/autoware_internal_debug_msgs/msg/_int32_multi_array_stamped.py"
+  "../rosidl_generator_py/autoware_internal_debug_msgs/msg/_int32_multi_array_stamped_s.c"
+  "../rosidl_generator_py/autoware_internal_debug_msgs/msg/_int32_stamped.py"
+  "../rosidl_generator_py/autoware_internal_debug_msgs/msg/_int32_stamped_s.c"
+  "../rosidl_generator_py/autoware_internal_debug_msgs/msg/_int64_multi_array_stamped.py"
+  "../rosidl_generator_py/autoware_internal_debug_msgs/msg/_int64_multi_array_stamped_s.c"
+  "../rosidl_generator_py/autoware_internal_debug_msgs/msg/_int64_stamped.py"
+  "../rosidl_generator_py/autoware_internal_debug_msgs/msg/_int64_stamped_s.c"
+  "../rosidl_generator_py/autoware_internal_debug_msgs/msg/_processing_time_node.py"
+  "../rosidl_generator_py/autoware_internal_debug_msgs/msg/_processing_time_node_s.c"
+  "../rosidl_generator_py/autoware_internal_debug_msgs/msg/_processing_time_tree.py"
+  "../rosidl_generator_py/autoware_internal_debug_msgs/msg/_processing_time_tree_s.c"
+  "../rosidl_generator_py/autoware_internal_debug_msgs/msg/_service_log.py"
+  "../rosidl_generator_py/autoware_internal_debug_msgs/msg/_service_log_s.c"
+  "../rosidl_generator_py/autoware_internal_debug_msgs/msg/_string_stamped.py"
+  "../rosidl_generator_py/autoware_internal_debug_msgs/msg/_string_stamped_s.c"
+  "../rosidl_generator_py/autoware_internal_debug_msgs/srv/__init__.py"
+  "../rosidl_generator_py/autoware_internal_debug_msgs/srv/_string.py"
+  "../rosidl_generator_py/autoware_internal_debug_msgs/srv/_string_s.c"
+  "CMakeFiles/autoware_internal_debug_msgs__py"
+)
+
+# Per-language clean rules from dependency scanning.
+foreach(lang )
+  include(CMakeFiles/autoware_internal_debug_msgs__py.dir/cmake_clean_${lang}.cmake OPTIONAL)
+endforeach()

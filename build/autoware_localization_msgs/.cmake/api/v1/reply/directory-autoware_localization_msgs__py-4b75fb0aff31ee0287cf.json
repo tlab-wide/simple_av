@@ -1,0 +1,14 @@
+{
+	"backtraceGraph" : 
+	{
+		"commands" : [],
+		"files" : [],
+		"nodes" : []
+	},
+	"installers" : [],
+	"paths" : 
+	{
+		"build" : "autoware_localization_msgs__py",
+		"source" : "/workspace/simpleav/20251204/src/simple_av/build/autoware_localization_msgs/autoware_localization_msgs__py"
+	}
+}

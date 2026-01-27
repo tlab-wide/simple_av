@@ -1,0 +1,24 @@
+{
+  "package_name": "autoware_perception_msgs",
+  "non_idl_tuples": [
+    "/workspace/simpleav/20251204/src/simple_av/src/messages/autoware_msgs/autoware_perception_msgs:msg/DetectedObject.msg",
+    "/workspace/simpleav/20251204/src/simple_av/src/messages/autoware_msgs/autoware_perception_msgs:msg/DetectedObjectKinematics.msg",
+    "/workspace/simpleav/20251204/src/simple_av/src/messages/autoware_msgs/autoware_perception_msgs:msg/DetectedObjects.msg",
+    "/workspace/simpleav/20251204/src/simple_av/src/messages/autoware_msgs/autoware_perception_msgs:msg/ObjectClassification.msg",
+    "/workspace/simpleav/20251204/src/simple_av/src/messages/autoware_msgs/autoware_perception_msgs:msg/PredictedObject.msg",
+    "/workspace/simpleav/20251204/src/simple_av/src/messages/autoware_msgs/autoware_perception_msgs:msg/PredictedObjectKinematics.msg",
+    "/workspace/simpleav/20251204/src/simple_av/src/messages/autoware_msgs/autoware_perception_msgs:msg/PredictedObjects.msg",
+    "/workspace/simpleav/20251204/src/simple_av/src/messages/autoware_msgs/autoware_perception_msgs:msg/PredictedPath.msg",
+    "/workspace/simpleav/20251204/src/simple_av/src/messages/autoware_msgs/autoware_perception_msgs:msg/PredictedTrafficLightState.msg",
+    "/workspace/simpleav/20251204/src/simple_av/src/messages/autoware_msgs/autoware_perception_msgs:msg/Shape.msg",
+    "/workspace/simpleav/20251204/src/simple_av/src/messages/autoware_msgs/autoware_perception_msgs:msg/TrackedObject.msg",
+    "/workspace/simpleav/20251204/src/simple_av/src/messages/autoware_msgs/autoware_perception_msgs:msg/TrackedObjectKinematics.msg",
+    "/workspace/simpleav/20251204/src/simple_av/src/messages/autoware_msgs/autoware_perception_msgs:msg/TrackedObjects.msg",
+    "/workspace/simpleav/20251204/src/simple_av/src/messages/autoware_msgs/autoware_perception_msgs:msg/TrafficLightElement.msg",
+    "/workspace/simpleav/20251204/src/simple_av/src/messages/autoware_msgs/autoware_perception_msgs:msg/TrafficLightGroup.msg",
+    "/workspace/simpleav/20251204/src/simple_av/src/messages/autoware_msgs/autoware_perception_msgs:msg/TrafficLightGroupArray.msg",
+    "/workspace/simpleav/20251204/src/simple_av/src/messages/autoware_msgs/autoware_perception_msgs:msg/TrafficSignalElement.msg",
+    "/workspace/simpleav/20251204/src/simple_av/src/messages/autoware_msgs/autoware_perception_msgs:msg/TrafficSignal.msg",
+    "/workspace/simpleav/20251204/src/simple_av/src/messages/autoware_msgs/autoware_perception_msgs:msg/TrafficSignalArray.msg"
+  ]
+}

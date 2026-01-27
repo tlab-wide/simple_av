@@ -1,0 +1,14 @@
+{
+	"backtraceGraph" : 
+	{
+		"commands" : [],
+		"files" : [],
+		"nodes" : []
+	},
+	"installers" : [],
+	"paths" : 
+	{
+		"build" : "tier4_external_api_msgs__py",
+		"source" : "/workspace/simpleav/20251204/src/simple_av/build/tier4_external_api_msgs/tier4_external_api_msgs__py"
+	}
+}

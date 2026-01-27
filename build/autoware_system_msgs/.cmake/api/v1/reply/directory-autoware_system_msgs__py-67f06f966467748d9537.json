@@ -1,0 +1,14 @@
+{
+	"backtraceGraph" : 
+	{
+		"commands" : [],
+		"files" : [],
+		"nodes" : []
+	},
+	"installers" : [],
+	"paths" : 
+	{
+		"build" : "autoware_system_msgs__py",
+		"source" : "/workspace/simpleav/20251204/src/simple_av/build/autoware_system_msgs/autoware_system_msgs__py"
+	}
+}

@@ -1,0 +1,45 @@
+// generated from rosidl_adapter/resource/msg.idl.em
+// with input from autoware_map_msgs/msg/MapProjectorInfo.msg
+// generated code does not contain a copyright notice
+
+#include "geographic_msgs/msg/GeoPoint.idl"
+
+module autoware_map_msgs {
+  module msg {
+    module MapProjectorInfo_Constants {
+      const string LOCAL = "Local";
+      const string LOCAL_CARTESIAN_UTM = "LocalCartesianUTM";
+      const string LOCAL_CARTESIAN = "LocalCartesian";
+      const string MGRS = "MGRS";
+      const string TRANSVERSE_MERCATOR = "TransverseMercator";
+      @verbatim (language="comment", text=
+        "Vertical datum")
+      const string WGS84 = "WGS84";
+      const string EGM2008 = "EGM2008";
+    };
+    @verbatim (language="comment", text=
+      "Projector type")
+    struct MapProjectorInfo {
+      string projector_type;
+
+      string vertical_datum;
+
+      @verbatim (language="comment", text=
+        "Used for MGRS map")
+      string mgrs_grid;
+
+      @verbatim (language="comment", text=
+        "Used for some map projection types" "\n"
+        "Altitude is not used, so there is no need to specify it." "\n"
+        "Even if altitude is specified, it will be overwritten with 0.0.")
+      geographic_msgs::msg::GeoPoint map_origin;
+
+      @verbatim (language="comment", text=
+        "Scale factor of the map" "\n"
+        "Used for TransverseMercator map (default: 0.9996)" "\n"
+        "In the case of LocalCartesianUTM and MGRS, it will be overwritten with 0.9996." "\n"
+        "In the case of Local and LocalCartesian, it will be overwritten with 1.0.")
+      float scale_factor;
+    };
+  };
+};

@@ -52,7 +52,7 @@ class SensorTFPublisher(Node):
         # Orientation = vehicle orientation (no extra rotations needed)
         t.transform.rotation = vehicle_pose.orientation  
 
-        self.get_logger().info(
+        self.get_logger().debug(
             f"tf publisher\n"
             f"calibrations: {self.sensor_kit_base_link['x']}, {self.sensor_kit_base_link['y']}, {self.sensor_kit_base_link['z']}\n"
             f"vehicle pose: {vehicle_pose.position.x}, {vehicle_pose.position.y}, {vehicle_pose.position.z}\n"

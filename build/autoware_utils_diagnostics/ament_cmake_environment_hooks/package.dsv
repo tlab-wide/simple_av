@@ -1,0 +1,4 @@
+source;share/autoware_utils_diagnostics/local_setup.bash
+source;share/autoware_utils_diagnostics/local_setup.dsv
+source;share/autoware_utils_diagnostics/local_setup.sh
+source;share/autoware_utils_diagnostics/local_setup.zsh

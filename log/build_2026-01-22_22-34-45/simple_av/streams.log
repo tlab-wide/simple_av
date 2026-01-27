@@ -1,0 +1,34 @@
+[2.664s] Invoking command in '/workspace/simpleav/20251204/src/simple_av/build/simple_av': PYTHONPATH=/workspace/simpleav/20251204/src/simple_av/build/simple_av/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/workspace/simpleav/20251204/src/simple_av/install/simple_av/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py develop --editable --build-directory /workspace/simpleav/20251204/src/simple_av/build/simple_av/build --no-deps symlink_data
+[3.277s] running develop
+[3.367s] running egg_info
+[3.367s] creating simple_av.egg-info
+[3.367s] writing simple_av.egg-info/PKG-INFO
+[3.367s] writing dependency_links to simple_av.egg-info/dependency_links.txt
+[3.367s] writing entry points to simple_av.egg-info/entry_points.txt
+[3.368s] writing requirements to simple_av.egg-info/requires.txt
+[3.368s] writing top-level names to simple_av.egg-info/top_level.txt
+[3.368s] writing manifest file 'simple_av.egg-info/SOURCES.txt'
+[3.370s] reading manifest file 'simple_av.egg-info/SOURCES.txt'
+[3.371s] writing manifest file 'simple_av.egg-info/SOURCES.txt'
+[3.429s] running build_ext
+[3.429s] Creating /workspace/simpleav/20251204/src/simple_av/install/simple_av/lib/python3.10/site-packages/simple-av.egg-link (link to .)
+[3.430s] Installing rviz_intersection_layout_visualizer script to /workspace/simpleav/20251204/src/simple_av/install/simple_av/lib/simple_av
+[3.430s] Installing rviz_lanelet_map_publisher script to /workspace/simpleav/20251204/src/simple_av/install/simple_av/lib/simple_av
+[3.431s] Installing rviz_path_monitor script to /workspace/simpleav/20251204/src/simple_av/install/simple_av/lib/simple_av
+[3.431s] Installing rviz_point_visualizer script to /workspace/simpleav/20251204/src/simple_av/install/simple_av/lib/simple_av
+[3.431s] Installing rviz_status_publisher script to /workspace/simpleav/20251204/src/simple_av/install/simple_av/lib/simple_av
+[3.431s] Installing rviz_waypoint_speed_visualizer script to /workspace/simpleav/20251204/src/simple_av/install/simple_av/lib/simple_av
+[3.431s] Installing tf_publisher script to /workspace/simpleav/20251204/src/simple_av/install/simple_av/lib/simple_av
+[3.431s] 
+[3.431s] Installed /workspace/simpleav/20251204/src/simple_av/build/simple_av
+[3.431s] running symlink_data
+[3.431s] creating /workspace/simpleav/20251204/src/simple_av/install/simple_av/share/ament_index
+[3.431s] creating /workspace/simpleav/20251204/src/simple_av/install/simple_av/share/ament_index/resource_index
+[3.432s] creating /workspace/simpleav/20251204/src/simple_av/install/simple_av/share/ament_index/resource_index/packages
+[3.432s] symbolically linking /workspace/simpleav/20251204/src/simple_av/build/simple_av/resource/simple_av -> /workspace/simpleav/20251204/src/simple_av/install/simple_av/share/ament_index/resource_index/packages
+[3.432s] symbolically linking /workspace/simpleav/20251204/src/simple_av/build/simple_av/package.xml -> /workspace/simpleav/20251204/src/simple_av/install/simple_av/share/simple_av
+[3.432s] creating /workspace/simpleav/20251204/src/simple_av/install/simple_av/share/simple_av/launch
+[3.432s] symbolically linking /workspace/simpleav/20251204/src/simple_av/build/simple_av/launch/launch_all.py -> /workspace/simpleav/20251204/src/simple_av/install/simple_av/share/simple_av/launch
+[3.432s] creating /workspace/simpleav/20251204/src/simple_av/install/simple_av/share/simple_av/rviz
+[3.432s] symbolically linking /workspace/simpleav/20251204/src/simple_av/build/simple_av/rviz/simple_av.rviz -> /workspace/simpleav/20251204/src/simple_av/install/simple_av/share/simple_av/rviz
+[3.473s] Invoked command in '/workspace/simpleav/20251204/src/simple_av/build/simple_av' returned '0': PYTHONPATH=/workspace/simpleav/20251204/src/simple_av/build/simple_av/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/workspace/simpleav/20251204/src/simple_av/install/simple_av/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py develop --editable --build-directory /workspace/simpleav/20251204/src/simple_av/build/simple_av/build --no-deps symlink_data

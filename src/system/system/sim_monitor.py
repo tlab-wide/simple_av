@@ -61,15 +61,23 @@ class SimulationMonitor(Node):
             self.sim_clock_rate = (sim_time - self.sim_snap_shot)/(system_time - self.system_snap_shot)
             if self.sim_clock_rate > 1: 
                 self.sim_clock_rate = 1.0
-        self.get_logger().info(f"sim_clock_rate: {self.sim_clock_rate}")
+        self.get_logger().debug(f"sim_clock_rate: {self.sim_clock_rate}")
 
         '''
-        print("-----------")
-        print(f"awsim clock: {sim_time} time passed = {sim_time - self.last_sim_t}")
-        print(f"system time: {system_time} time passed = {system_time - self.last_system_t}")
-        print(f"t1         : {t1} time passed = {t1 - self.last_t1}")
-        print(f"awsim/system time {(t1 - self.last_t1)/(system_time - self.last_system_t)}")
-        print(f"system/awsim time {(system_time - self.last_system_t)/(t1 - self.last_t1)}")
+        self.get_logger().debug("-----------")
+        self.get_logger().debug(
+            f"awsim clock: {sim_time} time passed = {sim_time - self.last_sim_t}"
+        )
+        self.get_logger().debug(
+            f"system time: {system_time} time passed = {system_time - self.last_system_t}"
+        )
+        self.get_logger().debug(f"t1         : {t1} time passed = {t1 - self.last_t1}")
+        self.get_logger().debug(
+            f"awsim/system time {(t1 - self.last_t1)/(system_time - self.last_system_t)}"
+        )
+        self.get_logger().debug(
+            f"system/awsim time {(system_time - self.last_system_t)/(t1 - self.last_t1)}"
+        )
         self.last_system_t = system_time
         self.last_sim_t = sim_time
         self.last_t1 = t1

@@ -1,0 +1,233 @@
+{
+	"configurations" : 
+	[
+		{
+			"directories" : 
+			[
+				{
+					"build" : ".",
+					"childIndexes" : 
+					[
+						1
+					],
+					"hasInstallRule" : true,
+					"jsonFile" : "directory-.-79e6bd5f64765f4dcac7.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.12"
+					},
+					"projectIndex" : 0,
+					"source" : ".",
+					"targetIndexes" : 
+					[
+						0,
+						1,
+						2,
+						3,
+						5,
+						6,
+						7,
+						8,
+						9,
+						10,
+						11,
+						12,
+						13,
+						14,
+						15,
+						16,
+						17
+					]
+				},
+				{
+					"build" : "autoware_sensing_msgs__py",
+					"jsonFile" : "directory-autoware_sensing_msgs__py-cedc419867ef0ab1f407.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.12"
+					},
+					"parentIndex" : 0,
+					"projectIndex" : 0,
+					"source" : "/workspace/simpleav/20251204/src/simple_av/build/autoware_sensing_msgs/autoware_sensing_msgs__py",
+					"targetIndexes" : 
+					[
+						4
+					]
+				}
+			],
+			"name" : "",
+			"projects" : 
+			[
+				{
+					"directoryIndexes" : 
+					[
+						0,
+						1
+					],
+					"name" : "autoware_sensing_msgs",
+					"targetIndexes" : 
+					[
+						0,
+						1,
+						2,
+						3,
+						4,
+						5,
+						6,
+						7,
+						8,
+						9,
+						10,
+						11,
+						12,
+						13,
+						14,
+						15,
+						16,
+						17
+					]
+				}
+			],
+			"targets" : 
+			[
+				{
+					"directoryIndex" : 0,
+					"id" : "ament_cmake_python_build_autoware_sensing_msgs_egg::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-ament_cmake_python_build_autoware_sensing_msgs_egg-fcbd3a618b054bd48e7e.json",
+					"name" : "ament_cmake_python_build_autoware_sensing_msgs_egg",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "ament_cmake_python_symlink_autoware_sensing_msgs::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-ament_cmake_python_symlink_autoware_sensing_msgs-f892495be68f0f6b36d5.json",
+					"name" : "ament_cmake_python_symlink_autoware_sensing_msgs",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "autoware_sensing_msgs::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-autoware_sensing_msgs-b8bf4ceec3658cdc31fe.json",
+					"name" : "autoware_sensing_msgs",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "autoware_sensing_msgs__cpp::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-autoware_sensing_msgs__cpp-236e16ba544af8cb2eb5.json",
+					"name" : "autoware_sensing_msgs__cpp",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "autoware_sensing_msgs__py::@0261040d0cd972513145",
+					"jsonFile" : "target-autoware_sensing_msgs__py-882a5a754b7a1b13b975.json",
+					"name" : "autoware_sensing_msgs__py",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "autoware_sensing_msgs__rosidl_generator_c::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-autoware_sensing_msgs__rosidl_generator_c-85d361f7a214fdc06806.json",
+					"name" : "autoware_sensing_msgs__rosidl_generator_c",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "autoware_sensing_msgs__rosidl_generator_py::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-autoware_sensing_msgs__rosidl_generator_py-4e29564153ce8751d3e2.json",
+					"name" : "autoware_sensing_msgs__rosidl_generator_py",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "autoware_sensing_msgs__rosidl_typesupport_c::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-autoware_sensing_msgs__rosidl_typesupport_c-fcfe86a964d27cb6f787.json",
+					"name" : "autoware_sensing_msgs__rosidl_typesupport_c",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "autoware_sensing_msgs__rosidl_typesupport_c__pyext::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-autoware_sensing_msgs__rosidl_typesupport_c__pyext-97af624cb24597c07b06.json",
+					"name" : "autoware_sensing_msgs__rosidl_typesupport_c__pyext",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "autoware_sensing_msgs__rosidl_typesupport_cpp::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-autoware_sensing_msgs__rosidl_typesupport_cpp-7ebe1ff179924696cf9b.json",
+					"name" : "autoware_sensing_msgs__rosidl_typesupport_cpp",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "autoware_sensing_msgs__rosidl_typesupport_fastrtps_c::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-autoware_sensing_msgs__rosidl_typesupport_fastrtps_c-173e15c46834a9a8a4dd.json",
+					"name" : "autoware_sensing_msgs__rosidl_typesupport_fastrtps_c",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "autoware_sensing_msgs__rosidl_typesupport_fastrtps_c__pyext::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-autoware_sensing_msgs__rosidl_typesupport_fastrtps_c__pyext-f3a43c56ec3ee84c803e.json",
+					"name" : "autoware_sensing_msgs__rosidl_typesupport_fastrtps_c__pyext",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "autoware_sensing_msgs__rosidl_typesupport_fastrtps_cpp::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-autoware_sensing_msgs__rosidl_typesupport_fastrtps_cpp-c0719a2098b0acea1a58.json",
+					"name" : "autoware_sensing_msgs__rosidl_typesupport_fastrtps_cpp",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "autoware_sensing_msgs__rosidl_typesupport_introspection_c::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-autoware_sensing_msgs__rosidl_typesupport_introspection_c-c6a71ff940bbe22bde2e.json",
+					"name" : "autoware_sensing_msgs__rosidl_typesupport_introspection_c",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "autoware_sensing_msgs__rosidl_typesupport_introspection_c__pyext::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-autoware_sensing_msgs__rosidl_typesupport_introspection_c__pyext-b7d8333caf6b5f169866.json",
+					"name" : "autoware_sensing_msgs__rosidl_typesupport_introspection_c__pyext",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "autoware_sensing_msgs__rosidl_typesupport_introspection_cpp::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-autoware_sensing_msgs__rosidl_typesupport_introspection_cpp-2ccdd8630739026e5ceb.json",
+					"name" : "autoware_sensing_msgs__rosidl_typesupport_introspection_cpp",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "autoware_sensing_msgs_uninstall::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-autoware_sensing_msgs_uninstall-2584ef8672228d4d7fbf.json",
+					"name" : "autoware_sensing_msgs_uninstall",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "uninstall::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-uninstall-8560fd2fa8f68e4cf05d.json",
+					"name" : "uninstall",
+					"projectIndex" : 0
+				}
+			]
+		}
+	],
+	"kind" : "codemodel",
+	"paths" : 
+	{
+		"build" : "/workspace/simpleav/20251204/src/simple_av/build/autoware_sensing_msgs",
+		"source" : "/workspace/simpleav/20251204/src/simple_av/src/messages/autoware_msgs/autoware_sensing_msgs"
+	},
+	"version" : 
+	{
+		"major" : 2,
+		"minor" : 3
+	}
+}

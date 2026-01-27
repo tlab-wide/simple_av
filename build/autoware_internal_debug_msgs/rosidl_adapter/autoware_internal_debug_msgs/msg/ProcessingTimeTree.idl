@@ -1,0 +1,15 @@
+// generated from rosidl_adapter/resource/msg.idl.em
+// with input from autoware_internal_debug_msgs/msg/ProcessingTimeTree.msg
+// generated code does not contain a copyright notice
+
+#include "autoware_internal_debug_msgs/msg/ProcessingTimeNode.idl"
+
+module autoware_internal_debug_msgs {
+  module msg {
+    @verbatim (language="comment", text=
+      "Array of all time nodes")
+    struct ProcessingTimeTree {
+      sequence<autoware_internal_debug_msgs::msg::ProcessingTimeNode> nodes;
+    };
+  };
+};

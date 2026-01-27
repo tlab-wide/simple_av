@@ -7,7 +7,7 @@ import json
 import yaml
 from ament_index_python.packages import get_package_share_directory
 from geometry_msgs.msg import PoseStamped, Point
-from std_msgs.msg import String
+from std_msgs.msg import String, ColorRGBA
 import math
 from collections import deque
 from simple_av_msgs.msg import TrafficSignalsArray, DetectedObjectsArray
@@ -19,6 +19,7 @@ from scipy.spatial.transform import Rotation as R
 from autoware_vehicle_msgs.msg import VelocityReport
 from rclpy.qos import QoSProfile, QoSHistoryPolicy, QoSReliabilityPolicy, QoSDurabilityPolicy
 from autoware_perception_msgs.msg import TrafficLightGroup, TrafficLightElement
+from visualization_msgs.msg import Marker, MarkerArray
 
 class BehaviorMotionPlanning(Node):
     def __init__(self):
@@ -125,6 +126,16 @@ class BehaviorMotionPlanning(Node):
             "simple_av/planning/collision_prediction_info",
             10
         )
+        self.range_marker_pub = self.create_publisher(
+            MarkerArray,
+            "simple_av/visualization/collision_ranges",
+            10
+        )
+        self.prediction_marker_pub = self.create_publisher(
+            MarkerArray,
+            "simple_av/visualization/collision_prediction_markers",
+            10
+        )
 
         #Path
         self.isPathPlanned = False
@@ -138,6 +149,7 @@ class BehaviorMotionPlanning(Node):
         self.reaction_range = self.base_speed * self.prediction_reaction_range_C + self.prediction_reaction_range_B # meters
         self.detection_range = self.base_speed * self.prediction_detection_range_C + self.prediction_detection_range_B # meters
         self.current_speed = 0.0
+        self.latest_collision_point = None
         self.previous_speed_slidingWindow = deque(maxlen=8) # for storing 10 recent previous speed values
         self.previous_speed_slidingWindow.append(0.0)  # initializing the queue
         self.status = String() # Cruise, Decelerate, PrepareToStop, Turn
@@ -338,7 +350,7 @@ class BehaviorMotionPlanning(Node):
         msg.elements.append(element)
 
         self.pub.publish(msg)
-        self.get_logger().info("Published RViZ traffic light status")
+        self.get_logger().debug("Published RViZ traffic light status")
 
     def manage_traffic_lights(self, current_lane_obj):
         v2i_traffic_signals_id = list(self.trafficSignal.v2i_traffic_signals_id)
@@ -364,7 +376,7 @@ class BehaviorMotionPlanning(Node):
 
     def get_detected_objects_in_front(self):
         if not self.detectedObjects:
-            self.get_logger().warning("No Perception / no object detected!")
+            self.get_logger().debug("no object detected!")
             return None
 
         objects_ahead = []
@@ -376,7 +388,7 @@ class BehaviorMotionPlanning(Node):
         
     def get_objects_in_range(self, objects_ahead, filter_dist):
         if not objects_ahead:
-            print("No Object ahead")
+            self.get_logger().debug("No Object ahead")
             return None            
         objects_in_range = []
         for obj in objects_ahead:
@@ -503,7 +515,7 @@ class BehaviorMotionPlanning(Node):
 
         # Handle the vertical lines (infinite slope)
         if m1 == m2:
-            self.get_logger().error("Parallel lines")
+            self.get_logger().debug("Parallel lines")
             return None  # Parallel vertical lines
         elif m1 == float('inf'):  # Line 1 is vertical
             x = x1
@@ -556,7 +568,7 @@ class BehaviorMotionPlanning(Node):
         t_object = self.get_time_to_collison(object_pose, collison_point, object_speed)
 
         if abs(t_vehicle - t_object) <= self.reaction_time_threshold:
-            self.get_logger().warning(f"CP - Vehciel mooving - Potential collision detected! Time difference: {abs(t_vehicle - t_object):.2f} seconds.")
+            self.get_logger().debug(f"CP - Vehciel moving - Potential collision detected! Time difference: {abs(t_vehicle - t_object):.2f} seconds.")
             return True
         return False
     
@@ -567,7 +579,7 @@ class BehaviorMotionPlanning(Node):
             saftey_distance = 4.0
         dist_to_waypoint = self.calculate_distance(event_waypoint, vehicle_pose)
         if dist_to_waypoint <= saftey_distance: # Stop the vehicle if distance to the object is less that safety distance
-            self.get_logger().warning("CP - INSTANT STOP!!")
+            self.get_logger().debug("CP - INSTANT STOP!!")
             return (vehicle_pose, event_waypoint)
 
         stop_point_index = self.path_of_waypoints.index(event_waypoint) - int(saftey_distance/self.densify_interval)
@@ -581,9 +593,9 @@ class BehaviorMotionPlanning(Node):
         closest_object_info = self.find_nearest_obstacle_on_path(objects_in_range, current_closest_waypoint_to_vehicle_index, vehicle_pose)
         # return False, None, 'Cruise'
         if not closest_object_info:
-            self.get_logger().info("No Immediate danger")
+            self.get_logger().debug("No Immediate danger")
             return None
-        self.get_logger().info("Imediate threat. Objects ahead in danger zone")
+        self.get_logger().debug("Imediate threat. Objects ahead in danger zone")
         return self.get_stop_point_by_safety_distance(closest_object_info['waypoint'], vehicle_pose, 'on_path')
     
     def publish_collision_info(self, abs_pos, ttc, label, velocity):
@@ -609,6 +621,91 @@ class BehaviorMotionPlanning(Node):
         msg.collision_detected = False
 
         self.collision_info_pub.publish(msg)
+
+    def publish_range_markers(self, vehicle_pose):
+        marker_array = MarkerArray()
+        clear_marker = Marker()
+        clear_marker.action = Marker.DELETEALL
+        marker_array.markers.append(clear_marker)
+
+        now = self.get_clock().now().to_msg()
+        ranges = [
+            ("on_path_detection", self.on_path_detection_range, ColorRGBA(r=1.0, g=0.6, b=0.0, a=0.9)),
+            ("reaction_range", self.reaction_range, ColorRGBA(r=1.0, g=1.0, b=0.0, a=0.9)),
+            ("detection_range", self.detection_range, ColorRGBA(r=0.2, g=0.6, b=1.0, a=0.9)),
+        ]
+
+        for idx, (ns, radius, color) in enumerate(ranges):
+            marker = Marker()
+            marker.header.frame_id = "map"
+            marker.header.stamp = now
+            marker.ns = ns
+            marker.id = idx
+            marker.type = Marker.LINE_STRIP
+            marker.action = Marker.ADD
+            marker.pose.orientation.w = 1.0
+            marker.scale.x = 0.2
+            marker.color = color
+
+            segments = 36
+            for i in range(segments + 1):
+                angle = 2.0 * math.pi * i / segments
+                x = vehicle_pose.x + radius * math.cos(angle)
+                y = vehicle_pose.y + radius * math.sin(angle)
+                marker.points.append(Point(x=x, y=y, z=vehicle_pose.z))
+
+            marker_array.markers.append(marker)
+
+        self.range_marker_pub.publish(marker_array)
+
+    def publish_prediction_markers(self, objects_info, collision_point):
+        marker_array = MarkerArray()
+        clear_marker = Marker()
+        clear_marker.action = Marker.DELETEALL
+        marker_array.markers.append(clear_marker)
+
+        now = self.get_clock().now().to_msg()
+        line_id = 0
+        for abs_pos, forward_vec in objects_info:
+            marker = Marker()
+            marker.header.frame_id = "map"
+            marker.header.stamp = now
+            marker.ns = "predicted_trajectories"
+            marker.id = line_id
+            line_id += 1
+            marker.type = Marker.LINE_STRIP
+            marker.action = Marker.ADD
+            marker.pose.orientation.w = 1.0
+            marker.scale.x = 0.15
+            marker.color = ColorRGBA(r=0.2, g=1.0, b=0.6, a=0.8)
+
+            end_x = abs_pos.x + forward_vec[0] * self.reaction_range
+            end_y = abs_pos.y + forward_vec[1] * self.reaction_range
+            marker.points.append(Point(x=abs_pos.x, y=abs_pos.y, z=abs_pos.z))
+            marker.points.append(Point(x=end_x, y=end_y, z=abs_pos.z))
+            marker_array.markers.append(marker)
+
+        if collision_point is not None:
+            marker = Marker()
+            marker.header.frame_id = "map"
+            marker.header.stamp = now
+            marker.ns = "predicted_collision"
+            marker.id = line_id
+            marker.type = Marker.SPHERE
+            marker.action = Marker.ADD
+            marker.pose.position = Point(
+                x=collision_point.x,
+                y=collision_point.y,
+                z=collision_point.z
+            )
+            marker.pose.orientation.w = 1.0
+            marker.scale.x = 1.0
+            marker.scale.y = 1.0
+            marker.scale.z = 1.0
+            marker.color = ColorRGBA(r=1.0, g=0.1, b=0.1, a=0.9)
+            marker_array.markers.append(marker)
+
+        self.prediction_marker_pub.publish(marker_array)
 
 
     def predict_nearest_collision(self, objects_ahead, current_closest_waypoint_to_vehicle_index, vehicle_pose):
@@ -636,12 +733,15 @@ class BehaviorMotionPlanning(Node):
             self.get_object_absolute_position(self.pose.pose.orientation, vehicle_pose, obj.position)
             for obj in objects_in_range
         ]
+        objects_forward_vectors = [
+            self.get_forward_vector(obj.orientation) for obj in objects_in_range
+        ]
 
         for i in range(len(objects_in_range)):
             obj = objects_in_range[i]
             for j in range(1, len(waypoints) - 1):
 
-                forward_vector = self.get_forward_vector(obj.orientation)
+                forward_vector = objects_forward_vectors[i]
                 collide_point = self.find_intersection_point(objects_absolute_positions[i],forward_vector,waypoints[j],waypoints[j+1])
 
                 if collide_point:
@@ -655,7 +755,7 @@ class BehaviorMotionPlanning(Node):
                         ttc_candidates.append((ttc_diff, objects_absolute_positions[i], obj.label, obj.velocity))
 
                         if self.will_collide_on_path_in_threshold(obj.label,obj.velocity,objects_absolute_positions[i],vehicle_pose,collide_point,waypoints[j]):
-                            self.get_logger().warning('P - Collide predicted!!!')
+                            self.get_logger().debug('P - Collide predicted!!!')
                             stop_point, event_waypoint = self.get_stop_point_by_safety_distance(waypoints[j], vehicle_pose, 'prediction')
 
                             # compute distance to vehicle for nearest selection
@@ -667,7 +767,8 @@ class BehaviorMotionPlanning(Node):
                                 ttc_diff,
                                 objects_absolute_positions[i],
                                 obj.label,
-                                obj.velocity
+                                obj.velocity,
+                                collide_point
                             ))
 
                             break
@@ -682,14 +783,18 @@ class BehaviorMotionPlanning(Node):
                 # No TTC objects → publish empty message
                 self.publish_empty_collision_info()
 
+            objects_info = list(zip(objects_absolute_positions, objects_forward_vectors))
+            self.publish_prediction_markers(objects_info, None)
             return None
 
         # Pick nearest collision stop point
         nearest = min(candidates, key=lambda x: x[2])  # x[2] = distance
-        stop_point, event_waypoint, distance, best_ttc, abs_pos, label, velocity = nearest
+        stop_point, event_waypoint, distance, best_ttc, abs_pos, label, velocity, collision_point = nearest
 
         # Publish TTC information of the *nearest collision object*
         self.publish_collision_info(abs_pos, best_ttc, label, velocity)
+        objects_info = list(zip(objects_absolute_positions, objects_forward_vectors))
+        self.publish_prediction_markers(objects_info, collision_point)
 
         return (stop_point, event_waypoint)
 
@@ -701,7 +806,9 @@ class BehaviorMotionPlanning(Node):
         """
 
         if self.use_RSU_for_trafficlight:
-            print("DEBUG, collision prediction: using RSU for traffic light", self.use_RSU_for_trafficlight)
+            self.get_logger().debug(
+                f"collision prediction: using RSU for traffic light {self.use_RSU_for_trafficlight}"
+            )
 
             if self.intersection_awareness_intersection_name is not None:
                 if self.intersection_awareness_intersection_name == "1":
@@ -725,17 +832,24 @@ class BehaviorMotionPlanning(Node):
                     current_lane_traffic_light_color = self.get_traffic_light_color_by_id(current_lane_traffic_light_id)
                     light_166922 = self.get_traffic_light_color_by_id(166922)
                     light_166940 = self.get_traffic_light_color_by_id(166940)
-                    print("DEBUG - colliision prediction in intersection #2")
-                    print(f"DEBUG, 165626: {current_lane_traffic_light_color}, 166922: {light_166922},  166940: {light_166940}")
+                    self.get_logger().debug("collision prediction in intersection #2")
+                    self.get_logger().debug(
+                        "165626: "
+                        f"{current_lane_traffic_light_color}, "
+                        f"166922: {light_166922}, "
+                        f"166940: {light_166940}"
+                    )
 
                     if current_lane_traffic_light_color in [3]: # if the ego vehicle traffic light is green, other traffic lights are red.
-                        print("DEBUG - light_165626 is green")
+                        self.get_logger().debug("light_165626 is green")
                         pedestrians = self.get_detected_pedestrians(objects_ahead)
-                        print(f"DEBUG - number of detected pedestrians: {len(pedestrians)}")
+                        self.get_logger().debug(
+                            f"number of detected pedestrians: {len(pedestrians)}"
+                        )
                         return self.predict_nearest_collision(pedestrians, current_closest_waypoint_to_vehicle_index, vehicle_pose)
                         
         # Default: always try to predict collisions
-        print("DEBUG, NORMAL PREDICT")
+        self.get_logger().debug("NORMAL PREDICT")
         return self.predict_nearest_collision(objects_ahead, current_closest_waypoint_to_vehicle_index, vehicle_pose)
 
 
@@ -847,7 +961,7 @@ class BehaviorMotionPlanning(Node):
 
         # Traffic light detection
         trafficLightTask, traffic_light_stopPoint, current_lane_traffic_light_id = self.manage_traffic_lights(current_lane_obj)
-        self.get_logger().info(f"DEBUG_trafficlight - trafficLightTask: {trafficLightTask} - traffic_light_stopPoint: {traffic_light_stopPoint}")
+        self.get_logger().debug(f"DEBUG_trafficlight - trafficLightTask: {trafficLightTask} - traffic_light_stopPoint: {traffic_light_stopPoint}")
         # Collision avoidance
         objects_ahead = self.get_detected_objects_in_front()
         on_path_collision_avoidance_result = self.on_path_collision_avoidance(objects_ahead, current_closest_waypoint_to_vehicle_index, vehicle_pose)
@@ -858,13 +972,13 @@ class BehaviorMotionPlanning(Node):
         self.stop_reason.data = 'No stop'
 
         if self.isTurnDetected:
-            self.get_logger().info("Turn detected")
+            self.get_logger().debug("Turn detected")
             self.status.data = 'Turn'
 
         if closest_event is not None:
 
             if closest_event['type'] in ('on_path', 'collision_prediction'):
-                self.get_logger().info('Collison Avoidance or prediction')
+                self.get_logger().debug('Collison Avoidance or prediction')
                 self.status.data = 'Decelerate'
                 self.stop_reason.data = (
                     'Collision Avoidance' if closest_event['type'] == 'on_path'
@@ -872,12 +986,12 @@ class BehaviorMotionPlanning(Node):
                 )
 
             elif closest_event['type'] == 'traffic_light':
-                self.get_logger().info('traffic_light')
+                self.get_logger().debug('traffic_light')
                 self.status.data = trafficLightTask
                 self.stop_reason.data = trafficLightTask
         
         if self.isEndOfPath:
-            self.get_logger().info("Approaching destination, decelerating.")
+            self.get_logger().debug("Approaching destination, decelerating.")
             self.status.data = 'Park'
             self.stop_reason.data = 'Park'
 
@@ -896,13 +1010,12 @@ class BehaviorMotionPlanning(Node):
             return None
         
         if self.path and not self.isPathPlanned:
-            self.get_logger().warning("Path has successfully initialized from Mission Planner")
+            self.get_logger().info("Path has successfully initialized from Mission Planner")
             self.destination = self.path[-1].waypoint
             for i, waypoint in enumerate(self.path):
                 self.path_of_waypoints.append(waypoint.waypoint)
             self.route = self.path_as_lanes[:]
             self.current_lane_index = 0
-
             self.isPathPlanned = True
         
         if not self.path :
@@ -921,6 +1034,7 @@ class BehaviorMotionPlanning(Node):
             self.isPathPlanned = False
             self.route = self.path_as_lanes[:]
             self.current_lane_index = 0
+            self.reset = False
             return
 
         search_area, search_area_as_lanes = self.create_search_area()
@@ -928,12 +1042,13 @@ class BehaviorMotionPlanning(Node):
         self.update_observation_range(self.current_speed, self.current_speed < self.previous_speed_slidingWindow[0])
         vehicle_pose = self.pose.pose.position
 
+        self.publish_range_markers(vehicle_pose)
         current_closest_waypoint_to_vehicle_index = self.find_closest_waypoint_to_vehicle(vehicle_pose, search_area)
         stop_point = self.motion_planner(current_closest_waypoint_to_vehicle_index)
         
         self.publish_motion_planning_msgs(stop_point) # publishing
         
-        self.get_logger().info(
+        self.get_logger().debug(
             f'behavior motion planning\n'
             f'distance to stop point: {self.calculate_distance(vehicle_pose, stop_point)}\n'
             f'status: {self.status.data}\n'
@@ -947,13 +1062,13 @@ def main(args=None):
     node = BehaviorMotionPlanning()
     try:
         while rclpy.ok() and not node.node_shut:
-            rclpy.spin_once(node, timeout_sec=None)# Set timeout to 0 to avoid delay
+            rclpy.spin_once(node, timeout_sec=0.1)# Set timeout to 0 to avoid delay
             node.motion_planning()
+    except KeyboardInterrupt:
+        pass
     finally:
         node.destroy_node()
         rclpy.shutdown()
-    node.destroy_node()
-    rclpy.shutdown()
 
 if __name__ == '__main__':
     main()

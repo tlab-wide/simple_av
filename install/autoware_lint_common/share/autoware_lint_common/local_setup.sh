@@ -1,0 +1,1 @@
+/workspace/simpleav/20251204/src/simple_av/build/autoware_lint_common/ament_cmake_environment_hooks/local_setup.sh

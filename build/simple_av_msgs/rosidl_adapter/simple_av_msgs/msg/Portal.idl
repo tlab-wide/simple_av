@@ -1,0 +1,16 @@
+// generated from rosidl_adapter/resource/msg.idl.em
+// with input from simple_av_msgs/msg/Portal.msg
+// generated code does not contain a copyright notice
+
+
+module simple_av_msgs {
+  module msg {
+    struct Portal {
+      boolean reset;
+
+      int32 round_number;
+
+      boolean finished;
+    };
+  };
+};

@@ -106,12 +106,12 @@ class MissionPlanner(Node):
         self.mission_plan_publisher = self.create_publisher(PlanningInternalMissionPlanMsg, 'simple_av/planning/mission_plan', qos_profile)
 
         #Path planning
-        self.isPathPlanned = False  # Flag to check if the path has been planned
+        # self.isPathPlanned = False  # Flag to check if the path has been planned
         self.path_as_lanes = []  # List of lanes from start lane to destination
         self.path = []  # List of waypoints in order of path_as_lanes
         self.curves = []
         self.initial_lane = None
-        self.isFirstRequest = True
+        # self.isFirstRequest = True
         self.search_depth = 5
 
         self.densify_interval = 2.0 # meters / Distance between each two consecutive waypoints on a lane
@@ -222,15 +222,18 @@ class MissionPlanner(Node):
             self.path_as_lanes.clear()
 
         if self.location:
-            self.get_logger().info("path planning")
             self.start_lanelet = self.initial_lane
+            self.get_logger().info(
+                f"Conducting mission plan with start_lanelet={self.start_lanelet} "
+                f"dest_lanelet={self.dest_lanelet}"
+            )
             self.bfs(self.start_lanelet, self.dest_lanelet) # Creates the path
             if self.path and self.path_as_lanes:
-                self.isPathPlanned = True
+                # self.isPathPlanned = True
                 curve_detector = CurveDetector2D(self.path)
                 self.curves = curve_detector.detect_curves()
         else:
-            self.get_logger().warning("No Location data")
+            self.get_logger().warning("No Location data to process mission planning")
             
     def publisher(self):
         mission_msg = PlanningInternalMissionPlanMsg()
@@ -247,18 +250,24 @@ class MissionPlanner(Node):
         self.mission_plan_publisher.publish(mission_msg)
 
     def handle_mission_plan_request(self, request, response):
-        if self.isFirstRequest:
-            self.get_logger().info("Received mission planning request.")
-            self.isFirstRequest = False
+        self.get_logger().info("Received mission planning request.")
+        if self.location:
             self.initial_lane = self.location.closest_lane_names.data
-        
-        self.get_logger().info("Received replan request.")
+            self.get_logger().info(
+                f"Mission plan seed lane: {self.initial_lane}, closest_point: "
+                f"({self.location.closest_point.x:.2f}, "
+                f"{self.location.closest_point.y:.2f}, {self.location.closest_point.z:.2f})"
+            )
+        else:
+            self.get_logger().warning("No location data; keeping previous initial lane.")
+        # self.isFirstRequest = False 
+
         # Generate path and path_as_lanes
         self.mission_planning()
-        print(self.path_as_lanes)
+        self.get_logger().info(f"path_as_lanes: {self.path_as_lanes}")
+        
         # Publish the new mission
         self.publisher()
-
         self.get_logger().info(f"Published mission plan with {len(self.path)} points.")
 
         response.success = True

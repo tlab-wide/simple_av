@@ -1,0 +1,18 @@
+{
+  "package_name": "autoware_map_msgs",
+  "non_idl_tuples": [
+    "/workspace/simpleav/20251204/src/simple_av/src/messages/autoware_msgs/autoware_map_msgs:msg/AreaInfo.msg",
+    "/workspace/simpleav/20251204/src/simple_av/src/messages/autoware_msgs/autoware_map_msgs:msg/LaneletMapBin.msg",
+    "/workspace/simpleav/20251204/src/simple_av/src/messages/autoware_msgs/autoware_map_msgs:msg/LaneletMapMetaData.msg",
+    "/workspace/simpleav/20251204/src/simple_av/src/messages/autoware_msgs/autoware_map_msgs:msg/LaneletMapCellMetaData.msg",
+    "/workspace/simpleav/20251204/src/simple_av/src/messages/autoware_msgs/autoware_map_msgs:msg/MapProjectorInfo.msg",
+    "/workspace/simpleav/20251204/src/simple_av/src/messages/autoware_msgs/autoware_map_msgs:msg/PointCloudMapCellWithID.msg",
+    "/workspace/simpleav/20251204/src/simple_av/src/messages/autoware_msgs/autoware_map_msgs:msg/PointCloudMapCellMetaData.msg",
+    "/workspace/simpleav/20251204/src/simple_av/src/messages/autoware_msgs/autoware_map_msgs:msg/PointCloudMapCellMetaDataWithID.msg",
+    "/workspace/simpleav/20251204/src/simple_av/src/messages/autoware_msgs/autoware_map_msgs:msg/PointCloudMapMetaData.msg",
+    "/workspace/simpleav/20251204/src/simple_av/src/messages/autoware_msgs/autoware_map_msgs:srv/GetPartialPointCloudMap.srv",
+    "/workspace/simpleav/20251204/src/simple_av/src/messages/autoware_msgs/autoware_map_msgs:srv/GetDifferentialPointCloudMap.srv",
+    "/workspace/simpleav/20251204/src/simple_av/src/messages/autoware_msgs/autoware_map_msgs:srv/GetSelectedPointCloudMap.srv",
+    "/workspace/simpleav/20251204/src/simple_av/src/messages/autoware_msgs/autoware_map_msgs:srv/GetSelectedLanelet2Map.srv"
+  ]
+}

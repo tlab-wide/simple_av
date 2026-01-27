@@ -1,0 +1,266 @@
+[0.174s] Invoking command in '/workspace/simpleav/20251204/src/simple_av/build/autoware_perception_msgs': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/workspace/simpleav/20251204/install/system:/workspace/simpleav/20251204/install/simple_av_logger:/workspace/simpleav/20251204/install/simple_av:/workspace/simpleav/20251204/install/planning:/workspace/simpleav/20251204/install/perception:/workspace/simpleav/20251204/install/localization:/workspace/simpleav/20251204/install/control:/workspace/simpleav/20251204/install/common:/opt/ros/humble /usr/bin/cmake /workspace/simpleav/20251204/src/simple_av/src/messages/autoware_msgs/autoware_perception_msgs -DAMENT_CMAKE_SYMLINK_INSTALL=1 -DCMAKE_INSTALL_PREFIX=/workspace/simpleav/20251204/src/simple_av/install/autoware_perception_msgs
+[1.519s] -- The C compiler identification is GNU 11.4.0
+[1.519s] -- The CXX compiler identification is GNU 11.4.0
+[1.519s] -- Detecting C compiler ABI info
+[1.519s] -- Detecting C compiler ABI info - done
+[1.519s] -- Check for working C compiler: /usr/lib/ccache/gcc - skipped
+[1.519s] -- Detecting C compile features
+[1.520s] -- Detecting C compile features - done
+[1.520s] -- Detecting CXX compiler ABI info
+[1.520s] -- Detecting CXX compiler ABI info - done
+[1.520s] -- Check for working CXX compiler: /usr/lib/ccache/g++ - skipped
+[1.520s] -- Detecting CXX compile features
+[1.520s] -- Detecting CXX compile features - done
+[1.520s] -- Found ament_cmake: 1.3.11 (/opt/ros/humble/share/ament_cmake/cmake)
+[1.520s] -- Found Python3: /usr/bin/python3 (found version "3.10.12") found components: Interpreter 
+[1.521s] -- Override CMake install command with custom implementation using symlinks instead of copying resources
+[1.667s] -- Found rosidl_default_generators: 1.2.0 (/opt/ros/humble/share/rosidl_default_generators/cmake)
+[1.694s] -- Using all available rosidl_typesupport_c: rosidl_typesupport_fastrtps_c;rosidl_typesupport_introspection_c
+[1.723s] -- Found rosidl_adapter: 3.1.6 (/opt/ros/humble/share/rosidl_adapter/cmake)
+[1.847s] -- Using all available rosidl_typesupport_cpp: rosidl_typesupport_fastrtps_cpp;rosidl_typesupport_introspection_cpp
+[1.942s] -- Found std_msgs: 4.2.4 (/opt/ros/humble/share/std_msgs/cmake)
+[2.001s] -- Found geometry_msgs: 4.2.4 (/opt/ros/humble/share/geometry_msgs/cmake)
+[2.029s] -- Found unique_identifier_msgs: 2.2.1 (/opt/ros/humble/share/unique_identifier_msgs/cmake)
+[2.683s] -- Found ament_cmake_ros: 0.10.0 (/opt/ros/humble/share/ament_cmake_ros/cmake)
+[3.135s] -- Using all available rosidl_typesupport_c: rosidl_typesupport_fastrtps_c;rosidl_typesupport_introspection_c
+[3.711s] -- Using all available rosidl_typesupport_cpp: rosidl_typesupport_fastrtps_cpp;rosidl_typesupport_introspection_cpp
+[3.760s] -- Found PythonInterp: /usr/bin/python3 (found suitable version "3.10.12", minimum required is "3.6") 
+[3.769s] -- Found python_cmake_module: 0.10.0 (/opt/ros/humble/share/python_cmake_module/cmake)
+[3.812s] -- Found PythonLibs: /usr/lib/x86_64-linux-gnu/libpython3.10.so (found suitable version "3.10.12", minimum required is "3.5") 
+[3.816s] -- Using PYTHON_EXECUTABLE: /usr/bin/python3
+[3.816s] -- Using PYTHON_INCLUDE_DIRS: /usr/include/python3.10
+[3.816s] -- Using PYTHON_LIBRARIES: /usr/lib/x86_64-linux-gnu/libpython3.10.so
+[3.858s] -- Found PythonExtra: .so  
+[4.043s] -- Configuring done
+[4.126s] -- Generating done
+[4.143s] -- Build files have been written to: /workspace/simpleav/20251204/src/simple_av/build/autoware_perception_msgs
+[4.158s] Invoked command in '/workspace/simpleav/20251204/src/simple_av/build/autoware_perception_msgs' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/workspace/simpleav/20251204/install/system:/workspace/simpleav/20251204/install/simple_av_logger:/workspace/simpleav/20251204/install/simple_av:/workspace/simpleav/20251204/install/planning:/workspace/simpleav/20251204/install/perception:/workspace/simpleav/20251204/install/localization:/workspace/simpleav/20251204/install/control:/workspace/simpleav/20251204/install/common:/opt/ros/humble /usr/bin/cmake /workspace/simpleav/20251204/src/simple_av/src/messages/autoware_msgs/autoware_perception_msgs -DAMENT_CMAKE_SYMLINK_INSTALL=1 -DCMAKE_INSTALL_PREFIX=/workspace/simpleav/20251204/src/simple_av/install/autoware_perception_msgs
+[4.159s] Invoking command in '/workspace/simpleav/20251204/src/simple_av/build/autoware_perception_msgs': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/workspace/simpleav/20251204/install/system:/workspace/simpleav/20251204/install/simple_av_logger:/workspace/simpleav/20251204/install/simple_av:/workspace/simpleav/20251204/install/planning:/workspace/simpleav/20251204/install/perception:/workspace/simpleav/20251204/install/localization:/workspace/simpleav/20251204/install/control:/workspace/simpleav/20251204/install/common:/opt/ros/humble /usr/bin/cmake --build /workspace/simpleav/20251204/src/simple_av/build/autoware_perception_msgs -- -j52 -l52
+[6.848s] [  0%] [34m[1mGenerating C code for ROS interfaces[0m
+[6.848s] [  0%] [34m[1mGenerating C++ code for ROS interfaces[0m
+[6.848s] [  0%] Built target ament_cmake_python_symlink_autoware_perception_msgs
+[6.848s] running egg_info
+[6.848s] creating autoware_perception_msgs.egg-info
+[6.848s] writing autoware_perception_msgs.egg-info/PKG-INFO
+[6.848s] writing dependency_links to autoware_perception_msgs.egg-info/dependency_links.txt
+[6.848s] writing top-level names to autoware_perception_msgs.egg-info/top_level.txt
+[6.848s] writing manifest file 'autoware_perception_msgs.egg-info/SOURCES.txt'
+[6.848s] reading manifest file 'autoware_perception_msgs.egg-info/SOURCES.txt'
+[6.848s] writing manifest file 'autoware_perception_msgs.egg-info/SOURCES.txt'
+[6.849s] [  0%] Built target ament_cmake_python_build_autoware_perception_msgs_egg
+[7.269s] [  1%] [32mBuilding C object CMakeFiles/autoware_perception_msgs__rosidl_generator_c.dir/rosidl_generator_c/autoware_perception_msgs/msg/detail/detected_object__functions.c.o[0m
+[7.276s] [  1%] Built target autoware_perception_msgs__cpp
+[7.276s] [  1%] [32mBuilding C object CMakeFiles/autoware_perception_msgs__rosidl_generator_c.dir/rosidl_generator_c/autoware_perception_msgs/msg/detail/detected_object_kinematics__functions.c.o[0m
+[7.291s] [  2%] [32mBuilding C object CMakeFiles/autoware_perception_msgs__rosidl_generator_c.dir/rosidl_generator_c/autoware_perception_msgs/msg/detail/object_classification__functions.c.o[0m
+[7.296s] [  2%] [32mBuilding C object CMakeFiles/autoware_perception_msgs__rosidl_generator_c.dir/rosidl_generator_c/autoware_perception_msgs/msg/detail/predicted_objects__functions.c.o[0m
+[7.309s] [  3%] [32mBuilding C object CMakeFiles/autoware_perception_msgs__rosidl_generator_c.dir/rosidl_generator_c/autoware_perception_msgs/msg/detail/detected_objects__functions.c.o[0m
+[7.309s] [  3%] [32mBuilding C object CMakeFiles/autoware_perception_msgs__rosidl_generator_c.dir/rosidl_generator_c/autoware_perception_msgs/msg/detail/predicted_object__functions.c.o[0m
+[7.309s] [  4%] [32mBuilding C object CMakeFiles/autoware_perception_msgs__rosidl_generator_c.dir/rosidl_generator_c/autoware_perception_msgs/msg/detail/predicted_path__functions.c.o[0m
+[7.313s] [  5%] [32mBuilding C object CMakeFiles/autoware_perception_msgs__rosidl_generator_c.dir/rosidl_generator_c/autoware_perception_msgs/msg/detail/shape__functions.c.o[0m
+[7.324s] [  6%] [32mBuilding C object CMakeFiles/autoware_perception_msgs__rosidl_generator_c.dir/rosidl_generator_c/autoware_perception_msgs/msg/detail/tracked_object__functions.c.o[0m
+[7.335s] [  7%] [32mBuilding C object CMakeFiles/autoware_perception_msgs__rosidl_generator_c.dir/rosidl_generator_c/autoware_perception_msgs/msg/detail/predicted_object_kinematics__functions.c.o[0m
+[7.335s] [  7%] [32mBuilding C object CMakeFiles/autoware_perception_msgs__rosidl_generator_c.dir/rosidl_generator_c/autoware_perception_msgs/msg/detail/traffic_light_element__functions.c.o[0m
+[7.344s] [  8%] [34m[1mGenerating C++ type support dispatch for ROS interfaces[0m
+[7.344s] [  9%] [32mBuilding C object CMakeFiles/autoware_perception_msgs__rosidl_generator_c.dir/rosidl_generator_c/autoware_perception_msgs/msg/detail/tracked_objects__functions.c.o[0m
+[7.344s] [ 10%] [34m[1mGenerating C++ type support for eProsima Fast-RTPS[0m
+[7.345s] [ 10%] [32mBuilding C object CMakeFiles/autoware_perception_msgs__rosidl_generator_c.dir/rosidl_generator_c/autoware_perception_msgs/msg/detail/tracked_object_kinematics__functions.c.o[0m
+[7.346s] [ 10%] [32mBuilding C object CMakeFiles/autoware_perception_msgs__rosidl_generator_c.dir/rosidl_generator_c/autoware_perception_msgs/msg/detail/predicted_traffic_light_state__functions.c.o[0m
+[7.356s] [ 11%] [32mBuilding C object CMakeFiles/autoware_perception_msgs__rosidl_generator_c.dir/rosidl_generator_c/autoware_perception_msgs/msg/detail/traffic_light_group__functions.c.o[0m
+[7.361s] [ 11%] [34m[1mGenerating C++ introspection for ROS interfaces[0m
+[7.377s] [ 11%] [32mBuilding C object CMakeFiles/autoware_perception_msgs__rosidl_generator_c.dir/rosidl_generator_c/autoware_perception_msgs/msg/detail/traffic_light_group_array__functions.c.o[0m
+[7.388s] [ 12%] [32mBuilding C object CMakeFiles/autoware_perception_msgs__rosidl_generator_c.dir/rosidl_generator_c/autoware_perception_msgs/msg/detail/traffic_signal_element__functions.c.o[0m
+[7.416s] [ 13%] [32mBuilding C object CMakeFiles/autoware_perception_msgs__rosidl_generator_c.dir/rosidl_generator_c/autoware_perception_msgs/msg/detail/traffic_signal__functions.c.o[0m
+[7.428s] [ 13%] [32mBuilding C object CMakeFiles/autoware_perception_msgs__rosidl_generator_c.dir/rosidl_generator_c/autoware_perception_msgs/msg/detail/traffic_signal_array__functions.c.o[0m
+[7.800s] [ 14%] [32m[1mLinking C shared library libautoware_perception_msgs__rosidl_generator_c.so[0m
+[8.003s] [ 14%] Built target autoware_perception_msgs__rosidl_generator_c
+[8.062s] [ 15%] [34m[1mGenerating C type support for eProsima Fast-RTPS[0m
+[8.084s] [ 16%] [34m[1mGenerating C type support dispatch for ROS interfaces[0m
+[8.084s] [ 17%] [34m[1mGenerating C introspection for ROS interfaces[0m
+[8.566s] gmake[2]: *** Deleting file 'rosidl_typesupport_fastrtps_cpp/autoware_perception_msgs/msg/detail/dds_fastrtps/detected_object__type_support.cpp'
+[8.566s] gmake[2]: *** Deleting file 'rosidl_typesupport_cpp/autoware_perception_msgs/msg/detected_object__type_support.cpp'
+[8.566s] Traceback (most recent call last):
+[8.566s]   File "/opt/ros/humble/lib/rosidl_typesupport_introspection_cpp/rosidl_typesupport_introspection_cpp", line 31, in <module>
+[8.566s]     sys.exit(main())
+[8.566s]   File "/opt/ros/humble/lib/rosidl_typesupport_introspection_cpp/rosidl_typesupport_introspection_cpp", line 27, in main
+[8.566s] Traceback (most recent call last):
+[8.566s]   File "/opt/ros/humble/lib/rosidl_typesupport_fastrtps_cpp/rosidl_typesupport_fastrtps_cpp", line 23, in <module>
+[8.566s]     generate_cpp(args.generator_arguments_file)
+[8.566s]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rosidl_typesupport_introspection_cpp/__init__.py", line 31, in generate_cpp
+[8.566s]     return generate_files(generator_arguments_file, mapping)
+[8.566s]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rosidl_cmake/__init__.py", line 74, in generate_files
+[8.566s]     sys.exit(main())
+[8.566s]     idl_file = parse_idl_file(locator)
+[8.566s]   File "/opt/ros/humble/lib/rosidl_typesupport_fastrtps_cpp/rosidl_typesupport_fastrtps_cpp", line 19, in main
+[8.566s]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rosidl_parser/parser.py", line 64, in parse_idl_file
+[8.566s]     generate_cpp(args.generator_arguments_file)
+[8.566s]     content = parse_idl_string(string, png_file=png_file)
+[8.566s]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rosidl_typesupport_fastrtps_cpp/__init__.py", line 24, in generate_cpp
+[8.566s]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rosidl_parser/parser.py", line 72, in parse_idl_string
+[8.566s]     tree = get_ast_from_idl_string(idl_string)
+[8.566s]     return generate_files(generator_arguments_file, mapping)
+[8.566s]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rosidl_parser/parser.py", line 89, in get_ast_from_idl_string
+[8.566s]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rosidl_cmake/__init__.py", line 74, in generate_files
+[8.567s]     return _parser.parse(idl_string)
+[8.567s]   File "/home/tlab/.local/lib/python3.10/site-packages/lark/lark.py", line 677, in parse
+[8.567s]     idl_file = parse_idl_file(locator)
+[8.567s]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rosidl_parser/parser.py", line 64, in parse_idl_file
+[8.567s]     content = parse_idl_string(string, png_file=png_file)
+[8.567s]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rosidl_parser/parser.py", line 72, in parse_idl_string
+[8.567s]     tree = get_ast_from_idl_string(idl_string)
+[8.567s]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rosidl_parser/parser.py", line 89, in get_ast_from_idl_string
+[8.567s]     return _parser.parse(idl_string)
+[8.567s]   File "/home/tlab/.local/lib/python3.10/site-packages/lark/lark.py", line 677, in parse
+[8.567s] gmake[2]: *** Deleting file 'rosidl_typesupport_introspection_cpp/autoware_perception_msgs/msg/detail/detected_object__rosidl_typesupport_introspection_cpp.hpp'
+[8.567s] Traceback (most recent call last):
+[8.567s]   File "/opt/ros/humble/lib/rosidl_typesupport_fastrtps_c/rosidl_typesupport_fastrtps_c", line 33, in <module>
+[8.567s]     return self.parser.parse(text, start=start, on_error=on_error)
+[8.567s] Traceback (most recent call last):
+[8.567s]   File "/home/tlab/.local/lib/python3.10/site-packages/lark/parser_frontends.py", line 131, in parse
+[8.567s]   File "/opt/ros/humble/lib/rosidl_typesupport_c/rosidl_typesupport_c", line 28, in <module>
+[8.567s]     return self.parser.parse(stream, chosen_start, **kw)
+[8.567s]   File "/home/tlab/.local/lib/python3.10/site-packages/lark/parsers/earley.py", line 280, in parse
+[8.567s]     sys.exit(main())
+[8.567s]   File "/opt/ros/humble/lib/rosidl_typesupport_fastrtps_c/rosidl_typesupport_fastrtps_c", line 29, in main
+[8.567s]     sys.exit(main())
+[8.567s]   File "/opt/ros/humble/lib/rosidl_typesupport_c/rosidl_typesupport_c", line 24, in main
+[8.567s]     generate_typesupport_fastrtps_c(args.generator_arguments_file)
+[8.567s]     to_scan = self._parse(lexer, columns, to_scan, start_symbol)
+[8.567s]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rosidl_typesupport_fastrtps_c/__init__.py", line 24, in generate_typesupport_fastrtps_c
+[8.567s]     generate_c(args.generator_arguments_file, args.typesupports)
+[8.567s]   File "/home/tlab/.local/lib/python3.10/site-packages/lark/parsers/xearley.py", line 151, in _parse
+[8.568s]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rosidl_typesupport_c/__init__.py", line 28, in generate_c
+[8.568s]     return generate_files(
+[8.568s]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rosidl_cmake/__init__.py", line 74, in generate_files
+[8.568s]     return generate_files(generator_arguments_file, mapping)
+[8.568s]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rosidl_cmake/__init__.py", line 74, in generate_files
+[8.568s]     idl_file = parse_idl_file(locator)
+[8.568s]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rosidl_parser/parser.py", line 64, in parse_idl_file
+[8.568s]     content = parse_idl_string(string, png_file=png_file)
+[8.568s]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rosidl_parser/parser.py", line 72, in parse_idl_string
+[8.568s]     idl_file = parse_idl_file(locator)
+[8.568s]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rosidl_parser/parser.py", line 64, in parse_idl_file
+[8.568s]     tree = get_ast_from_idl_string(idl_string)
+[8.568s]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rosidl_parser/parser.py", line 88, in get_ast_from_idl_string
+[8.568s]     _parser = Lark(grammar, start='specification', maybe_placeholders=False)
+[8.568s]   File "/home/tlab/.local/lib/python3.10/site-packages/lark/lark.py", line 456, in __init__
+[8.568s]     content = parse_idl_string(string, png_file=png_file)
+[8.568s]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rosidl_parser/parser.py", line 72, in parse_idl_string
+[8.568s]     tree = get_ast_from_idl_string(idl_string)
+[8.568s]     self.parser = self._build_parser()
+[8.568s]   File "/home/tlab/.local/lib/python3.10/site-packages/lark/lark.py", line 500, in _build_parser
+[8.568s]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rosidl_parser/parser.py", line 88, in get_ast_from_idl_string
+[8.568s]     self.predict_and_complete(i, to_scan, columns, transitives, node_cache)
+[8.568s] KeyboardInterrupt
+[8.569s]     return _construct_parsing_frontend(
+[8.569s]   File "/home/tlab/.local/lib/python3.10/site-packages/lark/parser_frontends.py", line 284, in _construct_parsing_frontend
+[8.569s]     return ParsingFrontend(lexer_conf, parser_conf, options)
+[8.569s]   File "/home/tlab/.local/lib/python3.10/site-packages/lark/parser_frontends.py", line 78, in __init__
+[8.569s]     self.parser = create_parser(lexer_conf, parser_conf, options)
+[8.569s]   File "/home/tlab/.local/lib/python3.10/site-packages/lark/parser_frontends.py", line 242, in create_earley_parser
+[8.569s]     return f(lexer_conf, parser_conf, resolve_ambiguity=resolve_ambiguity,
+[8.569s]   File "/home/tlab/.local/lib/python3.10/site-packages/lark/parser_frontends.py", line 220, in create_earley_parser__dynamic
+[8.569s]     return xearley.Parser(lexer_conf, parser_conf, earley_matcher.match, **kw)
+[8.569s]   File "/home/tlab/.local/lib/python3.10/site-packages/lark/parsers/xearley.py", line 34, in __init__
+[8.569s]     BaseParser.__init__(self, lexer_conf, parser_conf, term_matcher, resolve_ambiguity,
+[8.569s]   File "/home/tlab/.local/lib/python3.10/site-packages/lark/parsers/earley.py", line 35, in __init__
+[8.569s]     analysis = GrammarAnalyzer(parser_conf)
+[8.569s]   File "/home/tlab/.local/lib/python3.10/site-packages/lark/parsers/grammar_analysis.py", line 178, in __init__
+[8.569s] Traceback (most recent call last):
+[8.569s]   File "/opt/ros/humble/lib/rosidl_typesupport_cpp/rosidl_typesupport_cpp", line 28, in <module>
+[8.569s]     sys.exit(main())
+[8.569s]   File "/opt/ros/humble/lib/rosidl_typesupport_cpp/rosidl_typesupport_cpp", line 24, in main
+[8.569s]     generate_cpp(args.generator_arguments_file, args.typesupports)
+[8.569s]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rosidl_typesupport_cpp/__init__.py", line 28, in generate_cpp
+[8.569s]     return generate_files(
+[8.569s]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rosidl_cmake/__init__.py", line 74, in generate_files
+[8.569s]     idl_file = parse_idl_file(locator)
+[8.569s]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rosidl_parser/parser.py", line 64, in parse_idl_file
+[8.569s]     content = parse_idl_string(string, png_file=png_file)
+[8.569s]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rosidl_parser/parser.py", line 72, in parse_idl_string
+[8.569s]     tree = get_ast_from_idl_string(idl_string)
+[8.569s]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rosidl_parser/parser.py", line 89, in get_ast_from_idl_string
+[8.569s]     return _parser.parse(idl_string)
+[8.569s]   File "/home/tlab/.local/lib/python3.10/site-packages/lark/lark.py", line 677, in parse
+[8.569s]     return self.parser.parse(text, start=start, on_error=on_error)
+[8.570s]   File "/home/tlab/.local/lib/python3.10/site-packages/lark/parser_frontends.py", line 131, in parse
+[8.570s]     return self.parser.parse(stream, chosen_start, **kw)
+[8.570s]   File "/home/tlab/.local/lib/python3.10/site-packages/lark/parsers/earley.py", line 280, in parse
+[8.570s]     self.FIRST, self.FOLLOW, self.NULLABLE = calculate_sets(rules)
+[8.570s]   File "/home/tlab/.local/lib/python3.10/site-packages/lark/parsers/grammar_analysis.py", line 116, in calculate_sets
+[8.570s]     if update_set(FIRST[rule.origin], FIRST[sym]):
+[8.570s]     to_scan = self._parse(lexer, columns, to_scan, start_symbol)
+[8.570s]   File "/home/tlab/.local/lib/python3.10/site-packages/lark/grammar.py", line 21, in __eq__
+[8.570s]   File "/home/tlab/.local/lib/python3.10/site-packages/lark/parsers/xearley.py", line 151, in _parse
+[8.570s]     self.predict_and_complete(i, to_scan, columns, transitives, node_cache)
+[8.570s]   File "/home/tlab/.local/lib/python3.10/site-packages/lark/parsers/earley.py", line 153, in predict_and_complete
+[8.570s]     new_items.append(new_item)
+[8.570s] KeyboardInterrupt
+[8.570s]     _parser = Lark(grammar, start='specification', maybe_placeholders=False)
+[8.570s]   File "/home/tlab/.local/lib/python3.10/site-packages/lark/lark.py", line 424, in __init__
+[8.570s]     self.terminals, self.rules, self.ignore_tokens = self.grammar.compile(self.options.start, terminals_to_keep)
+[8.570s]   File "/home/tlab/.local/lib/python3.10/site-packages/lark/load_grammar.py", line 740, in compile
+[8.570s]     tree = transformer.transform(rule_tree)
+[8.570s]   File "/home/tlab/.local/lib/python3.10/site-packages/lark/visitors.py", line 264, in transform
+[8.570s]     return self.parser.parse(text, start=start, on_error=on_error)
+[8.570s]   File "/home/tlab/.local/lib/python3.10/site-packages/lark/parser_frontends.py", line 131, in parse
+[8.570s]     return self.parser.parse(stream, chosen_start, **kw)
+[8.570s]   File "/home/tlab/.local/lib/python3.10/site-packages/lark/parsers/earley.py", line 280, in parse
+[8.570s]     to_scan = self._parse(lexer, columns, to_scan, start_symbol)
+[8.570s]   File "/home/tlab/.local/lib/python3.10/site-packages/lark/parsers/xearley.py", line 151, in _parse
+[8.570s]     self.predict_and_complete(i, to_scan, columns, transitives, node_cache)
+[8.570s]   File "/home/tlab/.local/lib/python3.10/site-packages/lark/parsers/earley.py", line 134, in predict_and_complete
+[8.570s]     originators = [originator for originator in columns[item.start] if originator.expect is not None and originator.expect == item.s]
+[8.570s]   File "/home/tlab/.local/lib/python3.10/site-packages/lark/parsers/earley.py", line 134, in <listcomp>
+[8.571s]     return self.is_term == other.is_term and self.name == other.name
+[8.571s]     tree = t.transform(tree)
+[8.571s]   File "/home/tlab/.local/lib/python3.10/site-packages/lark/lexer.py", line 269, in __eq__
+[8.571s]     originators = [originator for originator in columns[item.start] if originator.expect is not None and originator.expect == item.s]
+[8.571s]   File "/home/tlab/.local/lib/python3.10/site-packages/lark/visitors.py", line 283, in transform
+[8.571s] KeyboardInterrupt
+[8.571s]     for subtree in tree.iter_subtrees():
+[8.571s]   File "/home/tlab/.local/lib/python3.10/site-packages/lark/tree.py", line 146, in iter_subtrees
+[8.571s]     return str.__eq__(self, other)
+[8.571s] KeyboardInterrupt
+[8.571s] Traceback (most recent call last):
+[8.571s]   File "/opt/ros/humble/lib/rosidl_typesupport_introspection_c/rosidl_typesupport_introspection_c", line 31, in <module>
+[8.571s]     sys.exit(main())
+[8.571s]   File "/opt/ros/humble/lib/rosidl_typesupport_introspection_c/rosidl_typesupport_introspection_c", line 27, in main
+[8.571s]     generate_c(args.generator_arguments_file)
+[8.571s]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rosidl_typesupport_introspection_c/__init__.py", line 31, in generate_c
+[8.571s]     return generate_files(generator_arguments_file, mapping)
+[8.571s]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rosidl_cmake/__init__.py", line 74, in generate_files
+[8.571s]     idl_file = parse_idl_file(locator)
+[8.571s]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rosidl_parser/parser.py", line 64, in parse_idl_file
+[8.571s]     content = parse_idl_string(string, png_file=png_file)
+[8.571s]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rosidl_parser/parser.py", line 72, in parse_idl_string
+[8.571s]     tree = get_ast_from_idl_string(idl_string)
+[8.571s]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rosidl_parser/parser.py", line 88, in get_ast_from_idl_string
+[8.571s]     _parser = Lark(grammar, start='specification', maybe_placeholders=False)
+[8.571s]   File "/home/tlab/.local/lib/python3.10/site-packages/lark/lark.py", line 424, in __init__
+[8.571s]     self.terminals, self.rules, self.ignore_tokens = self.grammar.compile(self.options.start, terminals_to_keep)
+[8.571s]   File "/home/tlab/.local/lib/python3.10/site-packages/lark/load_grammar.py", line 740, in compile
+[8.571s]     tree = transformer.transform(rule_tree)
+[8.571s]   File "/home/tlab/.local/lib/python3.10/site-packages/lark/visitors.py", line 264, in transform
+[8.571s]     tree = t.transform(tree)
+[8.572s]   File "/home/tlab/.local/lib/python3.10/site-packages/lark/visitors.py", line 284, in transform
+[8.572s]     subtree.children = list(self._transform_children(subtree.children))
+[8.572s]   File "/home/tlab/.local/lib/python3.10/site-packages/lark/visitors.py", line 146, in _transform_children
+[8.572s]     res = self._transform_tree(c)
+[8.572s] KeyboardInterrupt
+[8.572s]     queue += [c for c in reversed(subtree.children)
+[8.572s]   File "/home/tlab/.local/lib/python3.10/site-packages/lark/tree.py", line 147, in <listcomp>
+[8.572s]     if isinstance(c, Tree) and id(c) not in subtrees]
+[8.572s] KeyboardInterrupt
+[8.591s] gmake[2]: *** [CMakeFiles/autoware_perception_msgs__rosidl_typesupport_cpp.dir/build.make:161: rosidl_typesupport_cpp/autoware_perception_msgs/msg/detected_object__type_support.cpp] Interrupt
+[8.591s] gmake[1]: *** [CMakeFiles/Makefile2:394: CMakeFiles/autoware_perception_msgs__rosidl_typesupport_cpp.dir/all] Interrupt
+[8.597s] gmake[2]: *** [CMakeFiles/autoware_perception_msgs__rosidl_typesupport_c.dir/build.make:161: rosidl_typesupport_c/autoware_perception_msgs/msg/detected_object__type_support.cpp] Interrupt
+[8.597s] gmake[2]: *** [CMakeFiles/autoware_perception_msgs__rosidl_typesupport_introspection_cpp.dir/build.make:163: rosidl_typesupport_introspection_cpp/autoware_perception_msgs/msg/detail/detected_object__rosidl_typesupport_introspection_cpp.hpp] Interrupt
+[8.597s] gmake[1]: *** [CMakeFiles/Makefile2:368: CMakeFiles/autoware_perception_msgs__rosidl_typesupport_introspection_cpp.dir/all] Interrupt
+[8.597s] gmake[2]: *** [CMakeFiles/autoware_perception_msgs__rosidl_typesupport_fastrtps_c.dir/build.make:163: rosidl_typesupport_fastrtps_c/autoware_perception_msgs/msg/detail/detected_object__rosidl_typesupport_fastrtps_c.h] Interrupt
+[8.597s] gmake[1]: *** [CMakeFiles/Makefile2:238: CMakeFiles/autoware_perception_msgs__rosidl_typesupport_fastrtps_c.dir/all] Interrupt
+[8.603s] gmake[1]: *** [CMakeFiles/Makefile2:290: CMakeFiles/autoware_perception_msgs__rosidl_typesupport_c.dir/all] Interrupt
+[8.603s] gmake[2]: *** [CMakeFiles/autoware_perception_msgs__rosidl_typesupport_introspection_c.dir/build.make:163: rosidl_typesupport_introspection_c/autoware_perception_msgs/msg/detail/detected_object__rosidl_typesupport_introspection_c.h] Interrupt
+[8.603s] gmake[1]: *** [CMakeFiles/Makefile2:264: CMakeFiles/autoware_perception_msgs__rosidl_typesupport_introspection_c.dir/all] Interrupt
+[8.605s] gmake[2]: *** [CMakeFiles/autoware_perception_msgs__rosidl_typesupport_fastrtps_cpp.dir/build.make:163: rosidl_typesupport_fastrtps_cpp/autoware_perception_msgs/msg/detail/dds_fastrtps/detected_object__type_support.cpp] Interrupt
+[8.605s] gmake[1]: *** [CMakeFiles/Makefile2:342: CMakeFiles/autoware_perception_msgs__rosidl_typesupport_fastrtps_cpp.dir/all] Interrupt
+[8.605s] gmake: *** [Makefile:146: all] Interrupt

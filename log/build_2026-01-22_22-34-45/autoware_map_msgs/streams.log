@@ -1,0 +1,326 @@
+[0.150s] Invoking command in '/workspace/simpleav/20251204/src/simple_av/build/autoware_map_msgs': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/workspace/simpleav/20251204/install/system:/workspace/simpleav/20251204/install/simple_av_logger:/workspace/simpleav/20251204/install/simple_av:/workspace/simpleav/20251204/install/planning:/workspace/simpleav/20251204/install/perception:/workspace/simpleav/20251204/install/localization:/workspace/simpleav/20251204/install/control:/workspace/simpleav/20251204/install/common:/opt/ros/humble /usr/bin/cmake /workspace/simpleav/20251204/src/simple_av/src/messages/autoware_msgs/autoware_map_msgs -DAMENT_CMAKE_SYMLINK_INSTALL=1 -DCMAKE_INSTALL_PREFIX=/workspace/simpleav/20251204/src/simple_av/install/autoware_map_msgs
+[1.489s] -- The C compiler identification is GNU 11.4.0
+[1.489s] -- The CXX compiler identification is GNU 11.4.0
+[1.489s] -- Detecting C compiler ABI info
+[1.489s] -- Detecting C compiler ABI info - done
+[1.490s] -- Check for working C compiler: /usr/lib/ccache/gcc - skipped
+[1.490s] -- Detecting C compile features
+[1.490s] -- Detecting C compile features - done
+[1.490s] -- Detecting CXX compiler ABI info
+[1.490s] -- Detecting CXX compiler ABI info - done
+[1.490s] -- Check for working CXX compiler: /usr/lib/ccache/g++ - skipped
+[1.490s] -- Detecting CXX compile features
+[1.490s] -- Detecting CXX compile features - done
+[1.490s] -- Found ament_cmake_auto: 1.3.11 (/opt/ros/humble/share/ament_cmake_auto/cmake)
+[1.490s] -- Found Python3: /usr/bin/python3 (found version "3.10.12") found components: Interpreter 
+[1.490s] -- Override CMake install command with custom implementation using symlinks instead of copying resources
+[1.945s] -- Found rosidl_generator_c: 3.1.6 (/opt/ros/humble/share/rosidl_generator_c/cmake)
+[1.965s] -- Found rosidl_adapter: 3.1.6 (/opt/ros/humble/share/rosidl_adapter/cmake)
+[1.988s] -- Found rosidl_generator_cpp: 3.1.6 (/opt/ros/humble/share/rosidl_generator_cpp/cmake)
+[2.020s] -- Using all available rosidl_typesupport_c: rosidl_typesupport_fastrtps_c;rosidl_typesupport_introspection_c
+[2.061s] -- Using all available rosidl_typesupport_cpp: rosidl_typesupport_fastrtps_cpp;rosidl_typesupport_introspection_cpp
+[2.790s] -- Found ament_cmake_cppcheck: 0.12.11 (/opt/ros/humble/share/ament_cmake_cppcheck/cmake)
+[2.800s] -- Found ament_cmake_cpplint: 0.12.11 (/opt/ros/humble/share/ament_cmake_cpplint/cmake)
+[2.809s] -- Found ament_cmake_uncrustify: 0.12.11 (/opt/ros/humble/share/ament_cmake_uncrustify/cmake)
+[2.819s] -- Found ament_cmake_ros: 0.10.0 (/opt/ros/humble/share/ament_cmake_ros/cmake)
+[3.711s] -- Using all available rosidl_typesupport_c: rosidl_typesupport_fastrtps_c;rosidl_typesupport_introspection_c
+[4.035s] -- Using all available rosidl_typesupport_cpp: rosidl_typesupport_fastrtps_cpp;rosidl_typesupport_introspection_cpp
+[4.084s] -- Found PythonInterp: /usr/bin/python3 (found suitable version "3.10.12", minimum required is "3.6") 
+[4.095s] -- Found python_cmake_module: 0.10.0 (/opt/ros/humble/share/python_cmake_module/cmake)
+[4.149s] -- Found PythonLibs: /usr/lib/x86_64-linux-gnu/libpython3.10.so (found suitable version "3.10.12", minimum required is "3.5") 
+[4.149s] -- Using PYTHON_EXECUTABLE: /usr/bin/python3
+[4.149s] -- Using PYTHON_INCLUDE_DIRS: /usr/include/python3.10
+[4.149s] -- Using PYTHON_LIBRARIES: /usr/lib/x86_64-linux-gnu/libpython3.10.so
+[4.194s] -- Found PythonExtra: .so  
+[4.424s] -- Found ament_cmake_flake8: 0.12.11 (/opt/ros/humble/share/ament_cmake_flake8/cmake)
+[4.435s] -- Found ament_cmake_pep257: 0.12.11 (/opt/ros/humble/share/ament_cmake_pep257/cmake)
+[4.460s] -- Found ament_lint_auto: 0.12.11 (/opt/ros/humble/share/ament_lint_auto/cmake)
+[4.499s] -- Added test 'copyright' to check source files copyright and LICENSE
+[4.500s] -- Added test 'lint_cmake' to check CMake code style
+[4.502s] -- Added test 'xmllint' to check XML markup files
+[4.507s] -- Configuring done
+[4.591s] -- Generating done
+[4.617s] -- Build files have been written to: /workspace/simpleav/20251204/src/simple_av/build/autoware_map_msgs
+[4.631s] Invoked command in '/workspace/simpleav/20251204/src/simple_av/build/autoware_map_msgs' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/workspace/simpleav/20251204/install/system:/workspace/simpleav/20251204/install/simple_av_logger:/workspace/simpleav/20251204/install/simple_av:/workspace/simpleav/20251204/install/planning:/workspace/simpleav/20251204/install/perception:/workspace/simpleav/20251204/install/localization:/workspace/simpleav/20251204/install/control:/workspace/simpleav/20251204/install/common:/opt/ros/humble /usr/bin/cmake /workspace/simpleav/20251204/src/simple_av/src/messages/autoware_msgs/autoware_map_msgs -DAMENT_CMAKE_SYMLINK_INSTALL=1 -DCMAKE_INSTALL_PREFIX=/workspace/simpleav/20251204/src/simple_av/install/autoware_map_msgs
+[4.632s] Invoking command in '/workspace/simpleav/20251204/src/simple_av/build/autoware_map_msgs': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/workspace/simpleav/20251204/install/system:/workspace/simpleav/20251204/install/simple_av_logger:/workspace/simpleav/20251204/install/simple_av:/workspace/simpleav/20251204/install/planning:/workspace/simpleav/20251204/install/perception:/workspace/simpleav/20251204/install/localization:/workspace/simpleav/20251204/install/control:/workspace/simpleav/20251204/install/common:/opt/ros/humble /usr/bin/cmake --build /workspace/simpleav/20251204/src/simple_av/build/autoware_map_msgs -- -j52 -l52
+[8.039s] [  1%] [34m[1mGenerating C code for ROS interfaces[0m
+[8.040s] [  1%] [34m[1mGenerating C++ code for ROS interfaces[0m
+[8.040s] [  1%] Built target ament_cmake_python_symlink_autoware_map_msgs
+[8.040s] running egg_info
+[8.040s] creating autoware_map_msgs.egg-info
+[8.040s] writing autoware_map_msgs.egg-info/PKG-INFO
+[8.040s] writing dependency_links to autoware_map_msgs.egg-info/dependency_links.txt
+[8.041s] writing top-level names to autoware_map_msgs.egg-info/top_level.txt
+[8.041s] writing manifest file 'autoware_map_msgs.egg-info/SOURCES.txt'
+[8.041s] reading manifest file 'autoware_map_msgs.egg-info/SOURCES.txt'
+[8.041s] writing manifest file 'autoware_map_msgs.egg-info/SOURCES.txt'
+[8.041s] [  1%] Built target ament_cmake_python_build_autoware_map_msgs_egg
+[8.041s] [  1%] [32mBuilding C object CMakeFiles/autoware_map_msgs__rosidl_generator_c.dir/rosidl_generator_c/autoware_map_msgs/msg/detail/lanelet_map_bin__functions.c.o[0m
+[8.041s] [  2%] [32mBuilding C object CMakeFiles/autoware_map_msgs__rosidl_generator_c.dir/rosidl_generator_c/autoware_map_msgs/msg/detail/area_info__functions.c.o[0m
+[8.041s] [  3%] [32mBuilding C object CMakeFiles/autoware_map_msgs__rosidl_generator_c.dir/rosidl_generator_c/autoware_map_msgs/msg/detail/lanelet_map_meta_data__functions.c.o[0m
+[8.041s] [  4%] [32mBuilding C object CMakeFiles/autoware_map_msgs__rosidl_generator_c.dir/rosidl_generator_c/autoware_map_msgs/msg/detail/lanelet_map_cell_meta_data__functions.c.o[0m
+[8.041s] [  5%] [32mBuilding C object CMakeFiles/autoware_map_msgs__rosidl_generator_c.dir/rosidl_generator_c/autoware_map_msgs/msg/detail/map_projector_info__functions.c.o[0m
+[8.041s] [  6%] [32mBuilding C object CMakeFiles/autoware_map_msgs__rosidl_generator_c.dir/rosidl_generator_c/autoware_map_msgs/msg/detail/point_cloud_map_meta_data__functions.c.o[0m
+[8.041s] [  7%] [32mBuilding C object CMakeFiles/autoware_map_msgs__rosidl_generator_c.dir/rosidl_generator_c/autoware_map_msgs/msg/detail/point_cloud_map_cell_with_id__functions.c.o[0m
+[8.041s] [  8%] [32mBuilding C object CMakeFiles/autoware_map_msgs__rosidl_generator_c.dir/rosidl_generator_c/autoware_map_msgs/msg/detail/point_cloud_map_cell_meta_data_with_id__functions.c.o[0m
+[8.041s] [  8%] [32mBuilding C object CMakeFiles/autoware_map_msgs__rosidl_generator_c.dir/rosidl_generator_c/autoware_map_msgs/msg/detail/point_cloud_map_cell_meta_data__functions.c.o[0m
+[8.041s] [  9%] [32mBuilding C object CMakeFiles/autoware_map_msgs__rosidl_generator_c.dir/rosidl_generator_c/autoware_map_msgs/srv/detail/get_partial_point_cloud_map__functions.c.o[0m
+[8.041s] [ 10%] [32mBuilding C object CMakeFiles/autoware_map_msgs__rosidl_generator_c.dir/rosidl_generator_c/autoware_map_msgs/srv/detail/get_selected_lanelet2_map__functions.c.o[0m
+[8.041s] [ 11%] [32mBuilding C object CMakeFiles/autoware_map_msgs__rosidl_generator_c.dir/rosidl_generator_c/autoware_map_msgs/srv/detail/get_differential_point_cloud_map__functions.c.o[0m
+[8.041s] [ 11%] [32mBuilding C object CMakeFiles/autoware_map_msgs__rosidl_generator_c.dir/rosidl_generator_c/autoware_map_msgs/srv/detail/get_selected_point_cloud_map__functions.c.o[0m
+[8.041s] [ 12%] [32m[1mLinking C shared library libautoware_map_msgs__rosidl_generator_c.so[0m
+[8.041s] [ 12%] Built target autoware_map_msgs__rosidl_generator_c
+[8.041s] [ 13%] [34m[1mGenerating C type support for eProsima Fast-RTPS[0m
+[8.041s] [ 14%] [34m[1mGenerating C type support dispatch for ROS interfaces[0m
+[8.041s] [ 15%] [34m[1mGenerating C introspection for ROS interfaces[0m
+[8.041s] [ 15%] Built target autoware_map_msgs__cpp
+[8.041s] [ 16%] [34m[1mGenerating C++ type support dispatch for ROS interfaces[0m
+[8.041s] [ 17%] [34m[1mGenerating C++ type support for eProsima Fast-RTPS[0m
+[8.041s] [ 17%] [34m[1mGenerating C++ introspection for ROS interfaces[0m
+[8.539s] gmake[2]: *** Deleting file 'rosidl_typesupport_fastrtps_c/autoware_map_msgs/msg/detail/area_info__rosidl_typesupport_fastrtps_c.h'
+[8.539s] gmake[2]: *** Deleting file 'rosidl_typesupport_cpp/autoware_map_msgs/msg/area_info__type_support.cpp'
+[8.539s] gmake[2]: *** Deleting file 'rosidl_typesupport_fastrtps_cpp/autoware_map_msgs/msg/detail/dds_fastrtps/area_info__type_support.cpp'
+[8.539s] Traceback (most recent call last):
+[8.539s] Traceback (most recent call last):
+[8.539s]   File "/opt/ros/humble/lib/rosidl_typesupport_cpp/rosidl_typesupport_cpp", line 28, in <module>
+[8.539s]     sys.exit(main())
+[8.539s]   File "/opt/ros/humble/lib/rosidl_typesupport_cpp/rosidl_typesupport_cpp", line 24, in main
+[8.539s] gmake[2]: *** Deleting file 'rosidl_typesupport_introspection_cpp/autoware_map_msgs/msg/detail/area_info__rosidl_typesupport_introspection_cpp.hpp'
+[8.539s]     generate_cpp(args.generator_arguments_file, args.typesupports)
+[8.539s]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rosidl_typesupport_cpp/__init__.py", line 28, in generate_cpp
+[8.539s]     return generate_files(
+[8.539s]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rosidl_cmake/__init__.py", line 74, in generate_files
+[8.539s] gmake[2]: *** Deleting file 'rosidl_typesupport_c/autoware_map_msgs/msg/area_info__type_support.cpp'
+[8.539s]   File "/opt/ros/humble/lib/rosidl_typesupport_c/rosidl_typesupport_c", line 28, in <module>
+[8.539s]     sys.exit(main())
+[8.539s]   File "/opt/ros/humble/lib/rosidl_typesupport_c/rosidl_typesupport_c", line 24, in main
+[8.539s]     generate_c(args.generator_arguments_file, args.typesupports)
+[8.539s]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rosidl_typesupport_c/__init__.py", line 28, in generate_c
+[8.539s]     return generate_files(
+[8.539s]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rosidl_cmake/__init__.py", line 74, in generate_files
+[8.539s]     idl_file = parse_idl_file(locator)
+[8.540s]     idl_file = parse_idl_file(locator)
+[8.540s]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rosidl_parser/parser.py", line 64, in parse_idl_file
+[8.540s]     content = parse_idl_string(string, png_file=png_file)
+[8.540s]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rosidl_parser/parser.py", line 72, in parse_idl_string
+[8.540s]     tree = get_ast_from_idl_string(idl_string)
+[8.540s]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rosidl_parser/parser.py", line 89, in get_ast_from_idl_string
+[8.540s]     return _parser.parse(idl_string)
+[8.540s]   File "/home/tlab/.local/lib/python3.10/site-packages/lark/lark.py", line 677, in parse
+[8.540s] Traceback (most recent call last):
+[8.540s]   File "/opt/ros/humble/lib/rosidl_typesupport_fastrtps_cpp/rosidl_typesupport_fastrtps_cpp", line 23, in <module>
+[8.540s]     sys.exit(main())
+[8.540s]   File "/opt/ros/humble/lib/rosidl_typesupport_fastrtps_cpp/rosidl_typesupport_fastrtps_cpp", line 19, in main
+[8.540s]     generate_cpp(args.generator_arguments_file)
+[8.540s]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rosidl_typesupport_fastrtps_cpp/__init__.py", line 24, in generate_cpp
+[8.540s]     return self.parser.parse(text, start=start, on_error=on_error)
+[8.540s]   File "/home/tlab/.local/lib/python3.10/site-packages/lark/parser_frontends.py", line 131, in parse
+[8.540s]     return self.parser.parse(stream, chosen_start, **kw)
+[8.540s]   File "/home/tlab/.local/lib/python3.10/site-packages/lark/parsers/earley.py", line 309, in parse
+[8.540s] gmake[2]: *** Deleting file 'rosidl_typesupport_introspection_c/autoware_map_msgs/msg/detail/area_info__rosidl_typesupport_introspection_c.h'
+[8.540s]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rosidl_parser/parser.py", line 64, in parse_idl_file
+[8.540s]     content = parse_idl_string(string, png_file=png_file)
+[8.540s]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rosidl_parser/parser.py", line 72, in parse_idl_string
+[8.540s]     tree = get_ast_from_idl_string(idl_string)
+[8.540s]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rosidl_parser/parser.py", line 89, in get_ast_from_idl_string
+[8.540s]     return _parser.parse(idl_string)
+[8.541s]   File "/home/tlab/.local/lib/python3.10/site-packages/lark/lark.py", line 677, in parse
+[8.541s]     return self.parser.parse(text, start=start, on_error=on_error)
+[8.541s]   File "/home/tlab/.local/lib/python3.10/site-packages/lark/parser_frontends.py", line 131, in parse
+[8.541s]     return self.parser.parse(stream, chosen_start, **kw)
+[8.541s]   File "/home/tlab/.local/lib/python3.10/site-packages/lark/parsers/earley.py", line 309, in parse
+[8.541s]     return transformer.transform(solution)
+[8.541s]   File "/home/tlab/.local/lib/python3.10/site-packages/lark/parsers/earley_forest.py", line 392, in transform
+[8.541s]     return transformer.transform(solution)
+[8.541s]   File "/home/tlab/.local/lib/python3.10/site-packages/lark/parsers/earley_forest.py", line 392, in transform
+[8.541s]     self.visit(root)
+[8.541s]   File "/home/tlab/.local/lib/python3.10/site-packages/lark/parsers/earley_forest.py", line 529, in visit
+[8.541s]     super(ForestToParseTree, self).visit(root)
+[8.541s]   File "/home/tlab/.local/lib/python3.10/site-packages/lark/parsers/earley_forest.py", line 305, in visit
+[8.541s]     current = next(reversed(input_stack))
+[8.541s] KeyboardInterrupt
+[8.541s]     return generate_files(generator_arguments_file, mapping)
+[8.541s]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rosidl_cmake/__init__.py", line 87, in generate_files
+[8.541s]     expand_template(
+[8.541s]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rosidl_cmake/__init__.py", line 149, in expand_template
+[8.541s]     self.visit(root)
+[8.541s]   File "/home/tlab/.local/lib/python3.10/site-packages/lark/parsers/earley_forest.py", line 528, in visit
+[8.541s]     interpreter.string(template_content, template_path, locals=data)
+[8.541s]   File "/usr/lib/python3/dist-packages/em.py", line 2391, in string
+[8.541s]     self.prioritizer.visit(root)
+[8.541s]   File "/home/tlab/.local/lib/python3.10/site-packages/lark/parsers/earley_forest.py", line 332, in visit
+[8.541s]     if isinstance(current, PackedNode):
+[8.541s] KeyboardInterrupt
+[8.542s]     self.safe(scanner, True, locals)
+[8.542s]   File "/usr/lib/python3/dist-packages/em.py", line 2401, in safe
+[8.542s]     self.parse(scanner, locals)
+[8.542s]   File "/usr/lib/python3/dist-packages/em.py", line 2421, in parse
+[8.542s]     token.run(self, locals)
+[8.542s]   File "/usr/lib/python3/dist-packages/em.py", line 1425, in run
+[8.542s]     interpreter.execute(self.code, locals)
+[8.542s]   File "/usr/lib/python3/dist-packages/em.py", line 2596, in execute
+[8.542s]     _exec(statements, self.globals, locals)
+[8.542s]   File "<string>", line 10, in <module>
+[8.542s] Traceback (most recent call last):
+[8.542s]   File "/opt/ros/humble/lib/rosidl_typesupport_introspection_cpp/rosidl_typesupport_introspection_cpp", line 31, in <module>
+[8.542s]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rosidl_cmake/__init__.py", line 198, in _expand_template
+[8.542s]     interpreter.string(content, str(template_path), kwargs)
+[8.542s]   File "/usr/lib/python3/dist-packages/em.py", line 2391, in string
+[8.542s]     sys.exit(main())
+[8.542s]   File "/opt/ros/humble/lib/rosidl_typesupport_introspection_cpp/rosidl_typesupport_introspection_cpp", line 27, in main
+[8.542s]     generate_cpp(args.generator_arguments_file)
+[8.542s]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rosidl_typesupport_introspection_cpp/__init__.py", line 31, in generate_cpp
+[8.542s]     return generate_files(generator_arguments_file, mapping)
+[8.542s]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rosidl_cmake/__init__.py", line 87, in generate_files
+[8.543s]     expand_template(
+[8.543s]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rosidl_cmake/__init__.py", line 149, in expand_template
+[8.543s]     interpreter.string(template_content, template_path, locals=data)
+[8.543s]   File "/usr/lib/python3/dist-packages/em.py", line 2391, in string
+[8.543s]     self.safe(scanner, True, locals)
+[8.543s]   File "/usr/lib/python3/dist-packages/em.py", line 2401, in safe
+[8.543s]     self.safe(scanner, True, locals)
+[8.543s]   File "/usr/lib/python3/dist-packages/em.py", line 2401, in safe
+[8.543s]     self.parse(scanner, locals)
+[8.543s]   File "/usr/lib/python3/dist-packages/em.py", line 2421, in parse
+[8.543s]     self.parse(scanner, locals)
+[8.543s]   File "/usr/lib/python3/dist-packages/em.py", line 2420, in parse
+[8.543s]     token.run(self, locals)
+[8.543s]   File "/usr/lib/python3/dist-packages/em.py", line 1547, in run
+[8.543s]     self.invoke('atToken', token=token)
+[8.543s]   File "/usr/lib/python3/dist-packages/em.py", line 2636, in invoke
+[8.543s]     self.subrun(info[0][1], interpreter, locals)
+[8.543s]   File "/usr/lib/python3/dist-packages/em.py", line 1631, in subrun
+[8.543s]     token.run(interpreter, locals)
+[8.543s]   File "/usr/lib/python3/dist-packages/em.py", line 1425, in run
+[8.543s]     interpreter.execute(self.code, locals)
+[8.543s]   File "/usr/lib/python3/dist-packages/em.py", line 2596, in execute
+[8.543s]     if self.hooksEnabled:
+[8.543s] KeyboardInterrupt
+[8.544s]     _exec(statements, self.globals, locals)
+[8.544s]   File "<string>", line 2, in <module>
+[8.544s]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rosidl_cmake/__init__.py", line 198, in _expand_template
+[8.544s]     interpreter.string(content, str(template_path), kwargs)
+[8.544s]   File "/usr/lib/python3/dist-packages/em.py", line 2391, in string
+[8.544s]     self.safe(scanner, True, locals)
+[8.544s]   File "/usr/lib/python3/dist-packages/em.py", line 2401, in safe
+[8.544s]     self.parse(scanner, locals)
+[8.544s]   File "/usr/lib/python3/dist-packages/em.py", line 2417, in parse
+[8.544s]     token = scanner.one()
+[8.544s]   File "/usr/lib/python3/dist-packages/em.py", line 1984, in one
+[8.544s] Traceback (most recent call last):
+[8.544s]   File "/opt/ros/humble/lib/rosidl_typesupport_fastrtps_c/rosidl_typesupport_fastrtps_c", line 33, in <module>
+[8.544s]     token.scan(self)
+[8.544s]   File "/usr/lib/python3/dist-packages/em.py", line 1309, in scan
+[8.544s]     sys.exit(main())
+[8.544s]   File "/opt/ros/humble/lib/rosidl_typesupport_fastrtps_c/rosidl_typesupport_fastrtps_c", line 29, in main
+[8.544s]     generate_typesupport_fastrtps_c(args.generator_arguments_file)
+[8.544s]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rosidl_typesupport_fastrtps_c/__init__.py", line 24, in generate_typesupport_fastrtps_c
+[8.544s]     return generate_files(generator_arguments_file, mapping)
+[8.544s]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rosidl_cmake/__init__.py", line 74, in generate_files
+[8.544s]     idl_file = parse_idl_file(locator)
+[8.544s]     z = scanner.complex('(', ')', 0)
+[8.544s]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rosidl_parser/parser.py", line 64, in parse_idl_file
+[8.544s]   File "/usr/lib/python3/dist-packages/em.py", line 1893, in complex
+[8.544s]     content = parse_idl_string(string, png_file=png_file)
+[8.544s]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rosidl_parser/parser.py", line 72, in parse_idl_string
+[8.545s]     tree = get_ast_from_idl_string(idl_string)
+[8.545s]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rosidl_parser/parser.py", line 89, in get_ast_from_idl_string
+[8.545s]     return _parser.parse(idl_string)
+[8.545s]   File "/home/tlab/.local/lib/python3.10/site-packages/lark/lark.py", line 677, in parse
+[8.545s]     newQuote = self.check(i, quote)
+[8.545s]   File "/usr/lib/python3/dist-packages/em.py", line 1766, in check
+[8.545s]     return self.parser.parse(text, start=start, on_error=on_error)
+[8.545s]   File "/home/tlab/.local/lib/python3.10/site-packages/lark/parser_frontends.py", line 131, in parse
+[8.545s]     return self.parser.parse(stream, chosen_start, **kw)
+[8.545s]   File "/home/tlab/.local/lib/python3.10/site-packages/lark/parsers/earley.py", line 280, in parse
+[8.545s]     if self[i] in '\'\"':
+[8.545s]   File "/usr/lib/python3/dist-packages/em.py", line 1683, in __getitem__
+[8.545s]     to_scan = self._parse(lexer, columns, to_scan, start_symbol)
+[8.545s]   File "/home/tlab/.local/lib/python3.10/site-packages/lark/parsers/xearley.py", line 151, in _parse
+[8.545s]     self.predict_and_complete(i, to_scan, columns, transitives, node_cache)
+[8.549s]   File "/home/tlab/.local/lib/python3.10/site-packages/lark/parsers/earley.py", line 134, in predict_and_complete
+[8.549s]     originators = [originator for originator in columns[item.start] if originator.expect is not None and originator.expect == item.s]
+[8.549s]   File "/home/tlab/.local/lib/python3.10/site-packages/lark/parsers/earley.py", line 134, in <listcomp>
+[8.549s]     originators = [originator for originator in columns[item.start] if originator.expect is not None and originator.expect == item.s]
+[8.549s]     if isinstance(index, slice):
+[8.549s]   File "/home/tlab/.local/lib/python3.10/site-packages/lark/grammar.py", line 21, in __eq__
+[8.549s] KeyboardInterrupt
+[8.550s]     return self.is_term == other.is_term and self.name == other.name
+[8.551s]   File "/home/tlab/.local/lib/python3.10/site-packages/lark/lexer.py", line 265, in __eq__
+[8.551s]     def __eq__(self, other):
+[8.551s] KeyboardInterrupt
+[8.551s] Traceback (most recent call last):
+[8.551s]   File "/opt/ros/humble/lib/rosidl_typesupport_introspection_c/rosidl_typesupport_introspection_c", line 31, in <module>
+[8.551s]     sys.exit(main())
+[8.551s]   File "/opt/ros/humble/lib/rosidl_typesupport_introspection_c/rosidl_typesupport_introspection_c", line 27, in main
+[8.551s]     generate_c(args.generator_arguments_file)
+[8.551s]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rosidl_typesupport_introspection_c/__init__.py", line 31, in generate_c
+[8.551s]     return generate_files(generator_arguments_file, mapping)
+[8.551s]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rosidl_cmake/__init__.py", line 87, in generate_files
+[8.552s]     expand_template(
+[8.552s]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rosidl_cmake/__init__.py", line 149, in expand_template
+[8.552s]     interpreter.string(template_content, template_path, locals=data)
+[8.552s]   File "/usr/lib/python3/dist-packages/em.py", line 2391, in string
+[8.552s]     self.safe(scanner, True, locals)
+[8.552s]   File "/usr/lib/python3/dist-packages/em.py", line 2401, in safe
+[8.552s]     self.parse(scanner, locals)
+[8.552s]   File "/usr/lib/python3/dist-packages/em.py", line 2421, in parse
+[8.552s]     token.run(self, locals)
+[8.552s]   File "/usr/lib/python3/dist-packages/em.py", line 1547, in run
+[8.552s]     self.subrun(info[0][1], interpreter, locals)
+[8.552s]   File "/usr/lib/python3/dist-packages/em.py", line 1631, in subrun
+[8.552s]     token.run(interpreter, locals)
+[8.552s]   File "/usr/lib/python3/dist-packages/em.py", line 1425, in run
+[8.552s]     interpreter.execute(self.code, locals)
+[8.552s]   File "/usr/lib/python3/dist-packages/em.py", line 2596, in execute
+[8.552s]     _exec(statements, self.globals, locals)
+[8.552s]   File "<string>", line 2, in <module>
+[8.552s]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rosidl_cmake/__init__.py", line 198, in _expand_template
+[8.552s]     interpreter.string(content, str(template_path), kwargs)
+[8.553s]   File "/usr/lib/python3/dist-packages/em.py", line 2391, in string
+[8.553s]     self.safe(scanner, True, locals)
+[8.553s]   File "/usr/lib/python3/dist-packages/em.py", line 2401, in safe
+[8.553s]     self.parse(scanner, locals)
+[8.553s]   File "/usr/lib/python3/dist-packages/em.py", line 2417, in parse
+[8.553s]     token = scanner.one()
+[8.553s]   File "/usr/lib/python3/dist-packages/em.py", line 1984, in one
+[8.553s]     token.scan(self)
+[8.553s]   File "/usr/lib/python3/dist-packages/em.py", line 1421, in scan
+[8.553s]     i = scanner.complex('{', '}', 0)
+[8.553s]   File "/usr/lib/python3/dist-packages/em.py", line 1892, in complex
+[8.553s]     while i < end:
+[8.553s] KeyboardInterrupt
+[8.553s] Exception ignored in: <function Interpreter.__del__ at 0x74a7e1e00ee0>
+[8.553s] Traceback (most recent call last):
+[8.553s]   File "/usr/lib/python3/dist-packages/em.py", line 2094, in __del__
+[8.553s]   File "/usr/lib/python3/dist-packages/em.py", line 2157, in shutdown
+[8.553s]   File "/usr/lib/python3/dist-packages/em.py", line 2647, in finalize
+[8.553s]   File "/usr/lib/python3/dist-packages/em.py", line 2200, in push
+[8.553s] AttributeError: '_io.TextIOWrapper' object has no attribute 'push'
+[8.553s] Exception ignored in: <function Interpreter.__del__ at 0x735432848f70>
+[8.553s] Traceback (most recent call last):
+[8.553s]   File "/usr/lib/python3/dist-packages/em.py", line 2094, in __del__
+[8.553s]   File "/usr/lib/python3/dist-packages/em.py", line 2157, in shutdown
+[8.554s]   File "/usr/lib/python3/dist-packages/em.py", line 2647, in finalize
+[8.554s]   File "/usr/lib/python3/dist-packages/em.py", line 2200, in push
+[8.554s] AttributeError: '_io.TextIOWrapper' object has no attribute 'push'
+[8.554s] Exception ignored in: <function Interpreter.__del__ at 0x78dd76a00ee0>
+[8.554s] Traceback (most recent call last):
+[8.554s]   File "/usr/lib/python3/dist-packages/em.py", line 2094, in __del__
+[8.554s]   File "/usr/lib/python3/dist-packages/em.py", line 2157, in shutdown
+[8.554s]   File "/usr/lib/python3/dist-packages/em.py", line 2647, in finalize
+[8.554s]   File "/usr/lib/python3/dist-packages/em.py", line 2200, in push
+[8.554s] AttributeError: '_io.TextIOWrapper' object has no attribute 'push'
+[8.555s] gmake[2]: *** [CMakeFiles/autoware_map_msgs__rosidl_typesupport_introspection_cpp.dir/build.make:205: rosidl_typesupport_introspection_cpp/autoware_map_msgs/msg/detail/area_info__rosidl_typesupport_introspection_cpp.hpp] Interrupt
+[8.555s] gmake[2]: *** [CMakeFiles/autoware_map_msgs__rosidl_typesupport_fastrtps_cpp.dir/build.make:205: rosidl_typesupport_fastrtps_cpp/autoware_map_msgs/msg/detail/dds_fastrtps/area_info__type_support.cpp] Interrupt
+[8.555s] gmake[1]: *** [CMakeFiles/Makefile2:290: CMakeFiles/autoware_map_msgs__rosidl_typesupport_fastrtps_cpp.dir/all] Interrupt
+[8.555s] gmake[1]: *** [CMakeFiles/Makefile2:368: CMakeFiles/autoware_map_msgs__rosidl_typesupport_introspection_cpp.dir/all] Interrupt
+[8.561s] gmake[2]: *** [CMakeFiles/autoware_map_msgs__rosidl_typesupport_cpp.dir/build.make:203: rosidl_typesupport_cpp/autoware_map_msgs/msg/area_info__type_support.cpp] Interrupt
+[8.561s] gmake[1]: *** [CMakeFiles/Makefile2:394: CMakeFiles/autoware_map_msgs__rosidl_typesupport_cpp.dir/all] Interrupt
+[8.561s] gmake[2]: *** [CMakeFiles/autoware_map_msgs__rosidl_typesupport_c.dir/build.make:203: rosidl_typesupport_c/autoware_map_msgs/msg/area_info__type_support.cpp] Interrupt
+[8.561s] gmake[2]: *** [CMakeFiles/autoware_map_msgs__rosidl_typesupport_introspection_c.dir/build.make:205: rosidl_typesupport_introspection_c/autoware_map_msgs/msg/detail/area_info__rosidl_typesupport_introspection_c.h] Interrupt
+[8.562s] gmake[1]: *** [CMakeFiles/Makefile2:342: CMakeFiles/autoware_map_msgs__rosidl_typesupport_c.dir/all] Interrupt
+[8.562s] gmake[2]: *** [CMakeFiles/autoware_map_msgs__rosidl_typesupport_fastrtps_c.dir/build.make:205: rosidl_typesupport_fastrtps_c/autoware_map_msgs/msg/detail/area_info__rosidl_typesupport_fastrtps_c.h] Interrupt
+[8.563s] gmake[1]: *** [CMakeFiles/Makefile2:238: CMakeFiles/autoware_map_msgs__rosidl_typesupport_fastrtps_c.dir/all] Interrupt
+[8.563s] gmake[1]: *** [CMakeFiles/Makefile2:316: CMakeFiles/autoware_map_msgs__rosidl_typesupport_introspection_c.dir/all] Interrupt
+[8.563s] gmake: *** [Makefile:146: all] Interrupt

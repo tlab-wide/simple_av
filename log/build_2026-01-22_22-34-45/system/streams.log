@@ -1,0 +1,27 @@
+[2.469s] Invoking command in '/workspace/simpleav/20251204/src/simple_av/build/system': PYTHONPATH=/workspace/simpleav/20251204/src/simple_av/build/system/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/workspace/simpleav/20251204/src/simple_av/install/system/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py develop --editable --build-directory /workspace/simpleav/20251204/src/simple_av/build/system/build --no-deps symlink_data
+[3.246s] running develop
+[3.246s] running egg_info
+[3.247s] creating system.egg-info
+[3.247s] writing system.egg-info/PKG-INFO
+[3.247s] writing dependency_links to system.egg-info/dependency_links.txt
+[3.247s] writing entry points to system.egg-info/entry_points.txt
+[3.247s] writing requirements to system.egg-info/requires.txt
+[3.247s] writing top-level names to system.egg-info/top_level.txt
+[3.247s] writing manifest file 'system.egg-info/SOURCES.txt'
+[3.247s] reading manifest file 'system.egg-info/SOURCES.txt'
+[3.248s] writing manifest file 'system.egg-info/SOURCES.txt'
+[3.262s] running build_ext
+[3.263s] Creating /workspace/simpleav/20251204/src/simple_av/install/system/lib/python3.10/site-packages/system.egg-link (link to .)
+[3.264s] Installing portal script to /workspace/simpleav/20251204/src/simple_av/install/system/lib/system
+[3.265s] Installing sim_monitor script to /workspace/simpleav/20251204/src/simple_av/install/system/lib/system
+[3.267s] 
+[3.267s] Installed /workspace/simpleav/20251204/src/simple_av/build/system
+[3.267s] running symlink_data
+[3.268s] creating /workspace/simpleav/20251204/src/simple_av/install/system/share/ament_index
+[3.268s] creating /workspace/simpleav/20251204/src/simple_av/install/system/share/ament_index/resource_index
+[3.268s] creating /workspace/simpleav/20251204/src/simple_av/install/system/share/ament_index/resource_index/packages
+[3.268s] symbolically linking /workspace/simpleav/20251204/src/simple_av/build/system/resource/system -> /workspace/simpleav/20251204/src/simple_av/install/system/share/ament_index/resource_index/packages
+[3.269s] symbolically linking /workspace/simpleav/20251204/src/simple_av/build/system/package.xml -> /workspace/simpleav/20251204/src/simple_av/install/system/share/system
+[3.269s] creating /workspace/simpleav/20251204/src/simple_av/install/system/share/system/launch
+[3.269s] symbolically linking /workspace/simpleav/20251204/src/simple_av/build/system/launch/system_launcher.py -> /workspace/simpleav/20251204/src/simple_av/install/system/share/system/launch
+[3.314s] Invoked command in '/workspace/simpleav/20251204/src/simple_av/build/system' returned '0': PYTHONPATH=/workspace/simpleav/20251204/src/simple_av/build/system/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/workspace/simpleav/20251204/src/simple_av/install/system/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py develop --editable --build-directory /workspace/simpleav/20251204/src/simple_av/build/system/build --no-deps symlink_data

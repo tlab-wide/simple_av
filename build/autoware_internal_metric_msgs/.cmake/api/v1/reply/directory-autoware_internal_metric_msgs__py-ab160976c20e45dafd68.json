@@ -1,0 +1,14 @@
+{
+	"backtraceGraph" : 
+	{
+		"commands" : [],
+		"files" : [],
+		"nodes" : []
+	},
+	"installers" : [],
+	"paths" : 
+	{
+		"build" : "autoware_internal_metric_msgs__py",
+		"source" : "/workspace/simpleav/20251204/src/simple_av/build/autoware_internal_metric_msgs/autoware_internal_metric_msgs__py"
+	}
+}

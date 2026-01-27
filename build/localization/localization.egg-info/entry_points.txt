@@ -1,0 +1,4 @@
+[console_scripts]
+intersection_detector = localization.intersection_detector:main
+localization = localization.localization:main
+

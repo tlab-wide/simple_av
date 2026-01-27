@@ -1,0 +1,4 @@
+/workspace/simpleav/20251204/src/simple_av/build/autoware_control_msgs/rosidl_adapter/autoware_control_msgs:msg/Control.idl
+/workspace/simpleav/20251204/src/simple_av/build/autoware_control_msgs/rosidl_adapter/autoware_control_msgs:msg/ControlHorizon.idl
+/workspace/simpleav/20251204/src/simple_av/build/autoware_control_msgs/rosidl_adapter/autoware_control_msgs:msg/Lateral.idl
+/workspace/simpleav/20251204/src/simple_av/build/autoware_control_msgs/rosidl_adapter/autoware_control_msgs:msg/Longitudinal.idl

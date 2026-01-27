@@ -1,0 +1,14 @@
+{
+	"backtraceGraph" : 
+	{
+		"commands" : [],
+		"files" : [],
+		"nodes" : []
+	},
+	"installers" : [],
+	"paths" : 
+	{
+		"build" : "simple_av_msgs__py",
+		"source" : "/workspace/simpleav/20251204/src/simple_av/build/simple_av_msgs/simple_av_msgs__py"
+	}
+}

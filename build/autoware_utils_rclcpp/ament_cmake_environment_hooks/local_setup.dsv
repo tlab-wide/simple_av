@@ -1,0 +1,2 @@
+source;share/autoware_utils_rclcpp/environment/ament_prefix_path.sh
+source;share/autoware_utils_rclcpp/environment/path.sh

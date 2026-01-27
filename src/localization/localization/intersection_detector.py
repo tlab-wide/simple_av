@@ -60,27 +60,27 @@ class IntersectionStatusDetector(Node):
             if distance < threshold:
                 closest = (intersection_name, distance, intersection_referece_point, threshold)
         
-        print('closest: ', closest)
+        self.get_logger().debug(f'closest: {closest}')
         intersection_status_msg = LocalizationIntersectionStatus()
         if closest:
             name, distance, intersection_referece_point, threshold = closest
             distance_to_prev_pose = self.calculate_distance(self.position_log[0], intersection_referece_point)
             if distance < distance_to_prev_pose:
                 self.status = 'approaching'      
-                print("approaching")         
+                self.get_logger().debug("approaching")
             elif distance > distance_to_prev_pose:
                 self.status = 'exiting'
-                print("exiting")
+                self.get_logger().debug("exiting")
             elif distance == distance_to_prev_pose and self.status == 'approaching':
-                print("== aproaching")
+                self.get_logger().debug("== aproaching")
                 self.status = 'approaching'
             elif distance == distance_to_prev_pose and self.status == 'exiting':
-                print("== exiting")
+                self.get_logger().debug("== exiting")
                 self.status = 'exiting'
 
             if distance < threshold * 0.3:
                 self.status = 'in'
-                print("in")
+                self.get_logger().debug("in")
             
             intersection_status_msg.intersection_name = name
             intersection_status_msg.status = self.status

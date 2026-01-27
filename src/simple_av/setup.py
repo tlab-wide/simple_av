@@ -29,7 +29,8 @@ setup(
             'tf_publisher = simple_av.tf_publisher:main',
             'rviz_point_visualizer = simple_av.rviz_point_visualizer:main',
             'rviz_intersection_layout_visualizer = simple_av.rviz_intersection_layout_visualizer:main',
-            'rviz_status_publisher = simple_av.rviz_status_publisher:main'
+            'rviz_status_publisher = simple_av.rviz_status_publisher:main',
+            'rviz_waypoint_speed_visualizer = simple_av.rviz_waypoint_speed_visualizer:main'
         ],
     },
 )

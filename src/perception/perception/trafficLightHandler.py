@@ -108,14 +108,14 @@ class TrafficSignalHandler(Node):
         try:
             trafficSignal = getattr(self, f"trafficSignal_intersection{intersection_number}")
         except AttributeError:
-            self.get_logger().warning(f"No traffic signal data for intersection {intersection_number}")
+            self.get_logger().debug(f"No traffic signal data for intersection {intersection_number}")
             return [], []
-        print(f"debug - trafficSignal_intersection{intersection_number}")
+        self.get_logger().debug(f"trafficSignal_intersection{intersection_number}")
         v2i_traffic_signals_id = []
         v2i_traffic_signals_colors = []
 
         if not trafficSignal.traffic_signals:
-            print("debug: No data")
+            self.get_logger().debug("No traffic signal data")
             return [], []
 
         for traffic_signal in trafficSignal.traffic_signals.signals:
@@ -134,11 +134,13 @@ class TrafficSignalHandler(Node):
         v2i_traffic_signals_colors = []
 
         # Handle traffic signals
-        print("debug intersection awareness: ", self.intersection_awareness_intersection_name)
+        self.get_logger().debug(
+            f"intersection awareness: {self.intersection_awareness_intersection_name}"
+        )
         if self.enable_trafficlight and self.intersection_awareness_intersection_name is not None:
             v2i_traffic_signals_id, v2i_traffic_signals_colors = self.process_traffic_signals()
-            print(f'ids: {v2i_traffic_signals_id}')
-            print(f'colors: {v2i_traffic_signals_colors}') 
+            self.get_logger().debug(f'ids: {v2i_traffic_signals_id}')
+            self.get_logger().debug(f'colors: {v2i_traffic_signals_colors}')
 
         # Create and publish traffic signals message
         traffic_signals_msg = TrafficSignalsArray()
@@ -154,6 +156,8 @@ def main(args=None):
         while rclpy.ok() and not node.node_shut:
             rclpy.spin_once(node, timeout_sec=0)  # Set timeout to 0 to avoid delay
             node.trafficSignalDetection()
+    except KeyboardInterrupt:
+        pass
     finally:
         node.destroy_node()
         rclpy.shutdown()

@@ -1,0 +1,41 @@
+file(REMOVE_RECURSE
+  "../rosidl_generator_py/simple_av_msgs/_simple_av_msgs_s.ep.rosidl_typesupport_c.c"
+  "../rosidl_generator_py/simple_av_msgs/_simple_av_msgs_s.ep.rosidl_typesupport_fastrtps_c.c"
+  "../rosidl_generator_py/simple_av_msgs/_simple_av_msgs_s.ep.rosidl_typesupport_introspection_c.c"
+  "../rosidl_generator_py/simple_av_msgs/msg/__init__.py"
+  "../rosidl_generator_py/simple_av_msgs/msg/_collision_prediction_info.py"
+  "../rosidl_generator_py/simple_av_msgs/msg/_collision_prediction_info_s.c"
+  "../rosidl_generator_py/simple_av_msgs/msg/_detected_object.py"
+  "../rosidl_generator_py/simple_av_msgs/msg/_detected_object_s.c"
+  "../rosidl_generator_py/simple_av_msgs/msg/_detected_objects_array.py"
+  "../rosidl_generator_py/simple_av_msgs/msg/_detected_objects_array_s.c"
+  "../rosidl_generator_py/simple_av_msgs/msg/_localization_intersection_status.py"
+  "../rosidl_generator_py/simple_av_msgs/msg/_localization_intersection_status_s.c"
+  "../rosidl_generator_py/simple_av_msgs/msg/_localization_msg.py"
+  "../rosidl_generator_py/simple_av_msgs/msg/_localization_msg_s.c"
+  "../rosidl_generator_py/simple_av_msgs/msg/_planning_internal_mission_plan_msg.py"
+  "../rosidl_generator_py/simple_av_msgs/msg/_planning_internal_mission_plan_msg_s.c"
+  "../rosidl_generator_py/simple_av_msgs/msg/_planning_internal_msg.py"
+  "../rosidl_generator_py/simple_av_msgs/msg/_planning_internal_msg_s.c"
+  "../rosidl_generator_py/simple_av_msgs/msg/_planning_motion_planning_msg.py"
+  "../rosidl_generator_py/simple_av_msgs/msg/_planning_motion_planning_msg_s.c"
+  "../rosidl_generator_py/simple_av_msgs/msg/_planning_path_planning_msg.py"
+  "../rosidl_generator_py/simple_av_msgs/msg/_planning_path_planning_msg_s.c"
+  "../rosidl_generator_py/simple_av_msgs/msg/_planning_waypoint.py"
+  "../rosidl_generator_py/simple_av_msgs/msg/_planning_waypoint_s.c"
+  "../rosidl_generator_py/simple_av_msgs/msg/_portal.py"
+  "../rosidl_generator_py/simple_av_msgs/msg/_portal_s.c"
+  "../rosidl_generator_py/simple_av_msgs/msg/_sim_monitor.py"
+  "../rosidl_generator_py/simple_av_msgs/msg/_sim_monitor_s.c"
+  "../rosidl_generator_py/simple_av_msgs/msg/_traffic_signals_array.py"
+  "../rosidl_generator_py/simple_av_msgs/msg/_traffic_signals_array_s.c"
+  "../rosidl_generator_py/simple_av_msgs/srv/__init__.py"
+  "../rosidl_generator_py/simple_av_msgs/srv/_trigger_mission_plan.py"
+  "../rosidl_generator_py/simple_av_msgs/srv/_trigger_mission_plan_s.c"
+  "CMakeFiles/simple_av_msgs__py"
+)
+
+# Per-language clean rules from dependency scanning.
+foreach(lang )
+  include(CMakeFiles/simple_av_msgs__py.dir/cmake_clean_${lang}.cmake OPTIONAL)
+endforeach()

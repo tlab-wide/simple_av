@@ -1,0 +1,23 @@
+// generated from rosidl_adapter/resource/msg.idl.em
+// with input from autoware_internal_metric_msgs/msg/Metric.msg
+// generated code does not contain a copyright notice
+
+
+module autoware_internal_metric_msgs {
+  module msg {
+    @verbatim (language="comment", text=
+      "name of the metric")
+    struct Metric {
+      string name;
+
+      @verbatim (language="comment", text=
+        "unit (or type) of the metric" "\n"
+        "you can leave it empty or assign any identifier to the unit, such as \"milliseconds\", \"m/s\", \"IoU\", \"battery percentage\", etc.")
+      string unit;
+
+      @verbatim (language="comment", text=
+        "value of the metric")
+      string value;
+    };
+  };
+};

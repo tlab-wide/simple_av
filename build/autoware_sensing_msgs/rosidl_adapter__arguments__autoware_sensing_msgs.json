@@ -1,0 +1,7 @@
+{
+  "package_name": "autoware_sensing_msgs",
+  "non_idl_tuples": [
+    "/workspace/simpleav/20251204/src/simple_av/src/messages/autoware_msgs/autoware_sensing_msgs:msg/GnssInsOrientation.msg",
+    "/workspace/simpleav/20251204/src/simple_av/src/messages/autoware_msgs/autoware_sensing_msgs:msg/GnssInsOrientationStamped.msg"
+  ]
+}

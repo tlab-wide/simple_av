@@ -1,0 +1,31 @@
+running develop
+running egg_info
+creating common.egg-info
+writing common.egg-info/PKG-INFO
+writing dependency_links to common.egg-info/dependency_links.txt
+writing entry points to common.egg-info/entry_points.txt
+writing requirements to common.egg-info/requires.txt
+writing top-level names to common.egg-info/top_level.txt
+writing manifest file 'common.egg-info/SOURCES.txt'
+reading manifest file 'common.egg-info/SOURCES.txt'
+writing manifest file 'common.egg-info/SOURCES.txt'
+running build_ext
+Creating /workspace/simpleav/20251204/src/simple_av/install/common/lib/python3.10/site-packages/common.egg-link (link to .)
+
+Installed /workspace/simpleav/20251204/src/simple_av/build/common
+running symlink_data
+symbolically linking /workspace/simpleav/20251204/src/simple_av/build/common/package.xml -> /workspace/simpleav/20251204/src/simple_av/install/common/share/common
+creating /workspace/simpleav/20251204/src/simple_av/install/common/share/common/configs
+symbolically linking /workspace/simpleav/20251204/src/simple_av/build/common/configs/vehicle_config.yaml -> /workspace/simpleav/20251204/src/simple_av/install/common/share/common/configs
+symbolically linking /workspace/simpleav/20251204/src/simple_av/build/common/configs/av_features.yaml -> /workspace/simpleav/20251204/src/simple_av/install/common/share/common/configs
+symbolically linking /workspace/simpleav/20251204/src/simple_av/build/common/configs/logger_config.yaml -> /workspace/simpleav/20251204/src/simple_av/install/common/share/common/configs
+symbolically linking /workspace/simpleav/20251204/src/simple_av/build/common/configs/scenario_config.yaml -> /workspace/simpleav/20251204/src/simple_av/install/common/share/common/configs
+symbolically linking /workspace/simpleav/20251204/src/simple_av/build/common/configs/sensors_calibration.yaml -> /workspace/simpleav/20251204/src/simple_av/install/common/share/common/configs
+symbolically linking /workspace/simpleav/20251204/src/simple_av/build/common/configs/motion_behavior_config.yaml -> /workspace/simpleav/20251204/src/simple_av/install/common/share/common/configs
+creating /workspace/simpleav/20251204/src/simple_av/install/common/share/common/zones
+symbolically linking /workspace/simpleav/20251204/src/simple_av/build/common/zones/intersection_profiles.yaml -> /workspace/simpleav/20251204/src/simple_av/install/common/share/common/zones
+symbolically linking /workspace/simpleav/20251204/src/simple_av/build/common/zones/intersections_danger_zones.yaml -> /workspace/simpleav/20251204/src/simple_av/install/common/share/common/zones
+creating /workspace/simpleav/20251204/src/simple_av/install/common/share/common/maps
+symbolically linking /workspace/simpleav/20251204/src/simple_av/build/common/maps/Shinjuku.json -> /workspace/simpleav/20251204/src/simple_av/install/common/share/common/maps
+symbolically linking /workspace/simpleav/20251204/src/simple_av/build/common/maps/Kashiwa-lexus.json -> /workspace/simpleav/20251204/src/simple_av/install/common/share/common/maps
+symbolically linking /workspace/simpleav/20251204/src/simple_av/build/common/maps/Kashiwa-bus.json -> /workspace/simpleav/20251204/src/simple_av/install/common/share/common/maps

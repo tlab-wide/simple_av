@@ -1,0 +1,5 @@
+source;share/autoware_common_msgs/local_setup.bash
+source;share/autoware_common_msgs/local_setup.dsv
+source;share/autoware_common_msgs/local_setup.ps1
+source;share/autoware_common_msgs/local_setup.sh
+source;share/autoware_common_msgs/local_setup.zsh

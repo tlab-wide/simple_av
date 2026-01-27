@@ -1,0 +1,3 @@
+/workspace/simpleav/20251204/src/simple_av/build/autoware_system_msgs/rosidl_adapter/autoware_system_msgs:msg/AutowareState.idl
+/workspace/simpleav/20251204/src/simple_av/build/autoware_system_msgs/rosidl_adapter/autoware_system_msgs:msg/HazardStatus.idl
+/workspace/simpleav/20251204/src/simple_av/build/autoware_system_msgs/rosidl_adapter/autoware_system_msgs:msg/HazardStatusStamped.idl

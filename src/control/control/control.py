@@ -3,13 +3,14 @@
 import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import PoseStamped, Point
+from visualization_msgs.msg import Marker, MarkerArray
 
 from autoware_vehicle_msgs.msg import GearCommand, VelocityReport
 from autoware_control_msgs.msg import Control, Lateral, Longitudinal
 
 from rclpy.qos import QoSProfile, DurabilityPolicy, HistoryPolicy, ReliabilityPolicy
-from simple_av_msgs.msg import PlanningPathPlanningMsg, PlanningMotionPlanningMsg
-from simple_av_msgs.msg import SimMonitor
+from simple_av_msgs.msg import PlanningPathPlanningMsg, PlanningMotionPlanningMsg, CollisionPredictionInfo
+from simple_av_msgs.msg import SimMonitor, LocalizationIntersectionStatus
 import time
 import math
 from collections import deque
@@ -23,10 +24,11 @@ import time
 
 
 class PIDController:
-    def __init__(self, p_gain, i_gain, d_gain, sim_time=0.05):
+    def __init__(self, p_gain, i_gain, d_gain, sim_time=0.05, logger=None):
         self.kp = p_gain
         self.ki = i_gain
         self.kd = d_gain
+        self.logger = logger
 
         self.current_time = sim_time
         self.last_time = self.current_time
@@ -43,7 +45,10 @@ class PIDController:
         self.current_time = sim_time
         
         delta_time = self.current_time - self.last_time  # Convert to seconds
-        print("debug - delta time: ", delta_time, " sim time: ", sim_time, " real time: ", time.time())
+        if self.logger:
+            self.logger.debug(
+                f"delta time: {delta_time} sim time: {sim_time} real time: {time.time()}"
+            )
         self.slidingWindow.append(error)
         
         self.integrated_error = sum(self.slidingWindow) * delta_time
@@ -82,13 +87,13 @@ class VehicleControl(Node):
         self.previous_steering_angle = 0
         self.steering_gain = 0.2  # Proportional gain for steering
         self.acceleration_rate = self.vehicle_config['performance']['acceleration_rate']
+        self.ACCEL_PROFILE = self.vehicle_config['performance'].get('accel_profile', [])
         
         self.maximum_Stereing = None
         self.normal_deceleration_rate = self.vehicle_config['performance']['normal_deceleration_rate']
         self.normal_braking_deceleration_rate = self.vehicle_config['performance']['normal_braking_deceleration_rate']
         self.max_braking_deceleration_rate = self.vehicle_config['performance']['max_braking_deceleration_rate']
-        self.emergency_braking_deceleration_rate = self.vehicle_config['performance']['emergency_braking_deceleration_rate']
-
+        
         # Subscribe topics
         self.subscriptionPose = self.create_subscription(PoseStamped, '/sensing/gnss/pose', self.pose_callback, 10)
         self.pose = PoseStamped()
@@ -104,6 +109,23 @@ class VehicleControl(Node):
         
         self.subscriptionBehaviorMotionPlanning = self.create_subscription(PlanningMotionPlanningMsg, '/simple_av/planning/motion_planning', self.motion_planning_callback, 10)
         self.motion_plan = PlanningMotionPlanningMsg()
+
+        self.subscriptionCollisionPrediction = self.create_subscription(
+            CollisionPredictionInfo,
+            "simple_av/planning/collision_prediction_info",
+            self.collision_prediction_callback,
+            10
+        )
+        self.collision_prediction_info = CollisionPredictionInfo()
+
+        self.subscriptionIntersectionAwareness = self.create_subscription(
+            LocalizationIntersectionStatus,
+            'simple_av/localization/intersection_status',
+            self.intersection_awareness_callback,
+            10
+        )
+        self.intersection_awareness_intersection_name = None
+        self.intersection_awareness_status = None
 
         self.subscriptionSimMonitor = self.create_subscription(SimMonitor, 'simple_av/sim_monitor', self.sim_monitor_callback, 100)
         self.sim_clock_rate = 0
@@ -124,9 +146,14 @@ class VehicleControl(Node):
         self.control_publisher = self.create_publisher(Control, '/control/command/control_cmd', qos_profile)
         self.gear_publisher = self.create_publisher(GearCommand, '/control/command/gear_cmd', qos_profile)
         # self.turn_indicator_publisher = self.create_publisher(TurnIndicatorsCommand, '/control/command/turn_indicators_cmd', qos_profile)
+        self.status_marker_pub = self.create_publisher(
+            MarkerArray,
+            'simple_av/visualization/control_status_text',
+            10
+        )
 
-        # self.pid_controller = PIDController(p_gain=2.8, i_gain=25.0, d_gain=1.5)
-        self.pid_controller = PIDController(p_gain=5.0, i_gain=20.0, d_gain=1.5)
+        # self.pid_controller = PIDController(p_gain=2.8, i_gain=25.0, d_gain=1.5, logger=self.get_logger())
+        self.pid_controller = PIDController(p_gain=5.0, i_gain=20.0, d_gain=1.5, logger=self.get_logger())
 
         self.node_shut = False
     
@@ -175,6 +202,13 @@ class VehicleControl(Node):
     
     def motion_planning_callback(self, msg):
         self.motion_plan = msg
+    
+    def collision_prediction_callback(self, msg):
+        self.collision_prediction_info = msg
+    
+    def intersection_awareness_callback(self, msg):
+        self.intersection_awareness_intersection_name = msg.intersection_name
+        self.intersection_awareness_status = msg.status
 
     def get_latest_messages(self):
         return self.pose, self.velocity_report
@@ -192,7 +226,7 @@ class VehicleControl(Node):
             self.node_shut = True
             gear_msg = GearCommand()
             gear_msg.stamp = self.get_clock().now().to_msg()
-            print("park")
+            self.get_logger().debug("park")
             gear_msg.command = GearCommand.PARK
             self.gear_publisher.publish(gear_msg)  
             return
@@ -215,10 +249,10 @@ class VehicleControl(Node):
         gear_msg = GearCommand()
         gear_msg.stamp = self.get_clock().now().to_msg()
         if self.motion_plan.status.data == "Park":
-            print("park")
+            self.get_logger().debug("park")
             gear_msg.command = GearCommand.PARK
         else:
-            print("drive")
+            self.get_logger().debug("drive")
             gear_msg.command = GearCommand.DRIVE
 
         self.control_publisher.publish(control_msg)
@@ -230,7 +264,7 @@ class VehicleControl(Node):
     def get_lateral_command(self):
         lateral_command = Lateral()
         if self.motion_plan.status.data == "Park" and self.reset:
-            print("debug PARK")
+            self.get_logger().debug("debug PARK")
             lateral_command.steering_tire_angle = 0.0
             lateral_command.steering_tire_rotation_rate = 0.0
         else:
@@ -249,11 +283,14 @@ class VehicleControl(Node):
 
         current_speed = self.velocity_report.longitudinal_velocity if self.velocity_report else 0.0
         target_speed = self.path_plan.speed_limit
-        distance_to_stop = self.calculate_distance(self.motion_plan.stop_point, self.pose.pose.position)
+        stop_point = self.motion_plan.stop_point
+        if self.motion_plan.status.data == "Decelerate" and self.collision_prediction_info.collision_detected:
+            stop_point = self.collision_prediction_info.object_position
+        distance_to_stop = self.calculate_distance(stop_point, self.pose.pose.position)
 
-        print(f"status: {self.motion_plan.status.data}")
-        print(f"current_speed: {current_speed}")
-        print(f"distance_to_stop: {distance_to_stop}")
+        self.get_logger().debug(f"status: {self.motion_plan.status.data}")
+        self.get_logger().debug(f"current_speed: {current_speed}")
+        self.get_logger().debug(f"distance_to_stop: {distance_to_stop}")
 
         if self.motion_plan.status.data == "Decelerate" or self.motion_plan.status.data == "Stop_red" or self.reset:
             # print("debug: ", self.motion_plan.stop_point, type(self.motion_plan.stop_point))
@@ -261,36 +298,50 @@ class VehicleControl(Node):
             
             target_speed = self.calculate_target_speed_for_stop(distance_to_stop, current_speed)
             if self.motion_plan.status.data == "Stop_red" and distance_to_stop <= 4.0:
-                self.get_logger().warning("Full stop!")
+                self.get_logger().debug("Full stop!")
                 target_speed = 0.0
             if self.motion_plan.status.data == "Decelerate" and distance_to_stop <= 4.0:
-                self.get_logger().warning("Full stop!")
+                self.get_logger().debug("Full stop!")
                 target_speed = 0.0
             if self.reset:
-                self.get_logger().warning("Full stop!")
+                self.get_logger().debug("Full stop!")
                 target_speed = 0.0
             
-            print(f"Decelerate or stop red target_speed: {target_speed}")
+            self.get_logger().debug(f"Decelerate or stop red target_speed: {target_speed}")
 
         accel = self.pid_controller.updatePID(current_speed, target_speed, time.time() * self.sim_clock_rate)
         
         deceleration_rate = self.normal_deceleration_rate
 
-        print(f"calculated accel: {accel}")
+        self.get_logger().debug(f"calculated accel: {accel}")
         if self.motion_plan.status.data == "Decelerate" or self.motion_plan.status.data == "Stop_red" or self.reset:
-            print(f"normal braking deceleration {self.normal_braking_deceleration_rate}")
+            self.get_logger().debug(
+                f"normal braking deceleration {self.normal_braking_deceleration_rate}"
+            )
             deceleration_rate = self.normal_braking_deceleration_rate
-        
-        if self.motion_plan.status.data == "Decelerate" and distance_to_stop <= current_speed:
-            deceleration_rate = self.max_braking_deceleration_rate
-        
-        if self.motion_plan.status.data == "Stop_red" and (distance_to_stop <= current_speed or (distance_to_stop <= 8.0 and current_speed >= 2)):
-            print(f"MAX braking deceleration {self.max_braking_deceleration_rate}")
-            deceleration_rate = self.max_braking_deceleration_rate
 
-        print("--------------------------")
+        if self.motion_plan.status.data == "Decelerate":
+            if self.normal_braking_deceleration_rate != 0.0:
+                stopping_distance = (current_speed ** 2) / (2.0 * abs(self.normal_braking_deceleration_rate))
+            else:
+                stopping_distance = float('inf')
+            if distance_to_stop <= stopping_distance:
+                deceleration_rate = self.max_braking_deceleration_rate
+
+        if self.motion_plan.status.data == "Stop_red":
+            if self.normal_braking_deceleration_rate != 0.0:
+                stopping_distance = (current_speed ** 2) / (2.0 * abs(self.normal_braking_deceleration_rate))
+            else:
+                stopping_distance = float('inf')
+            if distance_to_stop <= stopping_distance or (distance_to_stop <= 8.0 and current_speed >= 2):
+                self.get_logger().debug(
+                    f"MAX braking deceleration {self.max_braking_deceleration_rate}"
+                )
+                deceleration_rate = self.max_braking_deceleration_rate
+
+        self.get_logger().debug("--------------------------")
         if accel > self.acceleration_rate:
-            accel = self.acceleration_rate
+            accel = self.get_accel_for_speed(current_speed)
         if accel < deceleration_rate:
             accel = deceleration_rate
 
@@ -301,23 +352,76 @@ class VehicleControl(Node):
         longitudinal_command.jerk = 0.0
         longitudinal_command.is_defined_jerk = False
 
-        # TODO: LookAhead from PathPlanning node no longer publishes stop point, read it from the obstacle avoidance msg
         if self.motion_plan.status.data == "Decelerate" or self.motion_plan.status.data == "Stop_red":
-            self.get_logger().info(
+            self.get_logger().debug(
             f'speed: {current_speed}\n'
             f'accel: {accel}\n'
             f'target speed: {target_speed}\n'
-            f'stop distance: {self.calculate_distance(self.motion_plan.stop_point, self.pose.pose.position)}\n'
+            f'stop distance: {distance_to_stop}\n'
             f'status : {self.motion_plan.status.data}\n'
         )
         else:
-            self.get_logger().info(
+            self.get_logger().debug(
                 f'speed: {current_speed}\n'
                 f'accel: {accel}\n'
                 f'target speed: {target_speed}\n'
                 f'status : {self.motion_plan.status.data}\n'
             )
+        self.publish_status_markers(distance_to_stop)
         return longitudinal_command
+
+    def publish_status_markers(self, distance_to_stop):
+        if not self.pose or not self.pose.pose:
+            return
+        marker_array = MarkerArray()
+        clear_marker = Marker()
+        clear_marker.action = Marker.DELETEALL
+        marker_array.markers.append(clear_marker)
+
+        base_x = self.pose.pose.position.x
+        base_y = self.pose.pose.position.y - 2.0
+        base_z = self.pose.pose.position.z + 3.0
+
+        entries = [
+            ("distance_to_stop", f"{distance_to_stop:.1f} m", (1.0, 0.2, 0.2)),
+            ("motion_status", self.motion_plan.status.data, (1.0, 1.0, 0.2)),
+            ("intersection", self.intersection_awareness_status or "none", (0.2, 1.0, 0.2)),
+            ("reset", "true" if self.reset else "false", (1.0, 1.0, 1.0)),
+        ]
+
+        for idx, (label, value, color) in enumerate(entries):
+            marker = Marker()
+            marker.header.frame_id = "map"
+            marker.header.stamp = self.get_clock().now().to_msg()
+            marker.ns = "control_status"
+            marker.id = idx
+            marker.type = Marker.TEXT_VIEW_FACING
+            marker.action = Marker.ADD
+            marker.pose.position = Point(
+                x=base_x,
+                y=base_y,
+                z=base_z - idx * 0.6,
+            )
+            marker.pose.orientation.w = 1.0
+            marker.scale.z = 0.6
+            marker.color.r, marker.color.g, marker.color.b = color
+            marker.color.a = 0.5
+            marker.text = f"{label}: {value}"
+            marker_array.markers.append(marker)
+
+        self.status_marker_pub.publish(marker_array)
+
+    def get_accel_for_speed(self, speed):
+        for entry in self.ACCEL_PROFILE:
+            try:
+                min_speed = float(entry.get('min_speed', 0.0))
+                max_speed = float(entry.get('max_speed', float('inf')))
+                accel = float(entry.get('accel', self.acceleration_rate))
+            except (TypeError, ValueError):
+                continue
+            if speed >= min_speed and speed < max_speed:
+                return accel
+        return self.acceleration_rate
     
     def calculate_target_speed_for_stop(self, distance_to_stop, current_speed):
         # Gradual deceleration based on distance and current speed
@@ -358,9 +462,9 @@ class VehicleControl(Node):
 
         # Debugging info: left or right turn
         if steering_angle >= 0:
-            self.get_logger().info("Left Turn")
+            self.get_logger().debug("Left Turn")
         else:
-            self.get_logger().info("Right Turn")
+            self.get_logger().debug("Right Turn")
 
         return steering_angle
 
@@ -371,7 +475,7 @@ class VehicleControl(Node):
         lookahead_y = self.path_plan.look_ahead_point.y - self.pose.pose.position.y
 
         yaw = self.get_yaw_from_pose(self.pose.pose.orientation)
-        print("degree: ", math.degrees(yaw))
+        self.get_logger().debug(f"degree: {math.degrees(yaw)}")
 
         local_x = math.cos(yaw) * lookahead_x + math.sin(yaw) * lookahead_y
         local_y = -math.sin(yaw) * lookahead_x + math.cos(yaw) * lookahead_y
@@ -382,9 +486,9 @@ class VehicleControl(Node):
         self.previous_steering_angle = steering_angle
 
         if steering_angle >= 0:
-            self.get_logger().info("Left")
+            self.get_logger().debug("Left")
         else:
-            self.get_logger().info("Right")
+            self.get_logger().debug("Right")
         # self.get_logger().info(
         #     f'steering_angle: {steering_angle}, yaw = {yaw}:\n'
         # )
@@ -405,13 +509,13 @@ def main(args=None):
 
     try:
         while rclpy.ok() and not node.node_shut:
-            rclpy.spin_once(node, timeout_sec=None)# Set timeout to 0 to avoid delay
+            rclpy.spin_once(node, timeout_sec=0.1)# Set timeout to 0 to avoid delay
             node.control()   
+    except KeyboardInterrupt:
+        pass
     finally:
         node.destroy_node()
         rclpy.shutdown()
-    node.destroy_node()
-    rclpy.shutdown()
 
 if __name__ == '__main__':
     main()
