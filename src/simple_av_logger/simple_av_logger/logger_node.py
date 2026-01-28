@@ -30,6 +30,7 @@ class Logger(Node):
 
         # Load configs
         self.logger_config = self.config_file_loader("logger_config.yaml")
+        self.scenario_config = self.config_file_loader("scenario_config.yaml")
         self.logger_state = self.logger_config['logger_module']['state']
 
         self.last_log_time = 0.0
@@ -133,7 +134,7 @@ class Logger(Node):
         self.finished = False
         self.prev_reset = False
         self.last_reset_time_ns = None
-        self.reset_cooldown = 2.0
+        self.reset_cooldown = self.scenario_config['scenario'].get('reset_cooldown_seconds', 2.0)
 
         self.subscriptionTrafficSignal = self.create_subscription(TrafficSignalsArray, 'simple_av/perception/traffic_signals', self.trafficSignal_callback, 10)
         self.trafficSignal = TrafficSignalsArray()

@@ -134,7 +134,7 @@ class BehaviorPathPlanner(Node):
         self._last_log_time = {}
         self.prev_reset = False
         self.last_reset_time_ns = None
-        self.reset_cooldown = 2.0
+        self.reset_cooldown = self.scenario_config['scenario'].get('reset_cooldown_seconds', 2.0)
         self.reset_pose = None
         self.reset_lane = None
         self.reset_closest_point = None

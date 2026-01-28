@@ -135,7 +135,7 @@ class VehicleControl(Node):
         self.finished = False
         self.prev_reset = False
         self.last_reset_time_ns = None
-        self.reset_cooldown = 2.0
+        self.reset_cooldown = self.scenario_config['scenario'].get('reset_cooldown_seconds', 2.0)
 
         # Publish topics
         qos_profile = QoSProfile(

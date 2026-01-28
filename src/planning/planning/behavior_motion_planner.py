@@ -93,7 +93,7 @@ class BehaviorMotionPlanning(Node):
         self.finished = False
         self.prev_reset = False
         self.last_reset_time_ns = None
-        self.reset_cooldown = 2.0
+        self.reset_cooldown = self.scenario_config['scenario'].get('reset_cooldown_seconds', 2.0)
 
         self.subscriptionSimMonitor = self.create_subscription(SimMonitor, 'simple_av/sim_monitor', self.sim_monitor_callback, 100)
         self.sim_clock_rate = 0

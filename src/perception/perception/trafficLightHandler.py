@@ -52,7 +52,7 @@ class TrafficSignalHandler(Node):
         self.finished = False
         self.prev_reset = False
         self.last_reset_time_ns = None
-        self.reset_cooldown = 2.0
+        self.reset_cooldown = self.scenario_config['scenario'].get('reset_cooldown_seconds', 2.0)
 
         # Create subscriber to simple_av/localization/intersection_status topic
         self.subscriptionIntersectionAwareness = self.create_subscription(LocalizationIntersectionStatus, 'simple_av/localization/intersection_status', self.intersectionAwareness_callback, 10)
