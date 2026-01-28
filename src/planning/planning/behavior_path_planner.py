@@ -347,7 +347,12 @@ class BehaviorPathPlanner(Node):
     def location_callback(self, msg):
         self.location = msg
         if self.waiting_for_localization:
-            self.got_localization_after_reset = True
+            if self.last_reset_time_ns is None:
+                self.got_localization_after_reset = True
+                return
+            msg_time_ns = (msg.header.stamp.sec * 1_000_000_000) + msg.header.stamp.nanosec
+            if msg_time_ns > self.last_reset_time_ns:
+                self.got_localization_after_reset = True
 
     def velocity_report_callback(self, msg):
         self.velocity_report = msg
@@ -500,13 +505,13 @@ class BehaviorPathPlanner(Node):
         self.internal_msg_publisher.publish(internal_msg)
 
     def request_mission_plan(self):
+        self.get_logger().info(
+            f"Requesting mission plan with lane={self.location.closest_lane_names.data} "
+            f"closest_point=({self.location.closest_point.x:.2f}, "
+            f"{self.location.closest_point.y:.2f}, {self.location.closest_point.z:.2f})"
+        )
         request = TriggerMissionPlan.Request()
         future = self.mission_planner_client.call_async(request)
-        self.get_logger().info(
-                    f"Requesting mission plan with lane={self.location.closest_lane_names.data} "
-                    f"closest_point=({self.location.closest_point.x:.2f}, "
-                    f"{self.location.closest_point.y:.2f}, {self.location.closest_point.z:.2f})"
-                )
         return future
 
     def adjust_speed_to_curve(self, curvature, max_speed, max_lateral_accel=4.0):
@@ -905,6 +910,7 @@ class BehaviorPathPlanner(Node):
 
     def handle_mission_plan(self):
         if self.path and self.path_as_lanes:
+            self.get_logger().info(f"received mission planed response")
             self.destination = self.path[-1].waypoint
             self.speeds_on_path = self.simple_av_speed_profile_maker(self.path)
                             
@@ -924,7 +930,7 @@ class BehaviorPathPlanner(Node):
 
             if self.is_cool4_speed_profile_enable:
                 self.intersection_points = self.find_intersection_start_and_exit_using_config(self.path)
-                self.get_logger().info(f"Read intersection_points: {self.intersection_points}")
+                self.get_logger().info(f"Cool4 is enabled -> Read intersection_points: {self.intersection_points}")
                 #self.get_logger().info(f"intersection speed profile is updated")
                 self.publish_intersection_point_markers()
             return True

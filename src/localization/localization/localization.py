@@ -409,6 +409,7 @@ class Localization(Node):
 
     def publish_vehicle_location(self, closest_point, closest_lane_name, min_distance):
         localization_result = LocalizationMsg()
+        localization_result.header.stamp = self.get_clock().now().to_msg()
         localization_result.closest_point = GeoPoint(x=closest_point.x, y=closest_point.y, z=closest_point.z)
         localization_result.closest_lane_names.data = closest_lane_name
         localization_result.minimal_distance = min_distance
