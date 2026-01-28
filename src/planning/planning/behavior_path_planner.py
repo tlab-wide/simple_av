@@ -485,8 +485,11 @@ class BehaviorPathPlanner(Node):
             
     def publish_path_planning_msgs(self, look_ahead_point, speed):
         lookahead_point = PlanningPathPlanningMsg()
-        # lookahead_point.look_ahead_point = Point(x=look_ahead_point['x'], y=look_ahead_point['y'], z=look_ahead_point['z'])
-        lookahead_point.look_ahead_point = look_ahead_point
+        if look_ahead_point is None:
+            lookahead_point.look_ahead_point = Point(x=0.0, y=0.0, z=0.0)
+        else:
+            # lookahead_point.look_ahead_point = Point(x=look_ahead_point['x'], y=look_ahead_point['y'], z=look_ahead_point['z'])
+            lookahead_point.look_ahead_point = look_ahead_point
         lookahead_point.speed_limit = speed
         self.planning_publisher.publish(lookahead_point)
     
