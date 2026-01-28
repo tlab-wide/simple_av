@@ -91,6 +91,12 @@ class TrafficSignalHandler(Node):
             self.last_reset_time_ns = now_ns
         self.prev_reset = msg.reset
 
+    def reset_cooldown_active(self):
+        if self.last_reset_time_ns is None:
+            return False
+        now_ns = self.get_clock().now().nanoseconds
+        return (now_ns - self.last_reset_time_ns) / 1e9 < self.reset_cooldown
+
     def pose_callback(self, msg):
         self.vehicle_pose = msg
 
@@ -140,6 +146,11 @@ class TrafficSignalHandler(Node):
     def trafficSignalDetection(self):
         if self.finished:
             self.node_shut = True
+            return
+        if self.reset:
+            self.reset = False
+            return
+        if self.reset_cooldown_active():
             return
         
         v2i_traffic_signals_id = []

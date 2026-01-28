@@ -136,6 +136,7 @@ class VehicleControl(Node):
         self.prev_reset = False
         self.last_reset_time_ns = None
         self.reset_cooldown = self.scenario_config['scenario'].get('reset_cooldown_seconds', 2.0)
+        self.reset_active = False
 
         # Publish topics
         qos_profile = QoSProfile(
@@ -198,7 +199,14 @@ class VehicleControl(Node):
         self.finished = msg.finished
         if self.reset:
             self.last_reset_time_ns = now_ns
+            self.reset_active = True
         self.prev_reset = msg.reset
+
+    def reset_cooldown_active(self):
+        if self.last_reset_time_ns is None:
+            return False
+        now_ns = self.get_clock().now().nanoseconds
+        return (now_ns - self.last_reset_time_ns) / 1e9 < self.reset_cooldown
 
     def pose_callback(self, msg):
         self.pose = msg
@@ -260,7 +268,16 @@ class VehicleControl(Node):
         # Gear Control
         gear_msg = GearCommand()
         gear_msg.stamp = self.get_clock().now().to_msg()
-        if self.motion_plan.status.data == "Park":
+        if self.reset_active:
+            current_speed = self.velocity_report.longitudinal_velocity if self.velocity_report else 0.0
+            if not self.reset_cooldown_active() and (current_speed > 0.1 or self.motion_plan.status.data != "Park"):
+                self.reset_active = False
+                self.get_logger().debug("drive")
+                gear_msg.command = GearCommand.DRIVE
+            else:
+                self.get_logger().debug("park (reset)")
+                gear_msg.command = GearCommand.PARK
+        elif self.motion_plan.status.data == "Park":
             self.get_logger().debug("park")
             gear_msg.command = GearCommand.PARK
         else:
@@ -275,7 +292,7 @@ class VehicleControl(Node):
     
     def get_lateral_command(self):
         lateral_command = Lateral()
-        if self.motion_plan.status.data == "Park" and self.reset:
+        if self.motion_plan.status.data == "Park" and (self.reset or self.reset_active):
             self.get_logger().debug("debug PARK")
             lateral_command.steering_tire_angle = 0.0
             lateral_command.steering_tire_rotation_rate = 0.0
@@ -304,7 +321,7 @@ class VehicleControl(Node):
         self.get_logger().debug(f"current_speed: {current_speed}")
         self.get_logger().debug(f"distance_to_stop: {distance_to_stop}")
 
-        if self.motion_plan.status.data == "Decelerate" or self.motion_plan.status.data == "Stop_red" or self.reset:
+        if self.motion_plan.status.data == "Decelerate" or self.motion_plan.status.data == "Stop_red" or self.reset or self.reset_active:
             # print("debug: ", self.motion_plan.stop_point, type(self.motion_plan.stop_point))
             # print("debug: ", self.pose.pose.position, type(self.pose.pose.position))
             
@@ -315,7 +332,7 @@ class VehicleControl(Node):
             if self.motion_plan.status.data == "Decelerate" and distance_to_stop <= 4.0:
                 self.get_logger().debug("Full stop!")
                 target_speed = 0.0
-            if self.reset:
+            if self.reset or self.reset_active:
                 self.get_logger().debug("Full stop!")
                 target_speed = 0.0
             
@@ -326,7 +343,7 @@ class VehicleControl(Node):
         deceleration_rate = self.normal_deceleration_rate
 
         self.get_logger().debug(f"calculated accel: {accel}")
-        if self.motion_plan.status.data == "Decelerate" or self.motion_plan.status.data == "Stop_red" or self.reset:
+        if self.motion_plan.status.data == "Decelerate" or self.motion_plan.status.data == "Stop_red" or self.reset or self.reset_active:
             self.get_logger().debug(
                 f"normal braking deceleration {self.normal_braking_deceleration_rate}"
             )

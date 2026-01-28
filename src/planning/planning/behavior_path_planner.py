@@ -177,6 +177,14 @@ class BehaviorPathPlanner(Node):
 
         #Path planning
         self.isPathPlanned = False  # Flag to check if the path has been planned
+        self.mission_plan_requested = False
+        self.mission_plan_request_time_ns = None
+        self.mission_plan_retry_count = 0
+        self.mission_plan_retry_base_seconds = 0.5
+        self.mission_plan_retry_max_seconds = 5.0
+        self.mission_plan_retry_backoff = 2.0
+        self.waiting_for_localization = False
+        self.got_localization_after_reset = False
         self.route = None # List of lanes from start lane to destination
         self.current_lane_index = 0
         self.initial_lane = None
@@ -317,6 +325,16 @@ class BehaviorPathPlanner(Node):
         if self.reset:
             self.last_reset_time_ns = now_ns
         self.prev_reset = msg.reset
+
+    def reset_cooldown_active(self):
+        if self.last_reset_time_ns is None:
+            return False
+        now_ns = self.get_clock().now().nanoseconds
+        return (now_ns - self.last_reset_time_ns) / 1e9 < self.reset_cooldown
+
+    def mission_plan_retry_delay(self):
+        delay = self.mission_plan_retry_base_seconds * (self.mission_plan_retry_backoff ** self.mission_plan_retry_count)
+        return min(self.mission_plan_retry_max_seconds, delay)
     
     def mission_plan_callback(self, msg):
         self.mission_plan = msg
@@ -328,6 +346,8 @@ class BehaviorPathPlanner(Node):
 
     def location_callback(self, msg):
         self.location = msg
+        if self.waiting_for_localization:
+            self.got_localization_after_reset = True
 
     def velocity_report_callback(self, msg):
         self.velocity_report = msg
@@ -479,6 +499,11 @@ class BehaviorPathPlanner(Node):
     def request_mission_plan(self):
         request = TriggerMissionPlan.Request()
         future = self.mission_planner_client.call_async(request)
+        self.get_logger().info(
+                    f"Requesting mission plan with lane={self.location.closest_lane_names.data} "
+                    f"closest_point=({self.location.closest_point.x:.2f}, "
+                    f"{self.location.closest_point.y:.2f}, {self.location.closest_point.z:.2f})"
+                )
         return future
 
     def adjust_speed_to_curve(self, curvature, max_speed, max_lateral_accel=4.0):
@@ -887,6 +912,9 @@ class BehaviorPathPlanner(Node):
             self.route = self.path_as_lanes[:]
             self.current_lane_index = 0
             self.isPathPlanned = True
+            self.mission_plan_requested = False
+            self.mission_plan_request_time_ns = None
+            self.mission_plan_retry_count = 0
             self.last_closest_point_index = None
             self.publish_speed_profile_markers()
             self.publish_path_of_waypoints_markers()
@@ -896,6 +924,8 @@ class BehaviorPathPlanner(Node):
                 self.get_logger().info(f"Read intersection_points: {self.intersection_points}")
                 #self.get_logger().info(f"intersection speed profile is updated")
                 self.publish_intersection_point_markers()
+            return True
+        return False
 
     def end_of_path_detection(self, current_closest_point_to_vehicle_index):
         current_pose = self.path_of_waypoints[current_closest_point_to_vehicle_index]
@@ -1100,12 +1130,32 @@ class BehaviorPathPlanner(Node):
             return None
 
         if not self.isPathPlanned:
-            self.get_logger().info(
-                    f"Requesting mission plan with lane={self.location.closest_lane_names.data} "
-                    f"closest_point=({self.location.closest_point.x:.2f}, "
-                    f"{self.location.closest_point.y:.2f}, {self.location.closest_point.z:.2f})"
-                )
+            if self.reset_cooldown_active():
+                return
+            if self.waiting_for_localization and not self.got_localization_after_reset:
+                return
+            if self.waiting_for_localization and self.got_localization_after_reset:
+                self.waiting_for_localization = False
+            if self.mission_plan_requested:
+                self.handle_mission_plan()
+                if self.isPathPlanned:
+                    return
+                now_ns = self.get_clock().now().nanoseconds
+                if self.mission_plan_request_time_ns is None:
+                    self.mission_plan_request_time_ns = now_ns
+                    return
+                elapsed = (now_ns - self.mission_plan_request_time_ns) / 1e9
+                if elapsed < self.mission_plan_retry_delay():
+                    return
+                self.request_mission_plan()
+                self.mission_plan_request_time_ns = now_ns
+                self.mission_plan_retry_count += 1
+                rclpy.spin_once(self, timeout_sec=0.2)  # allow 0.25s to receive mission plan
+                self.handle_mission_plan()
+                return
             self.request_mission_plan()
+            self.mission_plan_requested = True
+            self.mission_plan_request_time_ns = self.get_clock().now().nanoseconds
             rclpy.spin_once(self, timeout_sec=0.2)  # allow 0.25s to receive mission plan
             self.handle_mission_plan()
             self.get_logger().info("Start Local Path Planning...")
@@ -1125,6 +1175,20 @@ class BehaviorPathPlanner(Node):
             self.cool4_triggered = False
             self.prev_lookahead_index = 0
             self.current_lane_index = 0
+            self.mission_plan_requested = False
+            self.mission_plan_request_time_ns = None
+            self.mission_plan_retry_count = 0
+            self.path = None
+            self.path_as_lanes = None
+            self.path_of_waypoints.clear()
+            self.speeds_on_path = []
+            self.publish_path_planning_msgs(None, 0)
+            self.waiting_for_localization = True
+            self.got_localization_after_reset = False
+            return
+
+        if self.reset_cooldown_active():
+            self.publish_path_planning_msgs(None, 0)
             return
     
         if not self.path and not self.path_as_lanes:

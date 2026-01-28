@@ -189,6 +189,15 @@ class BehaviorMotionPlanning(Node):
         self.mission_plan = msg
         self.path = self.mission_plan.path
         self.path_as_lanes = self.mission_plan.path_as_lanes
+        if self.path and not self.isPathPlanned:
+            self.get_logger().info("Path has successfully initialized from Mission Planner")
+            self.destination = self.path[-1].waypoint
+            self.path_of_waypoints.clear()
+            for waypoint in self.path:
+                self.path_of_waypoints.append(waypoint.waypoint)
+            self.route = self.path_as_lanes[:]
+            self.current_lane_index = 0
+            self.isPathPlanned = True
     
     def intersectionAwareness_callback(self, msg):
         self.intersection_awareness_intersection_name = msg.intersection_name
@@ -221,6 +230,12 @@ class BehaviorMotionPlanning(Node):
         if self.reset:
             self.last_reset_time_ns = now_ns
         self.prev_reset = msg.reset
+
+    def reset_cooldown_active(self):
+        if self.last_reset_time_ns is None:
+            return False
+        now_ns = self.get_clock().now().nanoseconds
+        return (now_ns - self.last_reset_time_ns) / 1e9 < self.reset_cooldown
 
     def internal_msg_callback(self, msg):
         self.isTurnDetected = msg.is_curve_detected
@@ -1021,15 +1036,6 @@ class BehaviorMotionPlanning(Node):
             self.get_logger().warning("No location/pose input")
             return None
         
-        if self.path and not self.isPathPlanned:
-            self.get_logger().info("Path has successfully initialized from Mission Planner")
-            self.destination = self.path[-1].waypoint
-            for i, waypoint in enumerate(self.path):
-                self.path_of_waypoints.append(waypoint.waypoint)
-            self.route = self.path_as_lanes[:]
-            self.current_lane_index = 0
-            self.isPathPlanned = True
-        
         if not self.path :
             self.get_logger().warning("Path has not initialized from Mission Planner!!")
             self.isPathPlanned = False
@@ -1047,6 +1053,9 @@ class BehaviorMotionPlanning(Node):
             self.route = self.path_as_lanes[:]
             self.current_lane_index = 0
             self.reset = False
+            return
+
+        if self.reset_cooldown_active():
             return
 
         search_area, search_area_as_lanes = self.create_search_area()
