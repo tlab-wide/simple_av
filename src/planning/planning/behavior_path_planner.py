@@ -490,7 +490,7 @@ class BehaviorPathPlanner(Node):
         else:
             # lookahead_point.look_ahead_point = Point(x=look_ahead_point['x'], y=look_ahead_point['y'], z=look_ahead_point['z'])
             lookahead_point.look_ahead_point = look_ahead_point
-        lookahead_point.speed_limit = speed
+        lookahead_point.speed_limit = float(speed)
         self.planning_publisher.publish(lookahead_point)
     
     def publish_curve_internal_msg(self, isTurnDetected, isEndOfPath):
