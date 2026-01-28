@@ -457,10 +457,13 @@ class VehicleControl(Node):
         # Using a nonlinear deceleration curve for smoother braking
         
         # Adjusted deceleration factor
-        target_speed = current_speed * (distance_to_stop / (self.path_plan.speed_limit * 3.0))**1.0
+        speed_limit = float(self.path_plan.speed_limit) if self.path_plan else 0.0
+        if speed_limit <= 0.0:
+            return 0.0
+        target_speed = current_speed * (distance_to_stop / (speed_limit * 3.0))**1.0
         
         # Clamp for realistic behavior
-        return min(self.path_plan.speed_limit, max(1.0, target_speed))
+        return min(speed_limit, max(1.0, target_speed))
 
     def filter(self, new_value, previous_value, gain):
         return gain * previous_value + (1 - gain) * new_value

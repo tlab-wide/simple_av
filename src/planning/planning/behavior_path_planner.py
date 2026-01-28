@@ -349,10 +349,12 @@ class BehaviorPathPlanner(Node):
         if self.waiting_for_localization:
             if self.last_reset_time_ns is None:
                 self.got_localization_after_reset = True
+                self.get_logger().info("Got localization after reset (no reset time)")
                 return
             msg_time_ns = (msg.header.stamp.sec * 1_000_000_000) + msg.header.stamp.nanosec
             if msg_time_ns > self.last_reset_time_ns:
                 self.got_localization_after_reset = True
+                self.get_logger().info("Got localization after reset (timestamp ok)")
 
     def velocity_report_callback(self, msg):
         self.velocity_report = msg
