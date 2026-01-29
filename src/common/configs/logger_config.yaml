@@ -9,3 +9,14 @@ logger_module:
   # log_traffic_signal_state: None
   # log_position: None
   # log_other_vehicles: None
+
+  # Points to log when the vehicle approaches them.
+  # Distance threshold is in meters.
+  logging_points:
+    default_threshold: 2.0
+    points:
+      # - name: "P1"
+      #   x: 0.0
+      #   y: 0.0
+      #   z: 0.0
+      #   threshold: 2.0

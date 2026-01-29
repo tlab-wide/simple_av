@@ -114,12 +114,9 @@ class Logger(Node):
         self.logging_points = []
         self.logging_points_default_threshold = 2.0
         self.reached_logging_points = set()
-        try:
-            points_cfg = self.config_file_loader("logging_points.yaml")
-            self.logging_points_default_threshold = points_cfg.get('logging_points', {}).get('default_threshold', 2.0)
-            self.logging_points = points_cfg.get('logging_points', {}).get('points', [])
-        except Exception as exc:
-            self.get_logger().warning(f"logging_points.yaml not loaded: {exc}")
+        logging_points_cfg = self.logger_config.get('logger_module', {}).get('logging_points', {})
+        self.logging_points_default_threshold = logging_points_cfg.get('default_threshold', 2.0)
+        self.logging_points = logging_points_cfg.get('points', [])
 
         points_csv_filename = f"Intersection{self.intersection_id}_Scenario{log_scenario}_{speed_profile}_{RSU}_{timestamp_str}_points.csv"
         points_csv_path = os.path.join(data_dir, points_csv_filename)
