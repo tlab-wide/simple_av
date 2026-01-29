@@ -54,4 +54,4 @@ vehicles:
           accel: 0.455
       acceleration_rate: 1.2     # Acceleration rate (m/s²) - Fallback
       normal_braking_deceleration_rate: -1.5 # Braking deceleration (m/s²)
-      max_braking_deceleration_rate: -2.5 # Maximum braking deceleration (m/s²)
+      max_braking_deceleration_rate: -3.0 # Maximum braking deceleration (m/s²)
