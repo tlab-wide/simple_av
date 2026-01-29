@@ -110,6 +110,31 @@ class Logger(Node):
             'traffic_light_state'
         ])
 
+        # --- Points CSV ---
+        self.logging_points = []
+        self.logging_points_default_threshold = 2.0
+        self.reached_logging_points = set()
+        try:
+            points_cfg = self.config_file_loader("logging_points.yaml")
+            self.logging_points_default_threshold = points_cfg.get('logging_points', {}).get('default_threshold', 2.0)
+            self.logging_points = points_cfg.get('logging_points', {}).get('points', [])
+        except Exception as exc:
+            self.get_logger().warning(f"logging_points.yaml not loaded: {exc}")
+
+        points_csv_filename = f"Intersection{self.intersection_id}_Scenario{log_scenario}_{speed_profile}_{RSU}_{timestamp_str}_points.csv"
+        points_csv_path = os.path.join(data_dir, points_csv_filename)
+        self.points_csv = open(points_csv_path, 'w')
+        self.points_writer = csv.writer(self.points_csv)
+        self.points_writer.writerow([
+            'round_number',
+            'timestamp',
+            'point_name',
+            'point_x',
+            'point_y',
+            'point_z',
+            'threshold'
+        ])
+
         # Subscriptions
         self.subscriptionPose = self.create_subscription(PoseStamped, '/sensing/gnss/pose', self.pose_callback, 10)
         self.pose = PoseStamped()
@@ -456,6 +481,37 @@ class Logger(Node):
             self.rsu_detected = False
             self.obu_detected = False
             self.last_round_number = self.round_number
+            self.reached_logging_points.clear()
+
+    def log_points_if_reached(self, vehicle_pose):
+        if not self.logging_points:
+            return
+        for point in self.logging_points:
+            name = point.get('name')
+            if not name or name in self.reached_logging_points:
+                continue
+            try:
+                px = float(point.get('x', 0.0))
+                py = float(point.get('y', 0.0))
+                pz = float(point.get('z', 0.0))
+                threshold = float(point.get('threshold', self.logging_points_default_threshold))
+            except (TypeError, ValueError):
+                continue
+            dx = vehicle_pose.x - px
+            dy = vehicle_pose.y - py
+            dz = vehicle_pose.z - pz
+            dist = (dx * dx + dy * dy + dz * dz) ** 0.5
+            if dist <= threshold:
+                self.reached_logging_points.add(name)
+                self.points_writer.writerow([
+                    self.round_number,
+                    f"{self.sim_time:.1f}",
+                    name,
+                    f"{px:.3f}",
+                    f"{py:.3f}",
+                    f"{pz:.3f}",
+                    f"{threshold:.3f}",
+                ])
     
     def get_cross_walk_areas(self, intersection_id):
         cw_zones = [
@@ -625,6 +681,7 @@ class Logger(Node):
         x = vehicle_pose.x
         y = vehicle_pose.y
         self.update_is_vehicle_inside_intersection_state(vehicle_pose)
+        self.log_points_if_reached(vehicle_pose)
         if self.is_vehicle_inside_intersection and not self.has_danger_detection_completed:
             # self.has_pedesrian_detected_at_danger_zones = self.is_object_detected_at_intersection_danger_zones('2')
             (any_detected, rsu_detected, obu_detected) = self.is_object_detected_at_intersection_danger_zones(self.intersection_id)
@@ -687,6 +744,9 @@ class Logger(Node):
         if self.csv:
             self.csv.flush()
             self.csv.close()
+        if getattr(self, "points_csv", None):
+            self.points_csv.flush()
+            self.points_csv.close()
         super().destroy_node()
 
 def main(args=None):
