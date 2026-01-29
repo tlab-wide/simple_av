@@ -37,29 +37,36 @@ class SensorTFPublisher(Node):
         # Vehicle pose in map frame
         vehicle_pose = msg.pose
 
+        # Build transform map -> base_link from GNSS pose
+        t_map_base = TransformStamped()
+        t_map_base.header.stamp = msg.header.stamp
+        t_map_base.header.frame_id = "map"
+        t_map_base.child_frame_id = "base_link"
+        t_map_base.transform.translation.x = vehicle_pose.position.x
+        t_map_base.transform.translation.y = vehicle_pose.position.y
+        t_map_base.transform.translation.z = vehicle_pose.position.z
+        t_map_base.transform.rotation = vehicle_pose.orientation
 
-        # Build transform map -> sensor_kit_base_link
-        t = TransformStamped()
-        t.header.stamp = msg.header.stamp
-        t.header.frame_id = "map"
-        t.child_frame_id = "sensor_kit_base_link"
+        # Build transform base_link -> sensor_kit_base_link from calibration
+        t_base_sensor = TransformStamped()
+        t_base_sensor.header.stamp = msg.header.stamp
+        t_base_sensor.header.frame_id = "base_link"
+        t_base_sensor.child_frame_id = "sensor_kit_base_link"
+        t_base_sensor.transform.translation.x = self.sensor_kit_base_link['x']
+        t_base_sensor.transform.translation.y = self.sensor_kit_base_link['y']
+        t_base_sensor.transform.translation.z = self.sensor_kit_base_link['z']
 
-        # Just add the static offsets
-        t.transform.translation.x = vehicle_pose.position.x + self.sensor_kit_base_link['x']
-        t.transform.translation.y = vehicle_pose.position.y + self.sensor_kit_base_link['y']
-        t.transform.translation.z = vehicle_pose.position.z + self.sensor_kit_base_link['z']
-
-        # Orientation = vehicle orientation (no extra rotations needed)
-        t.transform.rotation = vehicle_pose.orientation  
+        # TODO: apply roll/pitch/yaw if needed (currently assuming no rotation offsets)
+        t_base_sensor.transform.rotation = vehicle_pose.orientation
 
         self.get_logger().debug(
             f"tf publisher\n"
-            f"calibrations: {self.sensor_kit_base_link['x']}, {self.sensor_kit_base_link['y']}, {self.sensor_kit_base_link['z']}\n"
-            f"vehicle pose: {vehicle_pose.position.x}, {vehicle_pose.position.y}, {vehicle_pose.position.z}\n"
+            f"base_link pose: {vehicle_pose.position.x}, {vehicle_pose.position.y}, {vehicle_pose.position.z}\n"
+            f"sensor_kit_base_link offset: {self.sensor_kit_base_link['x']}, {self.sensor_kit_base_link['y']}, {self.sensor_kit_base_link['z']}\n"
         )
 
-
-        self.br.sendTransform(t)
+        self.br.sendTransform(t_map_base)
+        self.br.sendTransform(t_base_sensor)
 
 def main(args=None):
     rclpy.init(args=args)
