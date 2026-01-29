@@ -15,8 +15,23 @@ logger_module:
   logging_points:
     default_threshold: 2.0
     points:
-      # - name: "P1"
-      #   x: 0.0
-      #   y: 0.0
-      #   z: 0.0
-      #   threshold: 2.0
+      - name: "enter intersection"
+        x: 4514.74
+        y: 72946.41
+        z: 18.63
+        threshold: 0.5
+      - name: "exit intersection"
+        x: 4496.31
+        y: 72947.96
+        z: 18.76
+        threshold: 0.5
+      - name: "exit intersection tail"
+        x: 4496.31
+        y: 72947.96
+        z: 18.76
+        threshold: 0.5
+      - name: "after 30km point"
+        x: 4459.47
+        y: 73040.55
+        z: 18.62
+        threshold: 0.5

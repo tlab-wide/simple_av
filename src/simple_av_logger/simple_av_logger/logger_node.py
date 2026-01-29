@@ -1,6 +1,7 @@
 import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import PoseStamped, Point
+from visualization_msgs.msg import Marker, MarkerArray
 from autoware_vehicle_msgs.msg import VelocityReport
 import numpy as np
 import yaml
@@ -163,6 +164,14 @@ class Logger(Node):
 
         self.subscriptionDetectedObjects = self.create_subscription(DetectedObjectsArray, 'simple_av/perception/detected_objects', self.detectedObjects_callback, 10)
         self.detectedObjects = DetectedObjectsArray()
+
+        # Logging points visualization
+        self.logging_points_marker_pub = self.create_publisher(
+            MarkerArray,
+            'simple_av/visualization/logging_points',
+            10
+        )
+        self.publish_logging_points_markers()
 
         self.subscription = self.create_subscription(
             Control,
@@ -509,6 +518,40 @@ class Logger(Node):
                     f"{pz:.3f}",
                     f"{threshold:.3f}",
                 ])
+
+    def publish_logging_points_markers(self):
+        if not self.logging_points:
+            return
+        marker_array = MarkerArray()
+        now = self.get_clock().now().to_msg()
+        for idx, point in enumerate(self.logging_points):
+            name = point.get('name', f"point_{idx}")
+            try:
+                px = float(point.get('x', 0.0))
+                py = float(point.get('y', 0.0))
+                pz = float(point.get('z', 0.0))
+            except (TypeError, ValueError):
+                continue
+            marker = Marker()
+            marker.header.frame_id = "map"
+            marker.header.stamp = now
+            marker.ns = "logging_points"
+            marker.id = idx
+            marker.type = Marker.SPHERE
+            marker.action = Marker.ADD
+            marker.pose.position = Point(x=px, y=py, z=pz)
+            marker.pose.orientation.w = 1.0
+            marker.scale.x = 0.8
+            marker.scale.y = 0.8
+            marker.scale.z = 0.8
+            marker.color.r = 0.5
+            marker.color.g = 1.0
+            marker.color.b = 0.5
+            marker.color.a = 0.9
+            marker.text = name
+            marker_array.markers.append(marker)
+
+        self.logging_points_marker_pub.publish(marker_array)
     
     def get_cross_walk_areas(self, intersection_id):
         cw_zones = [
