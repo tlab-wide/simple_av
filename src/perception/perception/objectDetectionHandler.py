@@ -36,6 +36,8 @@ class Perception(Node):
         self.av_features = self.config_file_loader("av_features.yaml")
         self.enable_object_detection = self.av_features['object_detection']['enable']
         self.enable_RSU_for_object_detection = self.av_features['object_detection']['use_rsu']
+        self.direction_filter_cfg = self.av_features['object_detection'].get('direction_filter', {})
+        self.direction_lateral_threshold = float(self.direction_filter_cfg.get('lateral_threshold', 2.25))
 
         
         # Create subscriber for /OBU/Sensing topic. This topic publishes the information of detected objects from vehicle-mounted sensors.
@@ -140,7 +142,7 @@ class Perception(Node):
 
     # Getting the direction of the object from Automated vehicle point of view
     def object_direction(self, x, y):
-        if y <= 2.25 and y >= -2.25:
+        if y <= self.direction_lateral_threshold and y >= -self.direction_lateral_threshold:
             # above or behind the vehicle
             if x >=0:
                 # object is above the vehicle

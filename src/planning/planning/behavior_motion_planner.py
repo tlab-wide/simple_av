@@ -44,6 +44,11 @@ class BehaviorMotionPlanning(Node):
         self.av_features = self.config_file_loader("av_features.yaml")
         self.use_RSU_for_trafficlight = self.av_features['traffic_light']['use_rsu']
         self.use_RSU_for_object_detection = self.av_features['object_detection']['use_rsu']
+        self.allowed_object_directions = set(
+            self.av_features['object_detection']
+            .get('direction_filter', {})
+            .get('allowed_directions', ['above', 'NW', 'NE'])
+        )
 
         # Load motion & behavior configs
         self.motion_behavior_config = self.config_file_loader("motion_behavior_config.yaml")
@@ -409,7 +414,7 @@ class BehaviorMotionPlanning(Node):
         objects_ahead = []
         for obj in self.detectedObjects.objects:
             object_direction = obj.relative_direction.data
-            if object_direction == 'above' or object_direction == 'NW' or object_direction == 'NE':
+            if object_direction in self.allowed_object_directions:
                 objects_ahead.append(obj)
         return objects_ahead
         
