@@ -75,6 +75,7 @@ class Logger(Node):
             speed_profile = 'cool4_SpeedProfile'
         else:
             speed_profile = 'SimpleAV_SpeedProfile'
+        self.speed_profile = speed_profile
 
         # RSU mode
         RSU = 'RSU_enabled' if self.av_features['object_detection']['use_rsu'] else 'RSU_disabled'
@@ -127,6 +128,26 @@ class Logger(Node):
             self.logging_point_names.append(name)
         header.extend(self.logging_point_names)
         self.writer.writerow(header)
+
+        # --- Round summary CSV ---
+        rounds_csv_filename = f"Intersection{self.intersection_id}_Scenario{log_scenario}_{speed_profile}_{RSU}_{timestamp_str}_rounds.csv"
+        rounds_csv_path = os.path.join(data_dir, rounds_csv_filename)
+        self.rounds_csv = open(rounds_csv_path, 'w')
+        self.rounds_writer = csv.writer(self.rounds_csv)
+        rounds_header = [
+            'round_number',
+            'round_start_timestamp',
+            'round_duration',
+            'speed_profile',
+            'red_light_stop_time'
+        ]
+        rounds_header.extend([f"{name}_t" for name in self.logging_point_names])
+        self.rounds_writer.writerow(rounds_header)
+        self.round_start_sim_time = None
+        self.round_reached_times = {}
+        self.red_light_stop_time = 0.0
+        self.last_snapshot_sim_time = None
+        self.red_stop_speed_threshold = 0.1
 
         # Subscriptions
         self.subscriptionPose = self.create_subscription(PoseStamped, '/sensing/gnss/pose', self.pose_callback, 10)
@@ -478,6 +499,8 @@ class Logger(Node):
 
     def new_round_parameter_rest(self):
         if self.round_number > self.last_round_number:
+            if self.round_start_sim_time is not None:
+                self.log_round_summary(self.last_round_number)
             self.has_danger_detection_completed = False
             self.is_vehicle_inside_intersection = False
             self.has_pedesrian_detected_at_danger_zones = -1
@@ -485,6 +508,26 @@ class Logger(Node):
             self.obu_detected = False
             self.last_round_number = self.round_number
             self.reached_logging_points.clear()
+            self.round_start_sim_time = self.sim_time
+            self.round_reached_times = {}
+            self.red_light_stop_time = 0.0
+            self.last_snapshot_sim_time = None
+
+    def log_round_summary(self, round_number):
+        if self.round_start_sim_time is None:
+            return
+        round_duration = max(0.0, self.sim_time - self.round_start_sim_time)
+        row = [
+            round_number,
+            f"{0.0:.1f}",
+            f"{round_duration:.1f}",
+            self.speed_profile,
+            f"{self.red_light_stop_time:.1f}"
+        ]
+        for name in self.logging_point_names:
+            t = self.round_reached_times.get(name)
+            row.append("" if t is None else f"{t:.1f}")
+        self.rounds_writer.writerow(row)
 
     def log_points_if_reached(self, vehicle_pose):
         if not self.logging_points:
@@ -506,6 +549,8 @@ class Logger(Node):
             dist = (dx * dx + dy * dy + dz * dz) ** 0.5
             if dist <= threshold:
                 self.reached_logging_points.add(name)
+                if name not in self.round_reached_times and self.round_start_sim_time is not None:
+                    self.round_reached_times[name] = max(0.0, self.sim_time - self.round_start_sim_time)
 
     def publish_logging_points_markers(self):
         if not self.logging_points:
@@ -680,6 +725,13 @@ class Logger(Node):
         if (self.sim_time - self.last_log_time) < self.logging_interval:
             return
         self.last_log_time = self.sim_time
+        if self.round_start_sim_time is None:
+            self.round_start_sim_time = self.sim_time
+            self.round_reached_times = {}
+            self.red_light_stop_time = 0.0
+            self.last_snapshot_sim_time = self.sim_time
+        if self.last_snapshot_sim_time is None:
+            self.last_snapshot_sim_time = self.sim_time
 
         if self.reset:
             self.reset = False
@@ -740,6 +792,12 @@ class Logger(Node):
             light_165626 = 'green'
         else:
             light_165626 = 'unknown'
+
+        # Accumulate stopped time behind red light (per round)
+        dt = max(0.0, self.sim_time - self.last_snapshot_sim_time)
+        if light_165626 == 'red' and current_speed <= self.red_stop_speed_threshold:
+            self.red_light_stop_time += dt
+        self.last_snapshot_sim_time = self.sim_time
         
         if self.location.closest_lane_names.data is None or self.location.closest_lane_names.data == '':
             return
@@ -775,6 +833,11 @@ class Logger(Node):
         if self.csv:
             self.csv.flush()
             self.csv.close()
+        if getattr(self, "rounds_csv", None):
+            if self.round_start_sim_time is not None and self.round_number >= self.last_round_number:
+                self.log_round_summary(self.round_number)
+            self.rounds_csv.flush()
+            self.rounds_csv.close()
         super().destroy_node()
 
 def main(args=None):

@@ -37,7 +37,7 @@ vehicles:
       rear_overhang: 3.2  # Distance from rear axle to vehicle back (meters)
     weight: 7000  # Vehicle weight (kg)
     performance:
-      max_speed: 15.0         # Maximum speed (m/s)
+      max_speed: 8.5         # Maximum speed (m/s)
       min_speed: 0.84          # Minimum speed (m/s)
       cool4_min_speed: 0.84    # Cool4 minimum speed (m/s)
       cool4_middle_speed: 1.67 # Cool4 middle speed (m/s)

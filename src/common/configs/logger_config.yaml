@@ -19,19 +19,19 @@ logger_module:
         x: 4515.74
         y: 72941.41
         z: 18.63
-        threshold: 0.5
+        threshold: 2.0
       - name: "exit intersection"
         x: 4496.31
         y: 72947.96
         z: 18.76
-        threshold: 0.5
+        threshold: 2.0
       - name: "exit intersection tail"
         x: 4496.31
-        y: 72947.96
+        y: 72957.96
         z: 18.76
-        threshold: 0.5
+        threshold: 2.0
       - name: "after 30km point"
         x: 4415.47
         y: 73150.55
         z: 18.62
-        threshold: 0.5
+        threshold: 2.0
