@@ -553,11 +553,14 @@ class Logger(Node):
                     self.round_reached_times[name] = max(0.0, self.sim_time - self.round_start_sim_time)
 
     def publish_logging_points_markers(self):
-        if not self.logging_points:
+        # Reload points from config so new points appear without restarting
+        logging_points_cfg = self.config_file_loader("logger_config.yaml").get('logger_module', {}).get('logging_points', {})
+        points = logging_points_cfg.get('points', [])
+        if not points:
             return
         marker_array = MarkerArray()
         now = self.get_clock().now().to_msg()
-        for idx, point in enumerate(self.logging_points):
+        for idx, point in enumerate(points):
             name = point.get('name', f"point_{idx}")
             try:
                 px = float(point.get('x', 0.0))
@@ -581,8 +584,24 @@ class Logger(Node):
             marker.color.g = 1.0
             marker.color.b = 0.5
             marker.color.a = 0.9
-            marker.text = name
             marker_array.markers.append(marker)
+
+            text_marker = Marker()
+            text_marker.header.frame_id = "map"
+            text_marker.header.stamp = now
+            text_marker.ns = "logging_points_text"
+            text_marker.id = idx + 1000
+            text_marker.type = Marker.TEXT_VIEW_FACING
+            text_marker.action = Marker.ADD
+            text_marker.pose.position = Point(x=px + 0.5, y=py, z=pz + 1.0)
+            text_marker.pose.orientation.w = 1.0
+            text_marker.scale.z = 0.6
+            text_marker.color.r = 0.5
+            text_marker.color.g = 1.0
+            text_marker.color.b = 0.5
+            text_marker.color.a = 0.9
+            text_marker.text = name
+            marker_array.markers.append(text_marker)
 
         self.logging_points_marker_pub.publish(marker_array)
     
