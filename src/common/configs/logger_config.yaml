@@ -4,7 +4,7 @@ logger_module:
   state: ON # ON/OFF
   intersection: '2' # Kakaiken: 2 - Ganken: 1
   scenario: '2' # scenario number
-  log_time_interval: 0.1
+  log_time_interval: 0.05
   # log_speed: None
   # log_traffic_signal_state: None
   # log_position: None
@@ -19,19 +19,19 @@ logger_module:
         x: 4515.74
         y: 72941.41
         z: 18.63
-        threshold: 2.0
+        threshold: 3.0
       - name: "exit intersection"
         x: 4496.31
         y: 72947.96
         z: 18.76
-        threshold: 2.0
+        threshold: 3.0
       - name: "exit intersection tail"
         x: 4496.31
         y: 72957.96
         z: 18.76
-        threshold: 2.0
+        threshold: 3.0
       - name: "after 30km point"
         x: 4415.47
         y: 73150.55
         z: 18.62
-        threshold: 2.0
+        threshold: 3.0

@@ -529,9 +529,10 @@ class Logger(Node):
             row.append("" if t is None else f"{t:.1f}")
         self.rounds_writer.writerow(row)
 
-    def log_points_if_reached(self, vehicle_pose):
+    def log_points_if_reached(self, vehicle_pose, localization_point=None):
         if not self.logging_points:
             return
+        ref_point = localization_point if localization_point is not None else vehicle_pose
         for point in self.logging_points:
             name = point.get('name')
             if not name or name in self.reached_logging_points:
@@ -543,9 +544,9 @@ class Logger(Node):
                 threshold = float(point.get('threshold', self.logging_points_default_threshold))
             except (TypeError, ValueError):
                 continue
-            dx = vehicle_pose.x - px
-            dy = vehicle_pose.y - py
-            dz = vehicle_pose.z - pz
+            dx = ref_point.x - px
+            dy = ref_point.y - py
+            dz = ref_point.z - pz
             dist = (dx * dx + dy * dy + dz * dz) ** 0.5
             if dist <= threshold:
                 self.reached_logging_points.add(name)
@@ -752,6 +753,9 @@ class Logger(Node):
         if self.last_snapshot_sim_time is None:
             self.last_snapshot_sim_time = self.sim_time
 
+        # Update round transitions even during resets/cooldown
+        self.new_round_parameter_rest()
+
         if self.reset:
             self.reset = False
             return
@@ -767,20 +771,22 @@ class Logger(Node):
             self.get_logger().warning("Vehicle pose at origin")
             return
         
-        # only log when in the intersection #2 - Kakaiken - area
-        if self.intersection_awareness_intersection_name is None or self.intersection_awareness_intersection_name != '2':
-            return
-        # ------- ------- ------- -------
-        
         # print("snapshot ...", self.sim_time)
-        self.new_round_parameter_rest()
         self.update_lane_history(self.location.closest_lane_names.data)
         current_speed = self.velocity_report.longitudinal_velocity
         vehicle_pose = self.pose.pose.position
         x = vehicle_pose.x
         y = vehicle_pose.y
         self.update_is_vehicle_inside_intersection_state(vehicle_pose)
-        self.log_points_if_reached(vehicle_pose)
+        localization_point = None
+        if self.location and self.location.closest_lane_names.data:
+            localization_point = self.location.closest_point
+        self.log_points_if_reached(vehicle_pose, localization_point)
+
+        # only log when in the intersection #2 - Kakaiken - area
+        # if self.intersection_awareness_intersection_name is None or self.intersection_awareness_intersection_name != '2':
+        #     return
+        # ------- ------- ------- -------
         if self.is_vehicle_inside_intersection and not self.has_danger_detection_completed:
             # self.has_pedesrian_detected_at_danger_zones = self.is_object_detected_at_intersection_danger_zones('2')
             (any_detected, rsu_detected, obu_detected) = self.is_object_detected_at_intersection_danger_zones(self.intersection_id)
