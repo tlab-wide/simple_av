@@ -93,7 +93,7 @@ class Logger(Node):
         self.writer = csv.writer(self.csv)
 
         # Write header
-        self.writer.writerow([
+        header = [
             'round_number',
             'timestamp', 
             'speed', 
@@ -109,29 +109,24 @@ class Logger(Node):
             'obu_objects', # format: [(ObjectID,type,BoxID,X,Y),(ObjectID,type,BoxID,X,Y), …]
             'collision_prediction', # format: [(ObjectID,type,BoxID,X,Y)]
             'traffic_light_state'
-        ])
+        ]
 
-        # --- Points CSV ---
+        # --- Logging points config ---
         self.logging_points = []
         self.logging_points_default_threshold = 2.0
         self.reached_logging_points = set()
         logging_points_cfg = self.logger_config.get('logger_module', {}).get('logging_points', {})
         self.logging_points_default_threshold = logging_points_cfg.get('default_threshold', 2.0)
         self.logging_points = logging_points_cfg.get('points', [])
-
-        points_csv_filename = f"Intersection{self.intersection_id}_Scenario{log_scenario}_{speed_profile}_{RSU}_{timestamp_str}_points.csv"
-        points_csv_path = os.path.join(data_dir, points_csv_filename)
-        self.points_csv = open(points_csv_path, 'w')
-        self.points_writer = csv.writer(self.points_csv)
-        self.points_writer.writerow([
-            'round_number',
-            'timestamp',
-            'point_name',
-            'point_x',
-            'point_y',
-            'point_z',
-            'threshold'
-        ])
+        self.get_logger().info(f"Logging points loaded: {self.logging_points}")
+        self.logging_point_names = []
+        for idx, point in enumerate(self.logging_points):
+            name = point.get('name')
+            if not name:
+                name = f"point_{idx}"
+            self.logging_point_names.append(name)
+        header.extend(self.logging_point_names)
+        self.writer.writerow(header)
 
         # Subscriptions
         self.subscriptionPose = self.create_subscription(PoseStamped, '/sensing/gnss/pose', self.pose_callback, 10)
@@ -172,6 +167,8 @@ class Logger(Node):
             10
         )
         self.publish_logging_points_markers()
+        # Republish periodically for RViz subscribers
+        self.logging_points_timer = self.create_timer(1.0, self.publish_logging_points_markers)
 
         self.subscription = self.create_subscription(
             Control,
@@ -509,15 +506,6 @@ class Logger(Node):
             dist = (dx * dx + dy * dy + dz * dz) ** 0.5
             if dist <= threshold:
                 self.reached_logging_points.add(name)
-                self.points_writer.writerow([
-                    self.round_number,
-                    f"{self.sim_time:.1f}",
-                    name,
-                    f"{px:.3f}",
-                    f"{py:.3f}",
-                    f"{pz:.3f}",
-                    f"{threshold:.3f}",
-                ])
 
     def publish_logging_points_markers(self):
         if not self.logging_points:
@@ -761,7 +749,7 @@ class Logger(Node):
 
         collision_predicted = self.get_collision_prediction_info(self.intersection_id)
 
-        self.writer.writerow([
+        row = [
             self.round_number,
             f"{self.sim_time:.1f}",
             f"{current_speed:.2f}", 
@@ -777,16 +765,16 @@ class Logger(Node):
             obu_objects,
             collision_predicted,
             light_165626
-        ])
+        ]
+        for name in self.logging_point_names:
+            row.append(str(name in self.reached_logging_points))
+        self.writer.writerow(row)
         
     def destroy_node(self):
         self.get_logger().info("Closing CSV file")
         if self.csv:
             self.csv.flush()
             self.csv.close()
-        if getattr(self, "points_csv", None):
-            self.points_csv.flush()
-            self.points_csv.close()
         super().destroy_node()
 
 def main(args=None):
