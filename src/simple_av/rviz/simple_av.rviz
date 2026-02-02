@@ -62,8 +62,7 @@ Visualization Manager:
           Tree:
             map:
               base_link:
-                sensor_kit_base_link:
-                  {}
+                {}
           Update Interval: 0
           Value: true
         - Alpha: 0.5
@@ -3211,36 +3210,11 @@ Visualization Manager:
                     Value: true
                   Map: true
                   Perception:
-                    CameraLidarFusion(purple): true
-                    Centerpoint(red1): true
-                    CenterpointROIFusion(red2): true
-                    CenterpointValidator(red3): true
-                    Detection(yellow): true
-                    DetectionByTracker(orange): true
-                    PointPainting(light_green1): true
-                    PointPaintingROIFusion(light_green2): true
-                    PointPaintingValidator(light_green3): true
-                    Prediction(light_blue): true
-                    RadarFarObjects(white): true
-                    Tracking(green): true
+                    "": true
                     Value: true
                   Planning:
-                    Objects Of Interest:
-                      AvoidanceByLCLeft: true
-                      AvoidanceByLCRight: true
-                      AvoidanceLeft: true
-                      AvoidanceRight: true
-                      BlindSpot: true
-                      Crosswalk: true
-                      DetectionArea: true
-                      GoalPlanner: true
-                      Intersection: true
-                      LaneChangeLeft: true
-                      LaneChangeRight: true
-                      NoStoppingArea: true
-                      ObstacleCruise: true
-                      StartPlanner: true
-                      TrafficLight: true
+                    "":
+                      "": true
                       Value: true
                     Value: true
                   Sensing:
@@ -5173,25 +5147,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/ThirdPersonFollower
-      Distance: 348.60858154296875
+      Distance: 22.965251922607422
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: -3.4428727626800537
-        Y: -24.553876876831055
+        X: 0
+        Y: 0
         Z: 0
       Focal Shape Fixed Size: false
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.8053983449935913
-      Target Frame: sensor_kit_base_link
+      Pitch: 0.3403985798358917
+      Target Frame: base_link
       Value: ThirdPersonFollower (rviz_default_plugins)
-      Yaw: 1.1354047060012817
+      Yaw: 3.1304049491882324
     Saved:
       - Class: rviz_default_plugins/ThirdPersonFollower
         Distance: 18
