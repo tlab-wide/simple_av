@@ -137,6 +137,7 @@ class VehicleControl(Node):
         self.last_reset_time_ns = None
         self.reset_cooldown = self.scenario_config['scenario'].get('reset_cooldown_seconds', 2.0)
         self.reset_active = False
+        self.round_number = 0
 
         # Publish topics
         qos_profile = QoSProfile(
@@ -197,6 +198,7 @@ class VehicleControl(Node):
         )
         self.reset = reset_edge and cooldown_ok
         self.finished = msg.finished
+        self.round_number = msg.round_number
         if self.reset:
             self.last_reset_time_ns = now_ns
             self.reset_active = True
@@ -416,6 +418,7 @@ class VehicleControl(Node):
             ("motion_status", self.motion_plan.status.data, (1.0, 1.0, 0.2)),
             ("intersection", self.intersection_awareness_status or "none", (0.2, 1.0, 0.2)),
             ("reset", "true" if self.reset else "false", (1.0, 1.0, 1.0)),
+            ("round", str(self.round_number), (0.6, 0.9, 1.0)),
         ]
 
         for idx, (label, value, color) in enumerate(entries):

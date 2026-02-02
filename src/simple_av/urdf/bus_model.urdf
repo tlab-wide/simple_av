@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<robot name="simple_av_bus">
+  <link name="base_link">
+    <visual>
+      <!--origin rpy="-1.5 -2.05 1.5" xyz="0 0 0"/-->
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <geometry>
+        <mesh filename="package://simple_av/rviz/BusModel/Bus_withTexture_YForwardZUp.dae" scale="0.01 0.01 0.01"/>
+      </geometry>
+    </visual>
+  </link>
+</robot>

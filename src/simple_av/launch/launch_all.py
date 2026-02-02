@@ -122,6 +122,13 @@ def generate_launch_description():
             output='screen',
             arguments=['--ros-args', '--log-level', LaunchConfiguration('log_level')]
         ),
+        Node(
+            package='robot_state_publisher',
+            executable='robot_state_publisher',
+            name='bus_model_state_publisher',
+            output='screen',
+            parameters=[{'robot_description': open(os.path.join(get_package_share_directory('simple_av'), 'urdf', 'bus_model.urdf')).read()}],
+        ),
 
         # RViz2 Node
         Node(

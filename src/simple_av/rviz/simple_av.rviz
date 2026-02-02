@@ -4,6 +4,10 @@ Panels:
     Name: Displays
     Property Tree Widget:
       Expanded:
+        - /Status1
+        - /System1
+        - /System1/Grid1
+        - /System1/Grid1/Offset1
         - /Sensing1/LiDAR1/ConcatenatePointCloud1/Autocompute Value Bounds1
         - /RSU2 PO1/PEDESTRIAN1
         - /CurrentWaypoint1
@@ -14,8 +18,9 @@ Panels:
         - /MarkerArray1/Namespaces1
         - /MarkerArray2/Topic1
         - /MarkerArray2/Namespaces1
+        - /Loggin points1
         - /Loggin points1/Topic1
-        - /MarkerArray4
+        - /RobotModel1
       Splitter Ratio: 0.557669460773468
     Tree Height: 666
   - Class: rviz_common/Selection
@@ -39,37 +44,46 @@ Visualization Manager:
     - Class: rviz_common/Group
       Displays:
         - Class: rviz_default_plugins/TF
-          Enabled: false
+          Enabled: true
           Frame Timeout: 15
           Frames:
             All Enabled: true
+            base_link:
+              Value: true
+            map:
+              Value: true
+            sensor_kit_base_link:
+              Value: true
           Marker Scale: 1
           Name: TF
           Show Arrows: true
           Show Axes: true
           Show Names: true
           Tree:
-            {}
+            map:
+              base_link:
+                sensor_kit_base_link:
+                  {}
           Update Interval: 0
-          Value: false
+          Value: true
         - Alpha: 0.5
           Cell Size: 1
           Class: rviz_default_plugins/Grid
           Color: 160; 160; 164
-          Enabled: false
+          Enabled: true
           Line Style:
             Line Width: 0.029999999329447746
             Value: Lines
           Name: Grid
           Normal Cell Count: 0
           Offset:
-            X: 0
-            Y: 0
+            X: 4498.7998046875
+            Y: 72948.1015625
             Z: 0
           Plane: XY
-          Plane Cell Count: 10
-          Reference Frame: <Fixed Frame>
-          Value: false
+          Plane Cell Count: 100
+          Reference Frame: sensor_kit_base_link
+          Value: true
         - Class: rviz_common/Group
           Displays:
             - Alpha: 0.30000001192092896
@@ -90,6 +104,11 @@ Visualization Manager:
                 Expand Link Details: false
                 Expand Tree: false
                 Link Tree Style: Links in Alphabetic Order
+                base_link:
+                  Alpha: 1
+                  Show Axes: false
+                  Show Trail: false
+                  Value: true
               Mass Properties:
                 Inertia: false
                 Mass: false
@@ -3192,11 +3211,36 @@ Visualization Manager:
                     Value: true
                   Map: true
                   Perception:
-                    "": true
+                    CameraLidarFusion(purple): true
+                    Centerpoint(red1): true
+                    CenterpointROIFusion(red2): true
+                    CenterpointValidator(red3): true
+                    Detection(yellow): true
+                    DetectionByTracker(orange): true
+                    PointPainting(light_green1): true
+                    PointPaintingROIFusion(light_green2): true
+                    PointPaintingValidator(light_green3): true
+                    Prediction(light_blue): true
+                    RadarFarObjects(white): true
+                    Tracking(green): true
                     Value: true
                   Planning:
-                    "":
-                      "": true
+                    Objects Of Interest:
+                      AvoidanceByLCLeft: true
+                      AvoidanceByLCRight: true
+                      AvoidanceLeft: true
+                      AvoidanceRight: true
+                      BlindSpot: true
+                      Crosswalk: true
+                      DetectionArea: true
+                      GoalPlanner: true
+                      Intersection: true
+                      LaneChangeLeft: true
+                      LaneChangeRight: true
+                      NoStoppingArea: true
+                      ObstacleCruise: true
+                      StartPlanner: true
+                      TrafficLight: true
                       Value: true
                     Value: true
                   Sensing:
@@ -3395,6 +3439,7 @@ Visualization Manager:
                 RSU2 PO: true
                 RSU4 PO: true
                 RSU5 PO: true
+                RobotModel: true
                 Sensing:
                   GNSS:
                     PoseWithCovariance: true
@@ -4902,7 +4947,9 @@ Visualization Manager:
       Enabled: true
       Name: SpeedProfile
       Namespaces:
-        {}
+        speed_profile: true
+        speed_profile_id: true
+        speed_profile_text: true
       Topic:
         Depth: 5
         Durability Policy: Volatile
@@ -4935,17 +4982,17 @@ Visualization Manager:
         Value: /simple_av/visualization/search_area_markers
       Value: false
     - Class: rviz_default_plugins/MarkerArray
-      Enabled: true
+      Enabled: false
       Name: Cool4_intersection_points
       Namespaces:
-        intersection_points: true
+        {}
       Topic:
         Depth: 5
         Durability Policy: Volatile
         History Policy: Keep Last
         Reliability Policy: Reliable
         Value: /simple_av/visualization/intersection_point_markers
-      Value: true
+      Value: false
     - Class: rviz_default_plugins/MarkerArray
       Enabled: true
       Name: MarkerArray
@@ -4989,6 +5036,7 @@ Visualization Manager:
       Name: Loggin points
       Namespaces:
         logging_points: true
+        logging_points_text: true
       Topic:
         Depth: 5
         Durability Policy: Volatile
@@ -4996,18 +5044,37 @@ Visualization Manager:
         Reliability Policy: Reliable
         Value: /simple_av/visualization/logging_points
       Value: true
-    - Class: rviz_default_plugins/MarkerArray
+    - Alpha: 1
+      Class: rviz_default_plugins/RobotModel
+      Collision Enabled: false
+      Description File: ""
+      Description Source: Topic
+      Description Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /robot_description
       Enabled: true
-      Name: MarkerArray
-      Namespaces:
-        logging_points: true
-      Topic:
-        Depth: 5
-        Durability Policy: Volatile
-        History Policy: Keep Last
-        Reliability Policy: Reliable
-        Value: /simple_av/visualization/logging_points
+      Links:
+        All Links Enabled: true
+        Expand Joint Details: false
+        Expand Link Details: false
+        Expand Tree: false
+        Link Tree Style: Links in Alphabetic Order
+        base_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+      Mass Properties:
+        Inertia: false
+        Mass: false
+      Name: RobotModel
+      TF Prefix: ""
+      Update Interval: 0
       Value: true
+      Visual Enabled: true
   Enabled: true
   Global Options:
     Background Color: 15; 20; 23
@@ -5105,21 +5172,26 @@ Visualization Manager:
   Value: true
   Views:
     Current:
-      Angle: 0
-      Class: rviz_default_plugins/TopDownOrtho
+      Class: rviz_default_plugins/ThirdPersonFollower
+      Distance: 348.60858154296875
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
+      Focal Point:
+        X: -3.4428727626800537
+        Y: -24.553876876831055
+        Z: 0
+      Focal Shape Fixed Size: false
+      Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Scale: 6.723044395446777
+      Pitch: 0.8053983449935913
       Target Frame: sensor_kit_base_link
-      Value: TopDownOrtho (rviz_default_plugins)
-      X: -27.547216415405273
-      Y: 6.864351749420166
+      Value: ThirdPersonFollower (rviz_default_plugins)
+      Yaw: 1.1354047060012817
     Saved:
       - Class: rviz_default_plugins/ThirdPersonFollower
         Distance: 18
@@ -5188,7 +5260,7 @@ Window Geometry:
   Hide Right Dock: true
   PointcloudOnCamera:
     collapsed: false
-  QMainWindow State: 000000ff00000000fd0000000400000000000000ef00000281fc020000000efb0000001200530065006c0065006300740069006f006e00000001e10000009b0000005c00fffffffb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb00000024004100750074006f00770061007200650053007400610074006500500061006e0065006c000000003d000001cb0000006e00fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261fb0000000c00430061006d0065007200610100000682000000eb0000000000000000fb0000000a0049006d0061006700650100000505000002680000000000000000fb0000002c0049006e0069007400690061006c0050006f007300650042007500740074006f006e00500061006e0065006c000000068f000000de0000000000000000fb0000002c0049006e0069007400690061006c0050006f007300650042007500740074006f006e00500061006e0065006c000000068f000000de0000000000000000fb00000030005200650063006f0067006e006900740069006f006e0052006500730075006c0074004f006e0049006d006100670065000000003d000002810000002800fffffffb0000002a004100750074006f0077006100720065004400610074006500540069006d006500500061006e0065006c0000000332000000720000004100fffffffb000000240050006f0069006e00740063006c006f00750064004f006e00430061006d006500720061000000039d000000560000002800ffffff000000010000036d0000039efc0200000004fb000000100044006900730070006c006100790073000000003d000002d7000000c900fffffffc0000031a000000c10000000000fffffffaffffffff0100000002fb0000000a0056006900650077007300000005d5000001ab0000010000fffffffb0000001e0054006f006f006c002000500072006f00700065007200740069006500730000000000ffffffff0000009d00fffffffb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000e7a0000005afc0100000001fb0000000a00560069006500770073030000004e00000080000002e1000001970000000300000e7a0000005afc0100000002fb0000000800540069006d0065010000000000000e7a0000000000000000fb0000000800540069006d006501000000000000045000000000000000000000073a0000039e00000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  QMainWindow State: 000000ff00000000fd0000000400000000000000ef00000281fc020000000efb0000001200530065006c0065006300740069006f006e00000001e10000009b0000005c00fffffffb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb00000024004100750074006f00770061007200650053007400610074006500500061006e0065006c000000003d000001cb0000006e00fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261fb0000000c00430061006d0065007200610100000682000000eb0000000000000000fb0000000a0049006d0061006700650100000505000002680000000000000000fb0000002c0049006e0069007400690061006c0050006f007300650042007500740074006f006e00500061006e0065006c000000068f000000de0000000000000000fb0000002c0049006e0069007400690061006c0050006f007300650042007500740074006f006e00500061006e0065006c000000068f000000de0000000000000000fb00000030005200650063006f0067006e006900740069006f006e0052006500730075006c0074004f006e0049006d006100670065000000003d000002810000002800fffffffb0000002a004100750074006f0077006100720065004400610074006500540069006d006500500061006e0065006c0000000332000000720000004100fffffffb000000240050006f0069006e00740063006c006f00750064004f006e00430061006d006500720061000000039d000000560000002800ffffff00000001000003650000039efc0200000004fb000000100044006900730070006c006100790073000000003d000002d7000000c900fffffffc0000031a000000c10000000000fffffffaffffffff0100000002fb0000000a0056006900650077007300000005d5000001ab0000010000fffffffb0000001e0054006f006f006c002000500072006f00700065007200740069006500730000000000ffffffff0000009d00fffffffb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000e7a0000005afc0100000001fb0000000a00560069006500770073030000004e00000080000002e1000001970000000300000e7a0000005afc0100000002fb0000000800540069006d0065010000000000000e7a0000000000000000fb0000000800540069006d006501000000000000045000000000000000000000039d0000039e00000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
   RecognitionResultOnImage:
     collapsed: false
   Selection:
@@ -5197,6 +5269,6 @@ Window Geometry:
     collapsed: true
   Views:
     collapsed: true
-  Width: 1850
-  X: 70
+  Width: 925
+  X: 995
   Y: 27
