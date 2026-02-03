@@ -58,5 +58,8 @@ Thumbs.db
 
 .github/
 
+# MkDocs build output
+site/
 
-
+# if this is a generated folder in your repo
+gh-pages/
