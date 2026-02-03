@@ -1,4 +1,5 @@
 site_name: Simple-AV
+site_url: https://tlab-wide.github.io/simple_av/
 
 theme:
   language: en 
