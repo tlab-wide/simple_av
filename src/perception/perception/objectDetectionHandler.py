@@ -287,14 +287,13 @@ class Perception(Node):
         if source_header is None or not source_header.frame_id:
             self.get_logger().warning("Detected objects are missing frame_id; cannot transform.")
             return None
-        # If a PoseStamped was passed in, unwrap to Pose
-        if hasattr(pose, 'pose') and not hasattr(pose, 'position'):
+        # Unwrap common pose containers to geometry_msgs/Pose
+        if isinstance(pose, PoseStamped):
+            pose = pose.pose
+        elif hasattr(pose, 'pose') and hasattr(pose.pose, 'position'):
             pose = pose.pose
         if source_header.frame_id == self.target_frame:
             return pose
-        pose_stamped = PoseStamped()
-        pose_stamped.header = source_header
-        pose_stamped.pose = pose
         try:
             transform = self.tf_buffer.lookup_transform(
                 self.target_frame,
@@ -302,8 +301,8 @@ class Perception(Node):
                 source_header.stamp,
                 timeout=Duration(seconds=0.1),
             )
-            return do_transform_pose(pose_stamped, transform).pose
-        except Exception as exc:
+            return do_transform_pose(pose, transform)
+        except Exception:
             # Fallback to latest available transform to avoid dropping all detections
             try:
                 transform = self.tf_buffer.lookup_transform(
@@ -312,8 +311,8 @@ class Perception(Node):
                     Time(),
                     timeout=Duration(seconds=0.1),
                 )
-                return do_transform_pose(pose_stamped, transform).pose
-            except Exception:
+                return do_transform_pose(pose, transform)
+            except Exception as exc:
                 self.get_logger().warning(
                     f"TF transform failed {source_header.frame_id} -> {self.target_frame}: {exc}"
                 )

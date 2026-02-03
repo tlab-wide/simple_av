@@ -3219,15 +3219,32 @@ Visualization Manager:
                 Debug:
                   Control: true
                   Localization:
-                    "": true
+                    EKFPoseHistory: true
+                    NDT pointclouds: true
+                    NDTLoadedPCDMap: true
+                    NDTPoseHistory: true
                     Value: true
                   Map: true
                   Perception:
                     "": true
                     Value: true
                   Planning:
-                    "":
-                      "": true
+                    Objects Of Interest:
+                      AvoidanceByLCLeft: true
+                      AvoidanceByLCRight: true
+                      AvoidanceLeft: true
+                      AvoidanceRight: true
+                      BlindSpot: true
+                      Crosswalk: true
+                      DetectionArea: true
+                      GoalPlanner: true
+                      Intersection: true
+                      LaneChangeLeft: true
+                      LaneChangeRight: true
+                      NoStoppingArea: true
+                      ObstacleCruise: true
+                      StartPlanner: true
+                      TrafficLight: true
                       Value: true
                     Value: true
                   Sensing:
@@ -4583,14 +4600,18 @@ Visualization Manager:
       Display Yaw Covariance: false
       Display Yaw Rate: false
       Display Yaw Rate Covariance: false
-      Enabled: false
+      Enabled: true
       Line Width: 0.029999999329447746
       MOTORCYCLE:
         Alpha: 0.9990000128746033
         Color: 143; 240; 164
       Name: DetectedObjects
       Namespaces:
-        {}
+        label: true
+        position covariance: true
+        shape: true
+        twist: true
+        velocity: true
       Object Fill Type: Fill
       PEDESTRIAN:
         Alpha: 0.9990000128746033
@@ -4607,11 +4628,11 @@ Visualization Manager:
         Durability Policy: Volatile
         History Policy: Keep Last
         Reliability Policy: Reliable
-        Value: /simple_av/perception/detected_objects
+        Value: /simple_av/perception/obu_sensing
       UNKNOWN:
         Alpha: 0.9990000128746033
         Color: 255; 255; 255
-      Value: false
+      Value: true
       Visualization Type: Normal
     - BUS:
         Alpha: 0.9990000128746033
@@ -4698,7 +4719,13 @@ Visualization Manager:
         Color: 220; 138; 221
       Name: RSU2 PO
       Namespaces:
-        {}
+        acceleration: true
+        label: true
+        position covariance: true
+        shape: true
+        twist: true
+        uuid: true
+        velocity: true
       Object Fill Type: skeleton
       PEDESTRIAN:
         Alpha: 0.9990000128746033
@@ -4898,24 +4925,7 @@ Visualization Manager:
       Enabled: true
       Name: intersection layouts
       Namespaces:
-        intersection_1_inside_0: true
-        intersection_1_lane_1: true
-        intersection_1_lane_2: true
-        intersection_1_lane_3: true
-        intersection_1_lane_4: true
-        intersection_1_sw_1: true
-        intersection_1_sw_2: true
-        intersection_1_sw_3: true
-        intersection_2_cw_1: true
-        intersection_2_cw_2: true
-        intersection_2_cw_3: true
-        intersection_2_inside_0: true
-        intersection_2_lanes_1: true
-        intersection_2_lanes_2: true
-        intersection_2_lanes_3: true
-        intersection_2_sw_1: true
-        intersection_2_sw_2: true
-        intersection_2_sw_3: true
+        {}
       Topic:
         Depth: 5
         Durability Policy: Transient Local
@@ -5149,7 +5159,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/ThirdPersonFollower
-      Distance: 22.965251922607422
+      Distance: 51.52347946166992
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -5164,10 +5174,10 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.44539856910705566
+      Pitch: 0.740398645401001
       Target Frame: base_link
       Value: ThirdPersonFollower (rviz_default_plugins)
-      Yaw: 3.2953991889953613
+      Yaw: 4.295404434204102
     Saved:
       - Class: rviz_default_plugins/ThirdPersonFollower
         Distance: 18
