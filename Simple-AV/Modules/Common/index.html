@@ -8,6 +8,8 @@
       
       
       
+        <link rel="canonical" href="https://tlab-wide.github.io/simple_av/Simple-AV/Modules/Common/">
+      
       
         <link rel="prev" href="../../JsonMap/">
       
@@ -1223,53 +1225,53 @@
 <p>The <code>configs</code> folder holds YAML configuration files that define key parameters and system behavior. These files are loaded by other modules to ensure consistent tuning and logic across the software stack. Below is a summary of the main configuration files:</p>
 <h3 id="av_featureyaml"><strong><code>av_feature.yaml</code></strong></h3>
 <p>Controls core AV features:</p>
-<div class="highlight"><pre><span></span><code><span class="c1"># Traffic Light Configuration</span>
-traffic_light:
-<span class="w">  </span>enable:<span class="w"> </span>True<span class="w">   </span><span class="c1"># Enable or disable traffic lights</span>
-<span class="w">  </span>use_rsu:<span class="w"> </span>True<span class="w">  </span><span class="c1"># Enable or disable RSU for traffic lights</span>
-
-
-<span class="c1"># Object Detection Configuration</span>
-object_detection:
-<span class="w">  </span>enable:<span class="w"> </span>True<span class="w">  </span><span class="c1"># Enable or disable object detection</span>
-<span class="w">  </span>use_rsu:<span class="w"> </span>True<span class="w"> </span><span class="c1"># Enable or disable RSU for traffic lights</span>
-
-
-<span class="c1"># Collision Avoidance Configuration</span>
-collision_avoidance:
-<span class="w">  </span>direct_collision_avoidance:<span class="w"> </span>True<span class="w"> </span><span class="c1"># Enable or disable direct collision avoidance</span>
-<span class="w">  </span>collision_prediction:<span class="w"> </span>True<span class="w">       </span><span class="c1"># Enable or disable collision prediction</span>
-</code></pre></div>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Traffic Light Configuration</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>traffic_light:
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span>enable:<span class="w"> </span>True<span class="w">   </span><span class="c1"># Enable or disable traffic lights</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">  </span>use_rsu:<span class="w"> </span>True<span class="w">  </span><span class="c1"># Enable or disable RSU for traffic lights</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="c1"># Object Detection Configuration</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>object_detection:
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="w">  </span>enable:<span class="w"> </span>True<span class="w">  </span><span class="c1"># Enable or disable object detection</span>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="w">  </span>use_rsu:<span class="w"> </span>True<span class="w"> </span><span class="c1"># Enable or disable RSU for traffic lights</span>
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>
+</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="c1"># Collision Avoidance Configuration</span>
+</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>collision_avoidance:
+</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="w">  </span>direct_collision_avoidance:<span class="w"> </span>True<span class="w"> </span><span class="c1"># Enable or disable direct collision avoidance</span>
+</span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="w">  </span>collision_prediction:<span class="w"> </span>True<span class="w">       </span><span class="c1"># Enable or disable collision prediction</span>
+</span></code></pre></div>
 <h3 id="motion_behavior_configyaml"><strong><code>motion_behavior_config.yaml</code></strong></h3>
 <p>Specifies the motion behavior and dynamics of the vehicle:</p>
-<div class="highlight"><pre><span></span><code>motion:
-<span class="w">  </span>max_turning_angle:<span class="w"> </span><span class="m">35</span>.0<span class="w">  </span><span class="c1"># Maximum allowable turning angle (degrees)</span>
-
-<span class="w">  </span>speed_limits:
-<span class="w">    </span>base:<span class="w"> </span><span class="m">11</span>.0<span class="w">     </span><span class="c1"># Default base speed (m/s)</span>
-<span class="w">    </span>turning_speed:<span class="w"> </span><span class="m">3</span>.0<span class="w"> </span><span class="c1"># Default speed on turns (m/s)</span>
-
-<span class="w">  </span>lookahead:
-<span class="w">    </span>coefficient:<span class="w"> </span><span class="m">1</span>.75<span class="w">    </span><span class="c1"># Scaling factor for lookahead distance</span>
-<span class="w">    </span>base:<span class="w"> </span><span class="m">2</span>.0<span class="w"> </span><span class="c1"># Multiplier based on vehicle speed</span>
-
-behavior:
-<span class="w">  </span>safety_distance:<span class="w"> </span><span class="m">16</span>.0<span class="w">  </span><span class="c1"># Minimum stopping distance behind an object (meters)</span>
-<span class="w">  </span>reaction_time_threshold:<span class="w"> </span><span class="m">4</span>.0<span class="w">  </span><span class="c1"># Time delay before reacting to an event (seconds)</span>
-<span class="w">  </span>range_low_pass_gain:<span class="w"> </span><span class="m">0</span>.90
-
-<span class="w">  </span>on_path_detection_range:<span class="w"> </span><span class="c1"># Detection range for Objects on the path</span>
-<span class="w">    </span>coefficient:<span class="w"> </span><span class="m">5</span>.0<span class="w"> </span><span class="c1"># Scaling factor for reaction distance</span>
-<span class="w">    </span>base:<span class="w"> </span><span class="m">25</span>.0<span class="w">        </span><span class="c1"># Base reaction distance (meters)</span>
-
-<span class="w">  </span>prediction_reaction_range:<span class="w"> </span>
-<span class="w">    </span>coefficient:<span class="w"> </span><span class="m">10</span>.0<span class="w">  </span><span class="c1"># Scaling factor for reaction distance</span>
-<span class="w">    </span>base:<span class="w"> </span><span class="m">150</span>.0<span class="w">         </span><span class="c1"># Base reaction distance (meters)</span>
-
-<span class="w">  </span>prediction_detection_range:
-<span class="w">    </span>coefficient:<span class="w"> </span><span class="m">10</span>.0<span class="w">  </span><span class="c1"># Scaling factor for detection radius</span>
-<span class="w">    </span>base:<span class="w"> </span><span class="m">150</span>.0<span class="w">      </span><span class="c1"># Base detection radius (meters)</span>
-</code></pre></div>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>motion:
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span>max_turning_angle:<span class="w"> </span><span class="m">35</span>.0<span class="w">  </span><span class="c1"># Maximum allowable turning angle (degrees)</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">  </span>speed_limits:
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">    </span>base:<span class="w"> </span><span class="m">11</span>.0<span class="w">     </span><span class="c1"># Default base speed (m/s)</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">    </span>turning_speed:<span class="w"> </span><span class="m">3</span>.0<span class="w"> </span><span class="c1"># Default speed on turns (m/s)</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">  </span>lookahead:
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">    </span>coefficient:<span class="w"> </span><span class="m">1</span>.75<span class="w">    </span><span class="c1"># Scaling factor for lookahead distance</span>
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="w">    </span>base:<span class="w"> </span><span class="m">2</span>.0<span class="w"> </span><span class="c1"># Multiplier based on vehicle speed</span>
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>
+</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>behavior:
+</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="w">  </span>safety_distance:<span class="w"> </span><span class="m">16</span>.0<span class="w">  </span><span class="c1"># Minimum stopping distance behind an object (meters)</span>
+</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="w">  </span>reaction_time_threshold:<span class="w"> </span><span class="m">4</span>.0<span class="w">  </span><span class="c1"># Time delay before reacting to an event (seconds)</span>
+</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="w">  </span>range_low_pass_gain:<span class="w"> </span><span class="m">0</span>.90
+</span><span id="__span-1-16"><a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a>
+</span><span id="__span-1-17"><a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a><span class="w">  </span>on_path_detection_range:<span class="w"> </span><span class="c1"># Detection range for Objects on the path</span>
+</span><span id="__span-1-18"><a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a><span class="w">    </span>coefficient:<span class="w"> </span><span class="m">5</span>.0<span class="w"> </span><span class="c1"># Scaling factor for reaction distance</span>
+</span><span id="__span-1-19"><a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a><span class="w">    </span>base:<span class="w"> </span><span class="m">25</span>.0<span class="w">        </span><span class="c1"># Base reaction distance (meters)</span>
+</span><span id="__span-1-20"><a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a>
+</span><span id="__span-1-21"><a id="__codelineno-1-21" name="__codelineno-1-21" href="#__codelineno-1-21"></a><span class="w">  </span>prediction_reaction_range:<span class="w"> </span>
+</span><span id="__span-1-22"><a id="__codelineno-1-22" name="__codelineno-1-22" href="#__codelineno-1-22"></a><span class="w">    </span>coefficient:<span class="w"> </span><span class="m">10</span>.0<span class="w">  </span><span class="c1"># Scaling factor for reaction distance</span>
+</span><span id="__span-1-23"><a id="__codelineno-1-23" name="__codelineno-1-23" href="#__codelineno-1-23"></a><span class="w">    </span>base:<span class="w"> </span><span class="m">150</span>.0<span class="w">         </span><span class="c1"># Base reaction distance (meters)</span>
+</span><span id="__span-1-24"><a id="__codelineno-1-24" name="__codelineno-1-24" href="#__codelineno-1-24"></a>
+</span><span id="__span-1-25"><a id="__codelineno-1-25" name="__codelineno-1-25" href="#__codelineno-1-25"></a><span class="w">  </span>prediction_detection_range:
+</span><span id="__span-1-26"><a id="__codelineno-1-26" name="__codelineno-1-26" href="#__codelineno-1-26"></a><span class="w">    </span>coefficient:<span class="w"> </span><span class="m">10</span>.0<span class="w">  </span><span class="c1"># Scaling factor for detection radius</span>
+</span><span id="__span-1-27"><a id="__codelineno-1-27" name="__codelineno-1-27" href="#__codelineno-1-27"></a><span class="w">    </span>base:<span class="w"> </span><span class="m">150</span>.0<span class="w">      </span><span class="c1"># Base detection radius (meters)</span>
+</span></code></pre></div>
 <h3 id="scenario_configyaml"><strong><code>scenario_config.yaml</code></strong></h3>
 <p>Provides parameters for simulation scenarios:</p>
 <ul>
@@ -1277,47 +1279,47 @@ behavior:
 <li>Allows for repeated testing with a scenario count.</li>
 <li>Defines the vehicle model in use (e.g., <code>bus</code>, <code>lexus</code>).</li>
 </ul>
-<div class="highlight"><pre><span></span><code>scenario:
-<span class="w">  </span>destination:<span class="w"> </span><span class="s1">&#39;lanelet761&#39;</span><span class="w"> </span><span class="c1"># Scenarion 1 lanelet761-- for scenarion 2 enter lanelet1162&#39;</span>
-<span class="w">  </span><span class="c1"># destination: &#39;lanelet177&#39; # Scenarion SHinjuku start from 96</span>
-<span class="w">  </span>repeat_count:<span class="w"> </span><span class="m">50</span><span class="w">  </span><span class="c1"># Number of times to repeat the scenario for testing</span>
-<span class="w">  </span>vehicle_model:<span class="w"> </span><span class="s1">&#39;bus&#39;</span><span class="w"> </span><span class="c1"># Selecting vehicle model based on what model is loaded on AWSIM: Lexus/bus or custom vehicle</span>
-</code></pre></div>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>scenario:
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span>destination:<span class="w"> </span><span class="s1">&#39;lanelet761&#39;</span><span class="w"> </span><span class="c1"># Scenarion 1 lanelet761-- for scenarion 2 enter lanelet1162&#39;</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span><span class="c1"># destination: &#39;lanelet177&#39; # Scenarion SHinjuku start from 96</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">  </span>repeat_count:<span class="w"> </span><span class="m">50</span><span class="w">  </span><span class="c1"># Number of times to repeat the scenario for testing</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">  </span>vehicle_model:<span class="w"> </span><span class="s1">&#39;bus&#39;</span><span class="w"> </span><span class="c1"># Selecting vehicle model based on what model is loaded on AWSIM: Lexus/bus or custom vehicle</span>
+</span></code></pre></div>
 <h3 id="vehicle_configyaml"><strong><code>vehicle_config.yaml</code></strong></h3>
 <p>Contains detailed vehicle specifications:</p>
 <ul>
 <li>Defines physical dimensions and dynamic capabilities for supported vehicle models like <code>lexus</code> and <code>bus</code>.</li>
 <li>Includes speed, acceleration, braking limits, and weights.</li>
 </ul>
-<div class="highlight"><pre><span></span><code>vehicles:
-<span class="w">  </span>lexus:
-<span class="w">    </span>model:<span class="w"> </span><span class="s2">&quot;RX450H&quot;</span>
-<span class="w">    </span>dimensions:
-<span class="w">      </span>length:<span class="w"> </span><span class="m">4</span>.8895<span class="w">  </span><span class="c1"># Vehicle length (meters)</span>
-<span class="w">      </span>width:<span class="w"> </span><span class="m">1</span>.895<span class="w">    </span><span class="c1"># Vehicle width (meters)</span>
-<span class="w">      </span>height:<span class="w"> </span><span class="m">1</span>.6<span class="w">     </span><span class="c1"># Vehicle height (meters)</span>
-<span class="w">      </span>wheel_base:<span class="w"> </span><span class="m">2</span>.75<span class="w"> </span><span class="c1"># Distance between front and rear axles (meters)</span>
-<span class="w">    </span>weight:<span class="w"> </span><span class="m">3000</span><span class="w">  </span><span class="c1"># Vehicle weight (kg)</span>
-<span class="w">    </span>performance:
-<span class="w">      </span>max_speed:<span class="w"> </span><span class="m">30</span>.0<span class="w">          </span><span class="c1"># Maximum speed (m/s)</span>
-<span class="w">      </span>max_acceleration:<span class="w"> </span><span class="m">3</span>.8<span class="w">     </span><span class="c1"># Maximum acceleration (m/s²)</span>
-<span class="w">      </span>max_braking_acceleration:<span class="w"> </span>-6.0<span class="w"> </span><span class="c1"># Maximum braking acceleration (m/s²)</span>
-
-<span class="w">  </span>bus:
-<span class="w">    </span>model:<span class="w"> </span><span class="s2">&quot;TierIV&quot;</span>
-<span class="w">    </span>dimensions:
-<span class="w">      </span>length:<span class="w"> </span><span class="m">10</span>.3<span class="w">   </span><span class="c1"># Vehicle length (meters)</span>
-<span class="w">      </span>width:<span class="w"> </span><span class="m">2</span>.9<span class="w">     </span><span class="c1"># Vehicle width (meters)</span>
-<span class="w">      </span>height:<span class="w"> </span><span class="m">3</span>.2<span class="w">    </span><span class="c1"># Vehicle height (meters)</span>
-<span class="w">      </span>wheel_base:<span class="w"> </span><span class="m">4</span>.8<span class="w"> </span><span class="c1"># Distance between front and rear axles (meters)</span>
-<span class="w">      </span>front_overhang:<span class="w"> </span><span class="m">2</span>.3<span class="w"> </span><span class="c1"># Distance from front axle to vehicle front (meters)</span>
-<span class="w">      </span>rear_overhang:<span class="w"> </span><span class="m">3</span>.2<span class="w">  </span><span class="c1"># Distance from rear axle to vehicle back (meters)</span>
-<span class="w">    </span>weight:<span class="w"> </span><span class="m">10000</span><span class="w">  </span><span class="c1"># Vehicle weight (kg)</span>
-<span class="w">    </span>performance:
-<span class="w">      </span>max_speed:<span class="w"> </span><span class="m">20</span>.0<span class="w">          </span><span class="c1"># Maximum speed (m/s)</span>
-<span class="w">      </span>max_acceleration:<span class="w"> </span><span class="m">1</span>.4<span class="w">     </span><span class="c1"># Maximum acceleration (m/s²)</span>
-<span class="w">      </span>max_braking_acceleration:<span class="w"> </span>-2.6<span class="w"> </span><span class="c1"># Maximum braking acceleration (m/s²)</span>
-</code></pre></div>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>vehicles:
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span>lexus:
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">    </span>model:<span class="w"> </span><span class="s2">&quot;RX450H&quot;</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">    </span>dimensions:
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">      </span>length:<span class="w"> </span><span class="m">4</span>.8895<span class="w">  </span><span class="c1"># Vehicle length (meters)</span>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">      </span>width:<span class="w"> </span><span class="m">1</span>.895<span class="w">    </span><span class="c1"># Vehicle width (meters)</span>
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">      </span>height:<span class="w"> </span><span class="m">1</span>.6<span class="w">     </span><span class="c1"># Vehicle height (meters)</span>
+</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">      </span>wheel_base:<span class="w"> </span><span class="m">2</span>.75<span class="w"> </span><span class="c1"># Distance between front and rear axles (meters)</span>
+</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="w">    </span>weight:<span class="w"> </span><span class="m">3000</span><span class="w">  </span><span class="c1"># Vehicle weight (kg)</span>
+</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="w">    </span>performance:
+</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="w">      </span>max_speed:<span class="w"> </span><span class="m">30</span>.0<span class="w">          </span><span class="c1"># Maximum speed (m/s)</span>
+</span><span id="__span-3-12"><a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="w">      </span>max_acceleration:<span class="w"> </span><span class="m">3</span>.8<span class="w">     </span><span class="c1"># Maximum acceleration (m/s²)</span>
+</span><span id="__span-3-13"><a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a><span class="w">      </span>max_braking_acceleration:<span class="w"> </span>-6.0<span class="w"> </span><span class="c1"># Maximum braking acceleration (m/s²)</span>
+</span><span id="__span-3-14"><a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a>
+</span><span id="__span-3-15"><a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a><span class="w">  </span>bus:
+</span><span id="__span-3-16"><a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a><span class="w">    </span>model:<span class="w"> </span><span class="s2">&quot;TierIV&quot;</span>
+</span><span id="__span-3-17"><a id="__codelineno-3-17" name="__codelineno-3-17" href="#__codelineno-3-17"></a><span class="w">    </span>dimensions:
+</span><span id="__span-3-18"><a id="__codelineno-3-18" name="__codelineno-3-18" href="#__codelineno-3-18"></a><span class="w">      </span>length:<span class="w"> </span><span class="m">10</span>.3<span class="w">   </span><span class="c1"># Vehicle length (meters)</span>
+</span><span id="__span-3-19"><a id="__codelineno-3-19" name="__codelineno-3-19" href="#__codelineno-3-19"></a><span class="w">      </span>width:<span class="w"> </span><span class="m">2</span>.9<span class="w">     </span><span class="c1"># Vehicle width (meters)</span>
+</span><span id="__span-3-20"><a id="__codelineno-3-20" name="__codelineno-3-20" href="#__codelineno-3-20"></a><span class="w">      </span>height:<span class="w"> </span><span class="m">3</span>.2<span class="w">    </span><span class="c1"># Vehicle height (meters)</span>
+</span><span id="__span-3-21"><a id="__codelineno-3-21" name="__codelineno-3-21" href="#__codelineno-3-21"></a><span class="w">      </span>wheel_base:<span class="w"> </span><span class="m">4</span>.8<span class="w"> </span><span class="c1"># Distance between front and rear axles (meters)</span>
+</span><span id="__span-3-22"><a id="__codelineno-3-22" name="__codelineno-3-22" href="#__codelineno-3-22"></a><span class="w">      </span>front_overhang:<span class="w"> </span><span class="m">2</span>.3<span class="w"> </span><span class="c1"># Distance from front axle to vehicle front (meters)</span>
+</span><span id="__span-3-23"><a id="__codelineno-3-23" name="__codelineno-3-23" href="#__codelineno-3-23"></a><span class="w">      </span>rear_overhang:<span class="w"> </span><span class="m">3</span>.2<span class="w">  </span><span class="c1"># Distance from rear axle to vehicle back (meters)</span>
+</span><span id="__span-3-24"><a id="__codelineno-3-24" name="__codelineno-3-24" href="#__codelineno-3-24"></a><span class="w">    </span>weight:<span class="w"> </span><span class="m">10000</span><span class="w">  </span><span class="c1"># Vehicle weight (kg)</span>
+</span><span id="__span-3-25"><a id="__codelineno-3-25" name="__codelineno-3-25" href="#__codelineno-3-25"></a><span class="w">    </span>performance:
+</span><span id="__span-3-26"><a id="__codelineno-3-26" name="__codelineno-3-26" href="#__codelineno-3-26"></a><span class="w">      </span>max_speed:<span class="w"> </span><span class="m">20</span>.0<span class="w">          </span><span class="c1"># Maximum speed (m/s)</span>
+</span><span id="__span-3-27"><a id="__codelineno-3-27" name="__codelineno-3-27" href="#__codelineno-3-27"></a><span class="w">      </span>max_acceleration:<span class="w"> </span><span class="m">1</span>.4<span class="w">     </span><span class="c1"># Maximum acceleration (m/s²)</span>
+</span><span id="__span-3-28"><a id="__codelineno-3-28" name="__codelineno-3-28" href="#__codelineno-3-28"></a><span class="w">      </span>max_braking_acceleration:<span class="w"> </span>-2.6<span class="w"> </span><span class="c1"># Maximum braking acceleration (m/s²)</span>
+</span></code></pre></div>
 <h2 id="zones">📁 zones</h2>
 <p>The <code>zones</code> folder contains metadata about specific geographic zones used within the system. One key file here is: <strong><code>intersection_profiles.yaml</code></strong>  </p>
 <p>Describes intersection areas with:</p>
@@ -1326,14 +1328,14 @@ behavior:
 <li>A <code>reference_point</code> (x, y coordinates) marking the center of the intersection.</li>
 <li>A <code>threshold</code> distance that defines the proximity boundary around each reference point.</li>
 </ul>
-<div class="highlight"><pre><span></span><code><span class="w">  </span>intersections:
-<span class="w">  </span>intersection_1:
-<span class="w">    </span>name:<span class="w"> </span><span class="s2">&quot;intersection_1&quot;</span>
-<span class="w">    </span>reference_point:<span class="w"> </span>
-<span class="w">      </span>x:<span class="w"> </span><span class="m">4250</span>.0
-<span class="w">      </span>y:<span class="w"> </span><span class="m">73455</span>.0
-<span class="w">    </span>threshold:<span class="w"> </span><span class="m">40</span>.0
-</code></pre></div>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="w">  </span>intersections:
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span>intersection_1:
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span>name:<span class="w"> </span><span class="s2">&quot;intersection_1&quot;</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">    </span>reference_point:<span class="w"> </span>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">      </span>x:<span class="w"> </span><span class="m">4250</span>.0
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">      </span>y:<span class="w"> </span><span class="m">73455</span>.0
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">    </span>threshold:<span class="w"> </span><span class="m">40</span>.0
+</span></code></pre></div>
 <p>These profiles are utilized in the <code>intersection_detection</code> node to determine whether the vehicle is approaching, inside, or exiting an intersection area.</p>
 <hr />
 <p>By organizing shared data in the <code>common</code> package, all modules operate with a consistent and centralized set of information, which simplifies development and improves maintainability.</p>

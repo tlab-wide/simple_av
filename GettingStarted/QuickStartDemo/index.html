@@ -8,6 +8,8 @@
       
       
       
+        <link rel="canonical" href="https://tlab-wide.github.io/simple_av/GettingStarted/QuickStartDemo/">
+      
       
         <link rel="prev" href="../../Simple-AV/SystemSetup/">
       
@@ -1383,65 +1385,65 @@
 <p>Refer to the <a href="../../Simple-AV/SystemSetup/">system setup page</a> for detailed instructions.</p>
 <h4 id="step-1-create-a-ros-workspace">Step 1: Create a ROS Workspace</h4>
 <p>First, create a new ROS workspace:</p>
-<div class="highlight"><pre><span></span><code>mkdir<span class="w"> </span>-p<span class="w"> </span>~/ros_ws/src
-</code></pre></div>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>mkdir<span class="w"> </span>-p<span class="w"> </span>~/ros_ws/src
+</span></code></pre></div>
 <h4 id="step-2-clone-the-repository">Step 2: Clone the Repository</h4>
 <p>Next, clone this repository into the src directory of your workspace:</p>
-<div class="highlight"><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>~/ros_ws/src
-git<span class="w"> </span>clone<span class="w"> </span>https://github.com/hoosh-ir/simple_av.git
-</code></pre></div>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nb">cd</span><span class="w"> </span>~/ros_ws/src
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/hoosh-ir/simple_av.git
+</span></code></pre></div>
 <h4 id="step-3-build-the-workspace">Step 3: Build the Workspace</h4>
 <p>After cloning the repository, build the workspace using colcon:
-<div class="highlight"><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>~/ros_ws/
-colcon<span class="w"> </span>build
-</code></pre></div></p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nb">cd</span><span class="w"> </span>~/ros_ws/
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>colcon<span class="w"> </span>build
+</span></code></pre></div></p>
 <p>The workspace should look like this after running <code>colcon build</code>:
-<div class="highlight"><pre><span></span><code>ros_ws/
-├──<span class="w"> </span>build/
-├──<span class="w"> </span>install/
-├──<span class="w"> </span>log/
-└──<span class="w"> </span>src/
-<span class="w">    </span>├──<span class="w"> </span>docs/
-<span class="w">    </span>├──<span class="w"> </span>mkdocs.yml
-<span class="w">    </span>├──<span class="w"> </span>README.md
-<span class="w">    </span>└──<span class="w"> </span>src/
-<span class="w">      </span>├──<span class="w"> </span>V2X_messages/
-<span class="w">      </span>├──<span class="w"> </span>simple_av_msgs/
-<span class="w">      </span>├──<span class="w"> </span>common/
-<span class="w">      </span>├──<span class="w"> </span>system/
-<span class="w">      </span>├──<span class="w"> </span>control/
-<span class="w">      </span>├──<span class="w"> </span>localization/
-<span class="w">      </span>├──<span class="w"> </span>planning/
-<span class="w">      </span>├──<span class="w"> </span>perception/
-<span class="w">      </span>└──<span class="w"> </span>simple_av/
-<span class="w">          </span>├──<span class="w"> </span>package.xml
-<span class="w">          </span>├──<span class="w"> </span>resource/
-<span class="w">          </span>├──<span class="w"> </span>setup.cfg
-<span class="w">          </span>├──<span class="w"> </span>setup.py
-<span class="w">          </span>└──<span class="w"> </span>launch/
-<span class="w">              </span>└──<span class="w"> </span>launch_all.py
-</code></pre></div></p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>ros_ws/
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>├──<span class="w"> </span>build/
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>├──<span class="w"> </span>install/
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>├──<span class="w"> </span>log/
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>└──<span class="w"> </span>src/
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">    </span>├──<span class="w"> </span>docs/
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">    </span>├──<span class="w"> </span>mkdocs.yml
+</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">    </span>├──<span class="w"> </span>README.md
+</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="w">    </span>└──<span class="w"> </span>src/
+</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="w">      </span>├──<span class="w"> </span>V2X_messages/
+</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="w">      </span>├──<span class="w"> </span>simple_av_msgs/
+</span><span id="__span-3-12"><a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="w">      </span>├──<span class="w"> </span>common/
+</span><span id="__span-3-13"><a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a><span class="w">      </span>├──<span class="w"> </span>system/
+</span><span id="__span-3-14"><a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a><span class="w">      </span>├──<span class="w"> </span>control/
+</span><span id="__span-3-15"><a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a><span class="w">      </span>├──<span class="w"> </span>localization/
+</span><span id="__span-3-16"><a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a><span class="w">      </span>├──<span class="w"> </span>planning/
+</span><span id="__span-3-17"><a id="__codelineno-3-17" name="__codelineno-3-17" href="#__codelineno-3-17"></a><span class="w">      </span>├──<span class="w"> </span>perception/
+</span><span id="__span-3-18"><a id="__codelineno-3-18" name="__codelineno-3-18" href="#__codelineno-3-18"></a><span class="w">      </span>└──<span class="w"> </span>simple_av/
+</span><span id="__span-3-19"><a id="__codelineno-3-19" name="__codelineno-3-19" href="#__codelineno-3-19"></a><span class="w">          </span>├──<span class="w"> </span>package.xml
+</span><span id="__span-3-20"><a id="__codelineno-3-20" name="__codelineno-3-20" href="#__codelineno-3-20"></a><span class="w">          </span>├──<span class="w"> </span>resource/
+</span><span id="__span-3-21"><a id="__codelineno-3-21" name="__codelineno-3-21" href="#__codelineno-3-21"></a><span class="w">          </span>├──<span class="w"> </span>setup.cfg
+</span><span id="__span-3-22"><a id="__codelineno-3-22" name="__codelineno-3-22" href="#__codelineno-3-22"></a><span class="w">          </span>├──<span class="w"> </span>setup.py
+</span><span id="__span-3-23"><a id="__codelineno-3-23" name="__codelineno-3-23" href="#__codelineno-3-23"></a><span class="w">          </span>└──<span class="w"> </span>launch/
+</span><span id="__span-3-24"><a id="__codelineno-3-24" name="__codelineno-3-24" href="#__codelineno-3-24"></a><span class="w">              </span>└──<span class="w"> </span>launch_all.py
+</span></code></pre></div></p>
 <h4 id="step-4-source-the-workspace">Step 4: Source the Workspace</h4>
 <p>Finally, source the workspace to make the ROS packages available:</p>
-<div class="highlight"><pre><span></span><code><span class="nb">source</span><span class="w"> </span>~/ros_ws/install/setup.bash
-</code></pre></div>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nb">source</span><span class="w"> </span>~/ros_ws/install/setup.bash
+</span></code></pre></div>
 <h4 id="step-5-running-the-project">Step 5: Running the Project</h4>
 <p>You can run the project by either running the launch file or by manually starting each node in sequence.</p>
 <p>Run the launch file:
-<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>launch<span class="w"> </span>simple_av<span class="w"> </span>launch_all.py
-</code></pre></div></p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>ros2<span class="w"> </span>launch<span class="w"> </span>simple_av<span class="w"> </span>launch_all.py
+</span></code></pre></div></p>
 <p>Or, run the nodes manually in the following order:</p>
-<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>run<span class="w"> </span>localization<span class="w"> </span>localization
-ros2<span class="w"> </span>run<span class="w"> </span>localization<span class="w"> </span>intersection_detector
-ros2<span class="w"> </span>run<span class="w"> </span>system<span class="w"> </span>portal
-ros2<span class="w"> </span>run<span class="w"> </span>system<span class="w"> </span>sim_monitor
-ros2<span class="w"> </span>run<span class="w"> </span>perception<span class="w"> </span>traffic_light_handler
-ros2<span class="w"> </span>run<span class="w"> </span>perception<span class="w"> </span>object_detection_handler
-ros2<span class="w"> </span>run<span class="w"> </span>planning<span class="w"> </span>mission_planning
-ros2<span class="w"> </span>run<span class="w"> </span>planning<span class="w"> </span>behavior_path_planning
-ros2<span class="w"> </span>run<span class="w"> </span>planning<span class="w"> </span>behavior_motion_planning
-ros2<span class="w"> </span>run<span class="w"> </span>control<span class="w"> </span>control
-</code></pre></div>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>ros2<span class="w"> </span>run<span class="w"> </span>localization<span class="w"> </span>localization
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>ros2<span class="w"> </span>run<span class="w"> </span>localization<span class="w"> </span>intersection_detector
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>ros2<span class="w"> </span>run<span class="w"> </span>system<span class="w"> </span>portal
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>ros2<span class="w"> </span>run<span class="w"> </span>system<span class="w"> </span>sim_monitor
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>ros2<span class="w"> </span>run<span class="w"> </span>perception<span class="w"> </span>traffic_light_handler
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>ros2<span class="w"> </span>run<span class="w"> </span>perception<span class="w"> </span>object_detection_handler
+</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>ros2<span class="w"> </span>run<span class="w"> </span>planning<span class="w"> </span>mission_planning
+</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>ros2<span class="w"> </span>run<span class="w"> </span>planning<span class="w"> </span>behavior_path_planning
+</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>ros2<span class="w"> </span>run<span class="w"> </span>planning<span class="w"> </span>behavior_motion_planning
+</span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a>ros2<span class="w"> </span>run<span class="w"> </span>control<span class="w"> </span>control
+</span></code></pre></div>
 <hr />
 <h2 id="2-running-simple-av-with-awsim">2. Running Simple-AV with AWSIM</h2>
 <p>Simple-AV is designed to work seamlessly alongside AWSIM. AWSIM acts as the simulation environment, providing sensor data and scene information. Simple-AV processes this data to perform localization, perception, planning, and control tasks. The computed control commands are then sent back to AWSIM, which moves the vehicle accordingly within the simulated environment.</p>

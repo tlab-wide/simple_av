@@ -8,6 +8,8 @@
       
       
       
+        <link rel="canonical" href="https://tlab-wide.github.io/simple_av/Simple-AV/JsonMap/">
+      
       
         <link rel="prev" href="../../ProjectGuide/GitBranch/">
       
@@ -1073,32 +1075,32 @@
 
 <h1 id="waypoint-map">Waypoint Map</h1>
 <p>Simple-AV uses the simplest form of map. This map which is a Json file, contains some crusial information about the environment which the autonomous vehicle operates in. Below you can see the format designed for this map file. The <a href="../Modules/Localization/">Localization module</a> uses this format to read the input map file. Also, the <a href="../Modules/Path_planning/index.md">Planning module</a> uses this map for path planning purposes.</p>
-<div class="highlight"><pre><span></span><code><span class="p">{</span>
-    <span class="s2">&quot;LaneLetsArray&quot;</span><span class="p">:</span> <span class="p">[</span>
-        <span class="p">{</span>
-            <span class="s2">&quot;name&quot;</span><span class="p">:</span>
-            <span class="s2">&quot;waypoints&quot;</span><span class="p">:</span> <span class="p">[</span>
-                <span class="p">{</span> <span class="s2">&quot;x&quot;</span><span class="p">:</span>  <span class="s2">&quot;y&quot;</span><span class="p">:</span> <span class="s2">&quot;z&quot;</span><span class="p">:</span> <span class="p">},</span>
-                <span class="p">{</span> <span class="s2">&quot;x&quot;</span><span class="p">:</span>  <span class="s2">&quot;y&quot;</span><span class="p">:</span> <span class="s2">&quot;z&quot;</span><span class="p">:</span> <span class="p">}</span>
-            <span class="p">],</span>
-            <span class="s2">&quot;prevLanes&quot;</span><span class="p">:</span> <span class="p">[],</span>
-            <span class="s2">&quot;nextLanes&quot;</span><span class="p">:</span> <span class="p">[],</span>
-            <span class="s2">&quot;trafficlightsWayIDs&quot;</span><span class="p">:</span> <span class="p">[],</span>
-            <span class="s2">&quot;trafficlightsRelationIDs&quot;</span><span class="p">:</span> <span class="p">[],</span>
-            <span class="s2">&quot;stopLinePoseP1&quot;</span><span class="p">:</span> <span class="p">[],</span>
-            <span class="s2">&quot;stopLinePoseP2&quot;</span><span class="p">:</span> <span class="p">[],</span>
-            <span class="s2">&quot;densed_waypoints&quot;</span><span class="p">:</span> <span class="p">[</span>
-                <span class="p">{</span> <span class="s2">&quot;x&quot;</span><span class="p">:</span>  <span class="s2">&quot;y&quot;</span><span class="p">:</span> <span class="s2">&quot;z&quot;</span><span class="p">:</span> <span class="p">},</span>
-                <span class="p">{</span> <span class="s2">&quot;x&quot;</span><span class="p">:</span>  <span class="s2">&quot;y&quot;</span><span class="p">:</span> <span class="s2">&quot;z&quot;</span><span class="p">:</span> <span class="p">}</span>
-            <span class="p">],</span>
-            <span class="s2">&quot;adjacentLanes&quot;</span><span class="p">:</span> <span class="p">[]</span>
-        <span class="p">},</span>
-        <span class="p">{</span>
-            <span class="c1"># data of another lane</span>
-        <span class="p">}</span>
-    <span class="p">]</span>
-<span class="p">}</span>
-</code></pre></div>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="p">{</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="s2">&quot;LaneLetsArray&quot;</span><span class="p">:</span> <span class="p">[</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>        <span class="p">{</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>            <span class="s2">&quot;name&quot;</span><span class="p">:</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>            <span class="s2">&quot;waypoints&quot;</span><span class="p">:</span> <span class="p">[</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>                <span class="p">{</span> <span class="s2">&quot;x&quot;</span><span class="p">:</span>  <span class="s2">&quot;y&quot;</span><span class="p">:</span> <span class="s2">&quot;z&quot;</span><span class="p">:</span> <span class="p">},</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>                <span class="p">{</span> <span class="s2">&quot;x&quot;</span><span class="p">:</span>  <span class="s2">&quot;y&quot;</span><span class="p">:</span> <span class="s2">&quot;z&quot;</span><span class="p">:</span> <span class="p">}</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>            <span class="p">],</span>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>            <span class="s2">&quot;prevLanes&quot;</span><span class="p">:</span> <span class="p">[],</span>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>            <span class="s2">&quot;nextLanes&quot;</span><span class="p">:</span> <span class="p">[],</span>
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>            <span class="s2">&quot;trafficlightsWayIDs&quot;</span><span class="p">:</span> <span class="p">[],</span>
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>            <span class="s2">&quot;trafficlightsRelationIDs&quot;</span><span class="p">:</span> <span class="p">[],</span>
+</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>            <span class="s2">&quot;stopLinePoseP1&quot;</span><span class="p">:</span> <span class="p">[],</span>
+</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>            <span class="s2">&quot;stopLinePoseP2&quot;</span><span class="p">:</span> <span class="p">[],</span>
+</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>            <span class="s2">&quot;densed_waypoints&quot;</span><span class="p">:</span> <span class="p">[</span>
+</span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>                <span class="p">{</span> <span class="s2">&quot;x&quot;</span><span class="p">:</span>  <span class="s2">&quot;y&quot;</span><span class="p">:</span> <span class="s2">&quot;z&quot;</span><span class="p">:</span> <span class="p">},</span>
+</span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>                <span class="p">{</span> <span class="s2">&quot;x&quot;</span><span class="p">:</span>  <span class="s2">&quot;y&quot;</span><span class="p">:</span> <span class="s2">&quot;z&quot;</span><span class="p">:</span> <span class="p">}</span>
+</span><span id="__span-0-18"><a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>            <span class="p">],</span>
+</span><span id="__span-0-19"><a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>            <span class="s2">&quot;adjacentLanes&quot;</span><span class="p">:</span> <span class="p">[]</span>
+</span><span id="__span-0-20"><a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>        <span class="p">},</span>
+</span><span id="__span-0-21"><a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>        <span class="p">{</span>
+</span><span id="__span-0-22"><a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>            <span class="c1"># data of another lane</span>
+</span><span id="__span-0-23"><a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a>        <span class="p">}</span>
+</span><span id="__span-0-24"><a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a>    <span class="p">]</span>
+</span><span id="__span-0-25"><a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a><span class="p">}</span>
+</span></code></pre></div>
 <h4 id="json-file-layout-and-architecture">JSON File Layout and Architecture</h4>
 <p><b>Root Element:</b></p>
 <ul>

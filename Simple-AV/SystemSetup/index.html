@@ -8,6 +8,8 @@
       
       
       
+        <link rel="canonical" href="https://tlab-wide.github.io/simple_av/Simple-AV/SystemSetup/">
+      
       
         <link rel="prev" href="../..">
       
@@ -1247,22 +1249,22 @@ LSO is a feature that helps improve network performance by offloading packet seg
 Disabling LSO on the WSL virtual Ethernet adapter might be necessary if you're experiencing network performance issues or connectivity problems with applications running in WSL. By disabling LSO, you force the CPU to handle packet segmentation, which can sometimes result in more stable network behavior in virtualized environments.</p>
 <p>1- open Windows Powershell as administrator. </p>
 <p>2- Run the command below to Identify the network adapters.</p>
-<p><div class="highlight"><pre><span></span><code>Get-NetAdapter<span class="w"> </span>-IncludeHidden
-</code></pre></div>
+<p><div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>Get-NetAdapter<span class="w"> </span>-IncludeHidden
+</span></code></pre></div>
 This command used to retrieve information about the network adapters on a Windows system, including those that are hidden. By using this command, you can see all network adapters on the system, including those that are not currently in use or visible in the standard network settings interface. This can be useful for troubleshooting network issues or for getting a complete inventory of all network interfaces on a system.</p>
 <p>In this Step the network adapters are something like below.
 <img alt="orginal network adapters" src="connection_image.png" /></p>
 <p>3- Run the command below to Disable Large Send Offload (LSO).</p>
-<p><div class="highlight"><pre><span></span><code>Disable-NetAdapterLso<span class="w"> </span>-IncludeHidden<span class="w"> </span>-Name<span class="w"> </span><span class="s2">&quot;vEthernet (WSL)&quot;</span>
-</code></pre></div>
+<p><div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>Disable-NetAdapterLso<span class="w"> </span>-IncludeHidden<span class="w"> </span>-Name<span class="w"> </span><span class="s2">&quot;vEthernet (WSL)&quot;</span>
+</span></code></pre></div>
 This command disables the Large Send Offload (LSO) feature on the specified network adapter, including hidden ones. LSO offloads the task of segmenting large TCP/IP packets to the network adapter hardware.</p>
 <p>4- Run the command below to Check the advanced properties.</p>
-<div class="highlight"><pre><span></span><code>Get-NetAdapterAdvancedProperty<span class="w"> </span>-IncludeHidden<span class="w"> </span>-Name<span class="w"> </span><span class="s2">&quot;vEthernet (WSL)&quot;</span>
-</code></pre></div>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>Get-NetAdapterAdvancedProperty<span class="w"> </span>-IncludeHidden<span class="w"> </span>-Name<span class="w"> </span><span class="s2">&quot;vEthernet (WSL)&quot;</span>
+</span></code></pre></div>
 <p>This command retrieves advanced properties and settings of the specified network adapter, including hidden ones.</p>
 <p>5- Run the command below to Restart the WSL adapter.</p>
-<div class="highlight"><pre><span></span><code>Restart-NetAdapter<span class="w"> </span>-IncludeHidden<span class="w"> </span>-Name<span class="w"> </span><span class="s2">&quot;vEthernet (WSL)&quot;</span>
-</code></pre></div>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>Restart-NetAdapter<span class="w"> </span>-IncludeHidden<span class="w"> </span>-Name<span class="w"> </span><span class="s2">&quot;vEthernet (WSL)&quot;</span>
+</span></code></pre></div>
 <p>This command restarts the specified network adapter, including hidden ones. To apply and solidify changes made to the network adapter settings, such as disabling LSO. Restarting the adapter ensures that all configuration changes take effect and the adapter operates with the updated settings.</p>
 <p>After running the 4 commands above, once again run the <code>Get-NetAdapterAdvancedProperty -IncludeHidden -Name "vEthernet (WSL)"</code> command. As is shown in the picture below, the Lso should be Off and the RegistryValue must be {0}</p>
 <p><img alt="alt text" src="connection_image-1.png" /></p>
@@ -1273,8 +1275,8 @@ This command disables the Large Send Offload (LSO) feature on the specified netw
 <img alt="alt text" src="image.png" /></p>
 <p><b>2. Run WSL2</b></p>
 <p>Now, run the WSL and source the ROS2 init using the command below:</p>
-<div class="highlight"><pre><span></span><code><span class="nb">source</span><span class="w"> </span>/opt/ros/humble/setup.bash
-</code></pre></div>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nb">source</span><span class="w"> </span>/opt/ros/humble/setup.bash
+</span></code></pre></div>
 <p>After sourcing the ROS2 you can get a topic list and see the all the topics that are being published and subscribed by AWSIM. </p>
 <p><img alt="alt text" src="image-1.png" /></p>
 <p>This means we have successfully setup our system and create a communication between Awsim on Windows and Ros2 on WSL.</p>
