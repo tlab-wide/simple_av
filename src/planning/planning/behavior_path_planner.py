@@ -7,6 +7,9 @@ import json
 import yaml
 from ament_index_python.packages import get_package_share_directory
 from geometry_msgs.msg import PoseStamped, Point
+from rclpy.duration import Duration as RclpyDuration
+from rclpy.time import Time
+from tf2_ros import Buffer, TransformListener
 from std_msgs.msg import String, ColorRGBA, Bool
 import math
 from collections import deque
@@ -99,8 +102,11 @@ class BehaviorPathPlanner(Node):
         self.intersection_awareness_status = None
 
         # Subscribe topics
-        self.subscriptionPose = self.create_subscription(PoseStamped, '/sensing/gnss/pose', self.pose_callback, 10)
         self.pose = PoseStamped()
+        self.map_frame = 'map'
+        self.base_frame = 'base_link'
+        self.tf_buffer = Buffer()
+        self.tf_listener = TransformListener(self.tf_buffer, self)
 
         self.subscriptionLocation = self.create_subscription(LocalizationMsg, 'simple_av/localization/location', self.location_callback, 10)
         self.location = LocalizationMsg()
@@ -346,8 +352,25 @@ class BehaviorPathPlanner(Node):
         self.path = self.mission_plan.path
         self.path_as_lanes = self.mission_plan.path_as_lanes
 
-    def pose_callback(self, msg):
-        self.pose = msg
+    def update_pose_from_tf(self):
+        try:
+            tf = self.tf_buffer.lookup_transform(
+                self.map_frame,
+                self.base_frame,
+                Time(),
+                timeout=RclpyDuration(seconds=0.0),
+            )
+        except Exception:
+            return False
+
+        pose_msg = PoseStamped()
+        pose_msg.header = tf.header
+        pose_msg.pose.position.x = tf.transform.translation.x
+        pose_msg.pose.position.y = tf.transform.translation.y
+        pose_msg.pose.position.z = tf.transform.translation.z
+        pose_msg.pose.orientation = tf.transform.rotation
+        self.pose = pose_msg
+        return True
 
     def location_callback(self, msg):
         self.location = msg
@@ -1076,6 +1099,7 @@ class BehaviorPathPlanner(Node):
         self.intersection_markers_pub.publish(marker_array)
 
     def lane_following(self):
+        self.update_pose_from_tf()
         if not self.location and not self.pose:
             self.get_logger().warning("No location/pose input")
             return None
