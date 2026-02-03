@@ -498,7 +498,8 @@ class BehaviorMotionPlanning(Node):
         Returns a list of detected objects with labels:
         - 7: Cyclist/Bicycle & Pedestrian
         """
-
+        if not objects:
+            return []
         detected_pedestrians = []
         for obj in objects:
             # Label is int32, check for pedestrian and cyclist (7)
