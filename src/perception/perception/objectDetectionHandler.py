@@ -4,7 +4,7 @@ import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import Point, Quaternion, Vector3
 from simple_av_msgs.msg import DetectedObject, DetectedObjectsArray, LocalizationIntersectionStatus
-from autoware_perception_msgs.msg import DetectedObjects
+from autoware_perception_msgs.msg import DetectedObjects, DetectedObject as AutowareDetectedObject
 from autoware_perception_msgs.msg import PredictedObjects
 from geometry_msgs.msg import PoseStamped
 from math import atan2, asin
@@ -14,6 +14,11 @@ import os
 from ament_index_python.packages import get_package_share_directory
 from scipy.spatial.transform import Rotation as R
 import numpy as np
+from tf2_ros import Buffer, TransformListener
+from tf2_geometry_msgs import do_transform_pose
+from rclpy.duration import Duration
+from autoware_perception_msgs.msg import ObjectClassification, DetectedObjectKinematics, Shape
+from geometry_msgs.msg import PoseWithCovariance, TwistWithCovariance
 # import transformations as tf
 from transformations import euler_from_quaternion
 from simple_av_msgs.msg import Portal
@@ -43,17 +48,21 @@ class Perception(Node):
         # Create subscriber for /OBU/Sensing topic. This topic publishes the information of detected objects from vehicle-mounted sensors.
         self.subscriptionSensor = self.create_subscription(DetectedObjects, '/OBU/Sensing', self.detectedObjects_callback, 10)
         self.detectedObjects = DetectedObjects()  # Initialize detected objects message
+        self.detectedObjects_header = None
 
         # Create subscriber for /v2x/predicted_object<n> topic. This topic publishes the information of detected objects from intersection-mounted RSU.
         # n determines the number of the intersection
         self.subscriptionRSU_intersection1 = self.create_subscription(PredictedObjects, '/v2x/rsu1/predicted_object', self.intersection1_RSU_detectedObjects_callback, 10)
         self.intersection1_RSU_detectedObjects = PredictedObjects()
+        self.intersection1_RSU_header = None
         
         self.subscriptionRSU_intersection2 = self.create_subscription(PredictedObjects, '/v2x/rsu2/predicted_object', self.intersection2_RSU_detectedObjects_callback, 10)
         self.intersection2_RSU_detectedObjects = PredictedObjects()
+        self.intersection2_RSU_header = None
 
         self.subscriptionRSU_intersection4 = self.create_subscription(PredictedObjects, '/v2x/rsu4/predicted_object', self.intersection4_RSU_detectedObjects_callback, 10)
         self.intersection4_RSU_detectedObjects = PredictedObjects()
+        self.intersection4_RSU_header = None
         
         
         # Create subscriber for /sensing/gnss/pose topic
@@ -74,9 +83,15 @@ class Perception(Node):
 
         # Initialize the publishers
         self.publisher_detected_objects = self.create_publisher(DetectedObjectsArray, 'simple_av/perception/detected_objects', 10)
+        self.publisher_detected_objects_autoware = self.create_publisher(DetectedObjects, 'simple_av/perception/detected_objects_', 10)
 
         self.vehicle_pose = PoseStamped()
         self.node_shut = False
+        self.target_frame = 'base_link'
+
+        # TF buffer/listener for transforming detections into base_link
+        self.tf_buffer = Buffer()
+        self.tf_listener = TransformListener(self.tf_buffer, self)
 
     def config_file_loader(self, file_name):
         # Path to the YAML file
@@ -112,15 +127,19 @@ class Perception(Node):
 
     def detectedObjects_callback(self, msg):
         self.detectedObjects = msg
+        self.detectedObjects_header = msg.header
     
     def intersection1_RSU_detectedObjects_callback(self, msg):
         self.intersection1_RSU_detectedObjects = msg
+        self.intersection1_RSU_header = msg.header
 
     def intersection2_RSU_detectedObjects_callback(self, msg):
         self.intersection2_RSU_detectedObjects = msg
+        self.intersection2_RSU_header = msg.header
     
     def intersection4_RSU_detectedObjects_callback(self, msg):
         self.intersection4_RSU_detectedObjects = msg
+        self.intersection4_RSU_header = msg.header
 
     def pose_callback(self, msg):
         self.vehicle_pose = msg
@@ -271,9 +290,29 @@ class Perception(Node):
         global_orientation = object_global_rot.as_quat()
         return Quaternion(x=global_orientation[0], y=global_orientation[1], z=global_orientation[2], w=global_orientation[3])  # x, y, z, w
 
-    def handle_detected_objects(self, detected_objects, is_from_rsu):
+    def transform_pose_to_base(self, pose, source_header):
+        if source_header is None or not source_header.frame_id:
+            self.get_logger().warning("Detected objects are missing frame_id; cannot transform.")
+            return None
+        pose_stamped = PoseStamped()
+        pose_stamped.header = source_header
+        pose_stamped.pose = pose
+        try:
+            transform = self.tf_buffer.lookup_transform(
+                self.target_frame,
+                source_header.frame_id,
+                source_header.stamp,
+                timeout=Duration(seconds=0.1),
+            )
+            return do_transform_pose(pose_stamped, transform).pose
+        except Exception as exc:
+            self.get_logger().warning(
+                f"TF transform failed {source_header.frame_id} -> {self.target_frame}: {exc}"
+            )
+            return None
+
+    def handle_detected_objects(self, detected_objects, is_from_rsu, source_header):
         detected_objects_list = []
-        vehicle_pose = {'x': self.vehicle_pose.pose.position.x, 'y': self.vehicle_pose.pose.position.y, 'z': self.vehicle_pose.pose.position.z}
         for obj in detected_objects.objects:
             detected_obj_msg = DetectedObject()
             
@@ -285,16 +324,20 @@ class Perception(Node):
             # Object pose (position and orientation)
             if is_from_rsu:
                 pose = obj.kinematics.initial_pose_with_covariance.pose
-                vector = self.get_rsu_object_relative_position(vehicle_pose, pose.position)
-                object_relative_pose = self.apply_inverse_quaternion_rotation(self.vehicle_pose.pose.orientation, vector)
-                detected_obj_msg.orientation = Quaternion(x=pose.orientation.x, y=pose.orientation.y, z=pose.orientation.z, w=pose.orientation.w)
-                detected_obj_msg.position = Point(x=object_relative_pose.x, y=object_relative_pose.y, z=object_relative_pose.z)
+                transformed_pose = self.transform_pose_to_base(pose, source_header)
+                if transformed_pose is None:
+                    continue
+                detected_obj_msg.orientation = transformed_pose.orientation
+                detected_obj_msg.position = transformed_pose.position
                 object_linear_velocity = obj.kinematics.initial_twist_with_covariance.twist.linear.x
                 detected_obj_msg.velocity = object_linear_velocity
             else:
                 pose = obj.kinematics.pose_with_covariance.pose
-                detected_obj_msg.orientation = self.convert_to_global_orientation(pose.orientation, self.vehicle_pose.pose.orientation)
-                detected_obj_msg.position = Point(x=pose.position.x, y=pose.position.y, z=pose.position.z)
+                transformed_pose = self.transform_pose_to_base(pose, source_header)
+                if transformed_pose is None:
+                    continue
+                detected_obj_msg.orientation = transformed_pose.orientation
+                detected_obj_msg.position = transformed_pose.position
                 object_linear_velocity = obj.kinematics.twist_with_covariance.twist.linear.x
                 detected_obj_msg.velocity = object_linear_velocity
             
@@ -317,6 +360,38 @@ class Perception(Node):
 
         return detected_objects_list
 
+    def build_autoware_detected_objects_from_obu(self, detected_objects, source_header):
+        if source_header is None:
+            return None
+        output = DetectedObjects()
+        output.header = source_header
+        output.header.frame_id = self.target_frame
+        for obj in detected_objects.objects:
+            pose = obj.kinematics.pose_with_covariance.pose
+            transformed_pose = self.transform_pose_to_base(pose, source_header)
+            if transformed_pose is None:
+                continue
+            new_obj = AutowareDetectedObject()
+            new_obj.existence_probability = obj.existence_probability
+            new_obj.classification = list(obj.classification)
+
+            kinematics = DetectedObjectKinematics()
+            kinematics.pose_with_covariance = PoseWithCovariance()
+            kinematics.pose_with_covariance.pose = transformed_pose
+            kinematics.has_position_covariance = False
+            kinematics.orientation_availability = DetectedObjectKinematics.AVAILABLE
+            kinematics.twist_with_covariance = TwistWithCovariance()
+            kinematics.has_twist = False
+            kinematics.has_twist_covariance = False
+            new_obj.kinematics = kinematics
+
+            new_obj.shape = obj.shape if isinstance(obj.shape, Shape) else Shape()
+            if new_obj.shape.type == 0:
+                new_obj.shape.type = Shape.BOUNDING_BOX
+
+            output.objects.append(new_obj)
+        return output
+
     def objectDetection(self):
         if self.finished:
             self.node_shut = True
@@ -327,23 +402,30 @@ class Perception(Node):
         if self.reset_cooldown_active():
             return
 
-        if self.vehicle_pose.pose.orientation.x == 0.0 and self.vehicle_pose.pose.orientation.y == 0.0 and \
-            self.vehicle_pose.pose.orientation.z == 0.0 and self.vehicle_pose.pose.orientation.w == 0.0 and \
-            self.vehicle_pose.pose.position.x == 0.0 and self.vehicle_pose.pose.position.y == 0.0 and self.vehicle_pose.pose.position.z == 0.0:
-            self.get_logger().warning("Vehicle data is not available: No position nor orientation data")
-            return
-        
         if not self.enable_object_detection:
             return
         
         # Handle detected objects
-        detected_objects_list = self.handle_detected_objects(self.detectedObjects, False) # Mounted-sensor data
+        detected_objects_list = self.handle_detected_objects(
+            self.detectedObjects,
+            False,
+            self.detectedObjects_header,
+        )  # Mounted-sensor data
+        autoware_obu = self.build_autoware_detected_objects_from_obu(
+            self.detectedObjects,
+            self.detectedObjects_header,
+        )
+        if autoware_obu is not None:
+            self.publisher_detected_objects_autoware.publish(autoware_obu)
         number_of_detected_by_mounted_sensor = len(detected_objects_list)
         if self.enable_RSU_for_object_detection and self.intersection_awareness_intersection_name is not None:
             intersection_number = self.intersection_awareness_intersection_name  # e.g., '1'
             try:
                 intersection_n_RSU_detectedObjects = getattr(self, f"intersection{intersection_number}_RSU_detectedObjects")
-                detected_objects_list.extend(self.handle_detected_objects(intersection_n_RSU_detectedObjects, True)) # RSU data
+                intersection_n_RSU_header = getattr(self, f"intersection{intersection_number}_RSU_header")
+                detected_objects_list.extend(
+                    self.handle_detected_objects(intersection_n_RSU_detectedObjects, True, intersection_n_RSU_header)
+                )  # RSU data
             except AttributeError:
                 self.get_logger().debug(f"No RSU data for intersection {intersection_number}")
         # Create and publish detected objects message
