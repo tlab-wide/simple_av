@@ -1,7 +1,7 @@
 base_link:
   sensor_kit_base_link:
-    x: 0.0     # forward (meters)
-    y: 4.57      # lateral offset if any
+    x: 4.57     # forward (meters)
+    y: 0.0      # lateral offset if any
     z: 2.31     # height above vehicle ref point
     roll: 0.0   # orientation if sensor is tilted
     pitch: 0.0
@@ -15,8 +15,8 @@ sensor_kit_base_link:
     pitch: 0.0
     yaw: 0.0
   perception_sensors:
-    x: 0.0
-    y: 2.64
+    x: 2.64
+    y: 0.0
     z: 0.0
     roll: 0.0
     pitch: 0.0

@@ -84,6 +84,8 @@ class Perception(Node):
         # Initialize the publishers
         self.publisher_detected_objects = self.create_publisher(DetectedObjectsArray, 'simple_av/perception/detected_objects', 10)
         self.publisher_detected_objects_autoware = self.create_publisher(DetectedObjects, 'simple_av/perception/detected_objects_', 10)
+        self.latest_autoware_obu = None
+        self.autoware_pub_timer = self.create_timer(0.1, self.publish_autoware_obu)
 
         self.vehicle_pose = PoseStamped()
         self.node_shut = False
@@ -392,6 +394,11 @@ class Perception(Node):
             output.objects.append(new_obj)
         return output
 
+    def publish_autoware_obu(self):
+        if self.latest_autoware_obu is None:
+            return
+        self.publisher_detected_objects_autoware.publish(self.latest_autoware_obu)
+
     def objectDetection(self):
         if self.finished:
             self.node_shut = True
@@ -416,7 +423,7 @@ class Perception(Node):
             self.detectedObjects_header,
         )
         if autoware_obu is not None:
-            self.publisher_detected_objects_autoware.publish(autoware_obu)
+            self.latest_autoware_obu = autoware_obu
         number_of_detected_by_mounted_sensor = len(detected_objects_list)
         if self.enable_RSU_for_object_detection and self.intersection_awareness_intersection_name is not None:
             intersection_number = self.intersection_awareness_intersection_name  # e.g., '1'

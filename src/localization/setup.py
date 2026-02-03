@@ -24,6 +24,7 @@ setup(
         'console_scripts': [
             'localization = localization.localization:main',
             'intersection_detector = localization.intersection_detector:main',
-        ],
+            'localization_fusion = localization.localization_fusion:main',
+                    ],
     },
 )
