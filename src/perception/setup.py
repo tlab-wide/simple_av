@@ -25,6 +25,8 @@ setup(
             'obu_perception = perception.obu_perception:main',
             'traffic_light_handler = perception.trafficLightHandler:main',
             'object_detection_handler = perception.objectDetectionHandler:main',
+            'object_tracking_handler = perception.objectTrackingHandler:main',
+            'object_prediction_handler = perception.objectPredictionHandler:main',
         ],
     },
 )

@@ -9,7 +9,8 @@ Panels:
         - /System1/Grid1/Offset1
         - /System1/Vehicle1/VehicleModel1
         - /Sensing1/LiDAR1/ConcatenatePointCloud1/Autocompute Value Bounds1
-        - /DetectedObjects1
+        - /Perception1
+        - /Perception1/ObjectRecognition1
         - /RSU2 PO1/PEDESTRIAN1
         - /CurrentWaypoint1
         - /LookAheadPoint1/Topic1
@@ -704,7 +705,11 @@ Visualization Manager:
                     Color: 119; 11; 32
                   Name: DetectedObjects
                   Namespaces:
-                    {}
+                    label: true
+                    position covariance: true
+                    shape: true
+                    twist: true
+                    velocity: true
                   Object Fill Type: skeleton
                   PEDESTRIAN:
                     Alpha: 0.9990000128746033
@@ -721,13 +726,13 @@ Visualization Manager:
                     Durability Policy: Volatile
                     History Policy: Keep Last
                     Reliability Policy: Best Effort
-                    Value: /perception/object_recognition/detection/objects
+                    Value: /simple_av/perception/obu_sensing
                   UNKNOWN:
                     Alpha: 0.9990000128746033
                     Color: 255; 255; 255
                   Value: true
                   Visualization Type: Normal
-              Enabled: false
+              Enabled: true
               Name: Detection
             - Class: rviz_common/Group
               Displays:
@@ -763,7 +768,13 @@ Visualization Manager:
                     Color: 119; 11; 32
                   Name: TrackedObjects
                   Namespaces:
-                    {}
+                    acceleration: true
+                    label: true
+                    position covariance: true
+                    shape: true
+                    twist: true
+                    uuid: true
+                    velocity: true
                   Object Fill Type: skeleton
                   PEDESTRIAN:
                     Alpha: 0.9990000128746033
@@ -780,13 +791,13 @@ Visualization Manager:
                     Durability Policy: Volatile
                     History Policy: Keep Last
                     Reliability Policy: Best Effort
-                    Value: /perception/object_recognition/tracking/objects
+                    Value: /simple_av/perception/tracked_objects
                   UNKNOWN:
                     Alpha: 0.9990000128746033
                     Color: 255; 255; 255
                   Value: true
                   Visualization Type: Normal
-              Enabled: false
+              Enabled: true
               Name: Tracking
             - Class: rviz_common/Group
               Displays:
@@ -821,7 +832,15 @@ Visualization Manager:
                     Color: 119; 11; 32
                   Name: PredictedObjects
                   Namespaces:
-                    {}
+                    acceleration: true
+                    label: true
+                    path: true
+                    path confidence: true
+                    position covariance: true
+                    shape: true
+                    twist: true
+                    uuid: true
+                    velocity: true
                   Object Fill Type: skeleton
                   PEDESTRIAN:
                     Alpha: 0.9990000128746033
@@ -838,7 +857,7 @@ Visualization Manager:
                     Durability Policy: Volatile
                     History Policy: Keep Last
                     Reliability Policy: Best Effort
-                    Value: /perception/object_recognition/objects
+                    Value: /simple_av/perception/predicted_objects
                   UNKNOWN:
                     Alpha: 0.9990000128746033
                     Color: 255; 255; 255
@@ -3229,22 +3248,8 @@ Visualization Manager:
                     "": true
                     Value: true
                   Planning:
-                    Objects Of Interest:
-                      AvoidanceByLCLeft: true
-                      AvoidanceByLCRight: true
-                      AvoidanceLeft: true
-                      AvoidanceRight: true
-                      BlindSpot: true
-                      Crosswalk: true
-                      DetectionArea: true
-                      GoalPlanner: true
-                      Intersection: true
-                      LaneChangeLeft: true
-                      LaneChangeRight: true
-                      NoStoppingArea: true
-                      ObstacleCruise: true
-                      StartPlanner: true
-                      TrafficLight: true
+                    "":
+                      "": true
                       Value: true
                     Value: true
                   Sensing:
@@ -4600,18 +4605,14 @@ Visualization Manager:
       Display Yaw Covariance: false
       Display Yaw Rate: false
       Display Yaw Rate Covariance: false
-      Enabled: true
+      Enabled: false
       Line Width: 0.029999999329447746
       MOTORCYCLE:
         Alpha: 0.9990000128746033
         Color: 143; 240; 164
       Name: DetectedObjects
       Namespaces:
-        label: true
-        position covariance: true
-        shape: true
-        twist: true
-        velocity: true
+        {}
       Object Fill Type: Fill
       PEDESTRIAN:
         Alpha: 0.9990000128746033
@@ -4632,7 +4633,7 @@ Visualization Manager:
       UNKNOWN:
         Alpha: 0.9990000128746033
         Color: 255; 255; 255
-      Value: true
+      Value: false
       Visualization Type: Normal
     - BUS:
         Alpha: 0.9990000128746033
@@ -4712,20 +4713,14 @@ Visualization Manager:
       Display Yaw Covariance: false
       Display Yaw Rate: false
       Display Yaw Rate Covariance: false
-      Enabled: true
+      Enabled: false
       Line Width: 0.20000000298023224
       MOTORCYCLE:
         Alpha: 0.9990000128746033
         Color: 220; 138; 221
       Name: RSU2 PO
       Namespaces:
-        acceleration: true
-        label: true
-        position covariance: true
-        shape: true
-        twist: true
-        uuid: true
-        velocity: true
+        {}
       Object Fill Type: skeleton
       PEDESTRIAN:
         Alpha: 0.9990000128746033
@@ -4746,7 +4741,7 @@ Visualization Manager:
       UNKNOWN:
         Alpha: 0.9990000128746033
         Color: 255; 255; 255
-      Value: true
+      Value: false
       Visualization Type: Normal
     - BUS:
         Alpha: 0.9990000128746033
@@ -4925,7 +4920,24 @@ Visualization Manager:
       Enabled: true
       Name: intersection layouts
       Namespaces:
-        {}
+        intersection_1_inside_0: true
+        intersection_1_lane_1: true
+        intersection_1_lane_2: true
+        intersection_1_lane_3: true
+        intersection_1_lane_4: true
+        intersection_1_sw_1: true
+        intersection_1_sw_2: true
+        intersection_1_sw_3: true
+        intersection_2_cw_1: true
+        intersection_2_cw_2: true
+        intersection_2_cw_3: true
+        intersection_2_inside_0: true
+        intersection_2_lanes_1: true
+        intersection_2_lanes_2: true
+        intersection_2_lanes_3: true
+        intersection_2_sw_1: true
+        intersection_2_sw_2: true
+        intersection_2_sw_3: true
       Topic:
         Depth: 5
         Durability Policy: Transient Local
@@ -5002,7 +5014,8 @@ Visualization Manager:
       Enabled: true
       Name: MarkerArray
       Namespaces:
-        {}
+        predicted_collision: true
+        predicted_trajectories: true
       Topic:
         Depth: 5
         Durability Policy: Volatile
@@ -5159,25 +5172,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/ThirdPersonFollower
-      Distance: 51.52347946166992
+      Distance: 55.666725158691406
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 0
-        Y: 0
+        X: 35.99921417236328
+        Y: -12.69959831237793
         Z: 0
       Focal Shape Fixed Size: false
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.740398645401001
+      Pitch: 0.42039868235588074
       Target Frame: base_link
       Value: ThirdPersonFollower (rviz_default_plugins)
-      Yaw: 4.295404434204102
+      Yaw: 2.440401554107666
     Saved:
       - Class: rviz_default_plugins/ThirdPersonFollower
         Distance: 18

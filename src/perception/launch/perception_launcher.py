@@ -30,5 +30,19 @@ def generate_launch_description():
             name='object_detection_handler_node',
             output='screen',
             arguments=['--ros-args', '--log-level', LaunchConfiguration('log_level')]
+        ),
+        Node(
+            package='perception',
+            executable='object_tracking_handler',
+            name='object_tracking_handler_node',
+            output='screen',
+            arguments=['--ros-args', '--log-level', LaunchConfiguration('log_level')]
+        ),
+        Node(
+            package='perception',
+            executable='object_prediction_handler',
+            name='object_prediction_handler_node',
+            output='screen',
+            arguments=['--ros-args', '--log-level', LaunchConfiguration('log_level')]
         )
     ])
