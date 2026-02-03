@@ -29,6 +29,11 @@ def generate_launch_description():
             default_value='INFO',
             description='Console log level: DEBUG, INFO, WARN'
         ),
+        DeclareLaunchArgument(
+            'use_sim_time',
+            default_value='true',
+            description='Use simulation time'
+        ),
 
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(
@@ -91,6 +96,7 @@ def generate_launch_description():
             executable='tf_publisher',
             name='tf_publisher_node',
             output='screen',
+            parameters=[{'use_sim_time': LaunchConfiguration('use_sim_time')}],
             arguments=['--ros-args', '--log-level', LaunchConfiguration('log_level')]
         ),
         Node(
@@ -137,6 +143,7 @@ def generate_launch_description():
             name='rviz2',
             output='screen',
             arguments=['-d', rviz_config_path],
+            parameters=[{'use_sim_time': LaunchConfiguration('use_sim_time')}],
             condition=IfCondition(LaunchConfiguration('with_rviz'))
         ),
     ])

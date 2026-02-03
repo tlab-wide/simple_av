@@ -30,7 +30,7 @@ class SensorTFPublisher(Node):
         )
 
         # Always publish fixed base_link -> sensor_kit_base_link
-        self.timer = self.create_timer(0.1, self.publish_sensor_tf)
+        self.timer = self.create_timer(0.05, self.publish_sensor_tf)
     
     def config_file_loader(self, file_name):
         # Path to the YAML file
