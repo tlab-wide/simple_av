@@ -27,7 +27,7 @@ setup(
             'object_detection_handler = perception.objectDetectionHandler:main',
             'object_tracking_handler = perception.objectTrackingHandler:main',
             'object_prediction_handler = perception.objectPredictionHandler:main',
-            'rsu_danger_zone_handler = perception.rsuDangerZoneHandler:main',
+            'v2x_handler = perception.v2xHandler:main',
         ],
     },
 )

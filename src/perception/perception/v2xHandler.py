@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import os
+import json
 import yaml
 from dataclasses import dataclass
 from typing import List, Tuple
@@ -11,7 +12,7 @@ from rclpy.time import Time
 from rclpy.duration import Duration as RclpyDuration
 
 from ament_index_python.packages import get_package_share_directory
-from std_msgs.msg import Bool
+from std_msgs.msg import Bool, String
 from autoware_perception_msgs.msg import PredictedObjects
 from simple_av_msgs.msg import LocalizationIntersectionStatus
 from geometry_msgs.msg import Pose
@@ -28,12 +29,13 @@ class PolygonRegion:
     points: List[Tuple[float, float, float]]
 
 
-class RsuDangerZoneHandler(Node):
+class V2xHandler(Node):
     def __init__(self):
-        super().__init__('rsu_danger_zone_handler')
+        super().__init__('v2x_handler')
 
         self.declare_parameter('map_frame', 'map')
         self.declare_parameter('output_topic', '/simple_av/perception/rsu_danger_detected')
+        self.declare_parameter('zones_output_topic', '/simple_av/perception/rsu_danger_zones')
         self.declare_parameter('intersection_status_topic', 'simple_av/localization/intersection_status')
         self.declare_parameter('rsu1_topic', '/v2x/rsu1/predicted_object')
         self.declare_parameter('rsu2_topic', '/v2x/rsu2/predicted_object')
@@ -42,6 +44,7 @@ class RsuDangerZoneHandler(Node):
 
         self.map_frame = self.get_parameter('map_frame').value
         self.output_topic = self.get_parameter('output_topic').value
+        self.zones_output_topic = self.get_parameter('zones_output_topic').value
         self.intersection_status_topic = self.get_parameter('intersection_status_topic').value
         self.danger_polygon_type = self.get_parameter('danger_polygon_type').value
 
@@ -52,6 +55,7 @@ class RsuDangerZoneHandler(Node):
         }
 
         self.pub = self.create_publisher(Bool, self.output_topic, 10)
+        self.zones_pub = self.create_publisher(String, self.zones_output_topic, 10)
 
         self.subscriptionIntersectionAwareness = self.create_subscription(
             LocalizationIntersectionStatus,
@@ -88,6 +92,7 @@ class RsuDangerZoneHandler(Node):
             self.evaluate_and_publish(self.rsu_msgs[self.intersection_name])
         else:
             self.pub.publish(Bool(data=False))
+            self.zones_pub.publish(String(data='[]'))
 
     def load_intersections_layouts(self) -> List[PolygonRegion]:
         package_dir = get_package_share_directory("common")
@@ -175,6 +180,7 @@ class RsuDangerZoneHandler(Node):
     def evaluate_and_publish(self, msg: PredictedObjects):
         if not self.intersection_name:
             self.pub.publish(Bool(data=False))
+            self.zones_pub.publish(String(data='[]'))
             return
 
         danger_zones = [
@@ -183,6 +189,7 @@ class RsuDangerZoneHandler(Node):
         ]
         if not danger_zones:
             self.pub.publish(Bool(data=False))
+            self.zones_pub.publish(String(data='[]'))
             return
 
         source_frame = msg.header.frame_id if msg.header.frame_id else self.map_frame
@@ -191,8 +198,10 @@ class RsuDangerZoneHandler(Node):
             transform = self.lookup_transform(self.map_frame, source_frame, msg.header.stamp)
             if transform is None:
                 self.pub.publish(Bool(data=False))
+                self.zones_pub.publish(String(data='[]'))
                 return
 
+        occupied = set()
         for obj in msg.objects:
             pose = obj.kinematics.initial_pose_with_covariance.pose
             if transform is not None:
@@ -201,15 +210,15 @@ class RsuDangerZoneHandler(Node):
             point = (pose.position.x, pose.position.y, pose.position.z)
             for polygon in danger_zones:
                 if self.is_point_in_polygon(point, polygon.points):
-                    self.pub.publish(Bool(data=True))
-                    return
+                    occupied.add(polygon.name)
 
-        self.pub.publish(Bool(data=False))
+        self.pub.publish(Bool(data=len(occupied) > 0))
+        self.zones_pub.publish(String(data=json.dumps(sorted(occupied))))
 
 
 def main(args=None):
     rclpy.init(args=args)
-    node = RsuDangerZoneHandler()
+    node = V2xHandler()
     rclpy.spin(node)
     node.destroy_node()
     rclpy.shutdown()
