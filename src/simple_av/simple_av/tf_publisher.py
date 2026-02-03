@@ -16,7 +16,8 @@ class SensorTFPublisher(Node):
             self.declare_parameter('use_sim_time', True)
 
         self.sensors_calibration = self.config_file_loader("sensors_calibration.yaml")
-        self.sensor_kit_base_link = self.sensors_calibration['base_link']['sensor_kit_base_link']
+        self.base_to_sensor_kit = self.sensors_calibration['base_link']['sensor_kit_base_link']
+        self.sensor_kit_children = self.sensors_calibration.get('sensor_kit_base_link', {})
 
         # Setup TF broadcaster
         self.br = TransformBroadcaster(self)
@@ -29,8 +30,8 @@ class SensorTFPublisher(Node):
             10
         )
 
-        # Always publish fixed base_link -> sensor_kit_base_link
-        self.timer = self.create_timer(0.05, self.publish_sensor_tf)
+        # Always publish fixed base_link -> sensor_kit_base_link and its children
+        self.timer = self.create_timer(0.02, self.publish_sensor_tfs)
     
     def config_file_loader(self, file_name):
         # Path to the YAML file
@@ -58,29 +59,36 @@ class SensorTFPublisher(Node):
         self.get_logger().debug(
             f"tf publisher\n"
             f"base_link pose: {vehicle_pose.position.x}, {vehicle_pose.position.y}, {vehicle_pose.position.z}\n"
-            f"sensor_kit_base_link offset: {self.sensor_kit_base_link['x']}, {self.sensor_kit_base_link['y']}, {self.sensor_kit_base_link['z']}\n"
+            f"sensor_kit_base_link offset: {self.base_to_sensor_kit['x']}, {self.base_to_sensor_kit['y']}, {self.base_to_sensor_kit['z']}\n"
         )
 
         self.br.sendTransform(t_map_base)
-        self.br.sendTransform(self.build_sensor_tf(msg.header.stamp))
+        self.publish_sensor_tfs(msg.header.stamp)
 
-    def publish_sensor_tf(self):
+    def publish_sensor_tfs(self, stamp=None):
         # Publish even when GNSS isn't available yet
-        self.br.sendTransform(self.build_sensor_tf(self.get_clock().now().to_msg()))
+        if stamp is None:
+            stamp = self.get_clock().now().to_msg()
+        self.br.sendTransform(
+            self.build_tf('base_link', 'sensor_kit_base_link', self.base_to_sensor_kit, stamp)
+        )
+        for child_frame, spec in self.sensor_kit_children.items():
+            self.br.sendTransform(
+                self.build_tf('sensor_kit_base_link', child_frame, spec, stamp)
+            )
 
-    def build_sensor_tf(self, stamp):
+    def build_tf(self, parent_frame, child_frame, spec, stamp):
         t_base_sensor = TransformStamped()
         t_base_sensor.header.stamp = stamp
-        t_base_sensor.header.frame_id = "base_link"
-        t_base_sensor.child_frame_id = "sensor_kit_base_link"
-        t_base_sensor.transform.translation.x = self.sensor_kit_base_link['x']
-        t_base_sensor.transform.translation.y = self.sensor_kit_base_link['y']
-        t_base_sensor.transform.translation.z = self.sensor_kit_base_link['z']
-
+        t_base_sensor.header.frame_id = parent_frame
+        t_base_sensor.child_frame_id = child_frame
+        t_base_sensor.transform.translation.x = spec.get('x', 0.0)
+        t_base_sensor.transform.translation.y = spec.get('y', 0.0)
+        t_base_sensor.transform.translation.z = spec.get('z', 0.0)
         qx, qy, qz, qw = self.quaternion_from_euler(
-            self.sensor_kit_base_link.get('roll', 0.0),
-            self.sensor_kit_base_link.get('pitch', 0.0),
-            self.sensor_kit_base_link.get('yaw', 0.0),
+            spec.get('roll', 0.0),
+            spec.get('pitch', 0.0),
+            spec.get('yaw', 0.0),
         )
         t_base_sensor.transform.rotation.x = qx
         t_base_sensor.transform.rotation.y = qy

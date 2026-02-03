@@ -6,3 +6,25 @@ base_link:
     roll: 0.0   # orientation if sensor is tilted
     pitch: 0.0
     yaw: 0.0
+sensor_kit_base_link:
+  gnss_link:
+    x: 0.0     # forward (meters)
+    y: 0.0     # lateral offset if any
+    z: 0.0     # height above sensor kit origin
+    roll: 0.0
+    pitch: 0.0
+    yaw: 0.0
+  perception_sensors:
+    x: 0.0
+    y: 0.0
+    z: 0.0
+    roll: 0.0
+    pitch: 0.0
+    yaw: 0.0
+  "tamagawa/imu_link":
+    x: 0.0
+    y: 0.0
+    z: 0.0
+    roll: 0.0
+    pitch: 0.0
+    yaw: 0.0
