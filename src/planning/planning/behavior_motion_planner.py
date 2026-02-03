@@ -6,20 +6,30 @@ import os
 import json
 import yaml
 from ament_index_python.packages import get_package_share_directory
-from geometry_msgs.msg import PoseStamped, Point
+from geometry_msgs.msg import PoseStamped, Point, Quaternion
 from std_msgs.msg import String, ColorRGBA
 import math
 from collections import deque
-from simple_av_msgs.msg import TrafficSignalsArray, DetectedObjectsArray
+from simple_av_msgs.msg import TrafficSignalsArray
+from autoware_perception_msgs.msg import PredictedObjects
 from simple_av_msgs.msg import PlanningInternalMsg, PlanningInternalMissionPlanMsg, PlanningMotionPlanningMsg, CollisionPredictionInfo
 from simple_av_msgs.msg import LocalizationMsg, LocalizationIntersectionStatus
 from simple_av_msgs.msg import SimMonitor, Portal
 import numpy as np
+from dataclasses import dataclass
 from scipy.spatial.transform import Rotation as R
 from autoware_vehicle_msgs.msg import VelocityReport
 from rclpy.qos import QoSProfile, QoSHistoryPolicy, QoSReliabilityPolicy, QoSDurabilityPolicy
 from autoware_perception_msgs.msg import TrafficLightGroup, TrafficLightElement
 from visualization_msgs.msg import Marker, MarkerArray
+
+@dataclass
+class SimpleObject:
+    label: int
+    position: Point
+    orientation: Quaternion
+    velocity: float
+    distance: float
 
 class BehaviorMotionPlanning(Node):
     def __init__(self):
@@ -49,6 +59,8 @@ class BehaviorMotionPlanning(Node):
             .get('direction_filter', {})
             .get('allowed_directions', ['above', 'NW', 'NE'])
         )
+        self.direction_filter_cfg = self.av_features['object_detection'].get('direction_filter', {})
+        self.direction_lateral_threshold = float(self.direction_filter_cfg.get('lateral_threshold', 2.25))
 
         # Load motion & behavior configs
         self.motion_behavior_config = self.config_file_loader("motion_behavior_config.yaml")
@@ -80,8 +92,13 @@ class BehaviorMotionPlanning(Node):
         self.subscriptionTrafficSignal = self.create_subscription(TrafficSignalsArray, 'simple_av/perception/traffic_signals', self.trafficSignal_callback, 10)
         self.trafficSignal = TrafficSignalsArray()
 
-        self.subscriptionDetectedObjects = self.create_subscription(DetectedObjectsArray, 'simple_av/perception/detected_objects', self.detectedObjects_callback, 10)
-        self.detectedObjects = DetectedObjectsArray()
+        self.subscriptionPredictedObjects = self.create_subscription(
+            PredictedObjects,
+            'simple_av/perception/predicted_objects',
+            self.predictedObjects_callback,
+            10
+        )
+        self.predicted_objects = []
 
         self.subscriptionPose = self.create_subscription(PoseStamped, '/sensing/gnss/pose', self.pose_callback, 10)
         self.pose = PoseStamped()
@@ -249,8 +266,31 @@ class BehaviorMotionPlanning(Node):
     def trafficSignal_callback(self, msg):
         self.trafficSignal = msg
 
-    def detectedObjects_callback(self, msg):
-        self.detectedObjects = msg
+    def predictedObjects_callback(self, msg: PredictedObjects):
+        objs = []
+        for obj in msg.objects:
+            label = obj.classification[0].label if obj.classification else 0
+            pose = obj.kinematics.initial_pose_with_covariance.pose
+            twist = obj.kinematics.initial_twist_with_covariance.twist.linear
+            speed = math.sqrt(twist.x ** 2 + twist.y ** 2 + twist.z ** 2)
+            distance = math.sqrt(pose.position.x ** 2 + pose.position.y ** 2)
+            objs.append(SimpleObject(
+                label=int(label),
+                position=pose.position,
+                orientation=pose.orientation,
+                velocity=float(speed),
+                distance=float(distance),
+            ))
+        self.predicted_objects = objs
+
+    def object_direction(self, x, y):
+        if y <= self.direction_lateral_threshold and y >= -self.direction_lateral_threshold:
+            if x >= 0:
+                return 'above'
+            return 'behind'
+        if y > self.direction_lateral_threshold:
+            return 'NW' if x >= 0 else 'SW'
+        return 'NE' if x >= 0 else 'SE'
 
     def pose_callback(self, msg):
         self.pose = msg
@@ -407,13 +447,13 @@ class BehaviorMotionPlanning(Node):
         
 
     def get_detected_objects_in_front(self):
-        if not self.detectedObjects:
+        if not self.predicted_objects:
             self.get_logger().debug("no object detected!")
             return None
 
         objects_ahead = []
-        for obj in self.detectedObjects.objects:
-            object_direction = obj.relative_direction.data
+        for obj in self.predicted_objects:
+            object_direction = self.object_direction(obj.position.x, obj.position.y)
             if object_direction in self.allowed_object_directions:
                 objects_ahead.append(obj)
         return objects_ahead

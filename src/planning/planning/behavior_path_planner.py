@@ -7,12 +7,12 @@ import json
 import yaml
 from ament_index_python.packages import get_package_share_directory
 from geometry_msgs.msg import PoseStamped, Point
-from std_msgs.msg import String, ColorRGBA
+from std_msgs.msg import String, ColorRGBA, Bool
 import math
 from collections import deque
 from simple_av_msgs.msg import PlanningPathPlanningMsg, PlanningInternalMsg, PlanningInternalMissionPlanMsg, PlanningWaypoint
 from simple_av_msgs.msg import LocalizationMsg, LocalizationIntersectionStatus
-from simple_av_msgs.msg import Portal, DetectedObjectsArray
+from simple_av_msgs.msg import Portal
 from visualization_msgs.msg import Marker, MarkerArray
 from autoware_vehicle_msgs.msg import VelocityReport
 import numpy as np
@@ -142,8 +142,13 @@ class BehaviorPathPlanner(Node):
         self.reset_wait_distance = 5.0
         self.reset_wait_timeout = 2.0
 
-        self.subscriptionDetectedObjects = self.create_subscription(DetectedObjectsArray, 'simple_av/perception/detected_objects', self.detectedObjects_callback, 10)
-        self.detectedObjects = DetectedObjectsArray()
+        self.subscriptionRsuDanger = self.create_subscription(
+            Bool,
+            'simple_av/perception/rsu_danger_detected',
+            self.rsu_danger_callback,
+            10
+        )
+        self.rsu_danger_detected = False
 
         # Publish topics
         self.planning_publisher = self.create_publisher(PlanningPathPlanningMsg, 'simple_av/planning/path_planning', 10)
@@ -306,8 +311,8 @@ class BehaviorPathPlanner(Node):
             config = yaml.safe_load(file)
         return config
     
-    def detectedObjects_callback(self, msg):
-        self.detectedObjects = msg
+    def rsu_danger_callback(self, msg):
+        self.rsu_danger_detected = bool(msg.data)
 
     def intersectionAwareness_callback(self, msg):
         self.intersection_awareness_intersection_id = msg.intersection_name
@@ -625,21 +630,8 @@ class BehaviorPathPlanner(Node):
         Returns a list of detected objects with labels:
         - 7: Cyclist/Bicycle & Pedestrian
         """
-        if not self.detectedObjects or not self.detectedObjects.objects:
-            self.get_logger().debug("No perception data or no objects detected")
-            return []  # Return empty list instead of None
-
-        detected_pedestrians = []
-        for obj in self.detectedObjects.objects:
-            object_type = obj.label
-            # Label is int32, check for pedestrian and cyclist (7)
-            if object_type in [7]:
-                detected_pedestrians.append(obj)
-
-        if detected_pedestrians:
-            self.get_logger().debug(f"Detected {len(detected_pedestrians)} pedestrians/cyclists")
-
-        return detected_pedestrians
+        self.get_logger().debug("Detected objects input disabled; use v2x_handler output.")
+        return []
 
     def apply_quaternion_rotation(self, quaternion, vector):
         """
@@ -687,60 +679,8 @@ class BehaviorPathPlanner(Node):
         return inside
 
     def is_object_detected_on_intersection_danger_zones(self, intersection_id):
-        self.get_logger().debug(f"insde is_object_detected_on_intersection_danger_zones ")
-        # Validate that we have pose data
-        if not self.pose or not self.pose.pose:
-            self.get_logger().warning("No pose data available for danger zone detection")
-            return False
-
-        vehicle_pose = self.pose.pose.position
-        vehicle_orientation = self.pose.pose.orientation
-
-        # Check if pose is valid (not at origin)
-        if vehicle_pose.x == 0.0 and vehicle_pose.y == 0.0 and vehicle_pose.z == 0.0:
-            self.get_logger().debug("Vehicle pose at origin, skipping danger zone check")
-            return False
-
-        self.get_logger().debug("Checking intersection danger zones...")
-        detected_pedestrians = self.get_detected_pedestrians()
-        if not detected_pedestrians:
-            self.get_logger().debug("No pedestrians detected")
-            return False
-
-        # Validate layout data exists
-        if not self.intersections_layouts:
-            self.get_logger().warning("No intersection layout data loaded")
-            return False
-
-        if not any(p.intersection_id == intersection_id for p in self.intersections_layouts):
-            self.get_logger().warning(f"No intersection data for intersection '{intersection_id}'")
-            return False
-
-        danger_zones = [
-            p for p in self.intersections_layouts
-            if p.intersection_id == intersection_id and p.polygon_type == "sw"
-        ]
-
-        objects_in_zones = 0
-        for ped in detected_pedestrians:
-            # Convert relative position to absolute position
-            ped_abs = self.get_object_absolute_position(vehicle_orientation, vehicle_pose, ped.position)
-            self.get_logger().debug(f"Checking pedestrian at absolute position: ({ped_abs.x:.2f}, {ped_abs.y:.2f})")
-
-            for p in danger_zones:
-                if p.polygon_id == '3': #skipping sw3 for this scenario TODO: change this later
-                    continue
-                if self.is_point_in_polygon(ped_abs, p.points):
-                    objects_in_zones += 1
-                    self.get_logger().debug(
-                        f"Pedestrian detected at ({ped_abs.x:.2f}, {ped_abs.y:.2f}) at intersection {p.intersection_id} inside: {p.polygon_type}{p.polygon_id}"
-                    )
-
-        if objects_in_zones > 0:
-            self.get_logger().debug(f"Total pedestrians in danger zones: {objects_in_zones}")
-        else:
-            self.get_logger().debug("No pedestrians in danger zones")
-        return objects_in_zones > 0
+        self.get_logger().debug("danger zone check via v2x_handler")
+        return self.rsu_danger_detected
 
 
     # def cool4_speed_profile_adjustment(self, intersection_points,  waypoint_distance=2.0):

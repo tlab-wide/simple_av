@@ -7,9 +7,12 @@ import numpy as np
 import yaml
 import os
 from ament_index_python.packages import get_package_share_directory
-from simple_av_msgs.msg import Portal, DetectedObjectsArray, TrafficSignalsArray, SimMonitor, LocalizationIntersectionStatus, LocalizationMsg, CollisionPredictionInfo
+from simple_av_msgs.msg import Portal, TrafficSignalsArray, SimMonitor, LocalizationIntersectionStatus, LocalizationMsg, CollisionPredictionInfo
+from autoware_perception_msgs.msg import PredictedObjects
+from std_msgs.msg import Bool, String
 from autoware_control_msgs.msg import Control, Lateral, Longitudinal
 import csv
+import json
 from typing import List, Tuple
 from dataclasses import dataclass
 from scipy.spatial.transform import Rotation as R
@@ -178,8 +181,29 @@ class Logger(Node):
         self.subscriptionTrafficSignal = self.create_subscription(TrafficSignalsArray, 'simple_av/perception/traffic_signals', self.trafficSignal_callback, 10)
         self.trafficSignal = TrafficSignalsArray()
 
-        self.subscriptionDetectedObjects = self.create_subscription(DetectedObjectsArray, 'simple_av/perception/detected_objects', self.detectedObjects_callback, 10)
-        self.detectedObjects = DetectedObjectsArray()
+        self.subscriptionPredictedObjects = self.create_subscription(
+            PredictedObjects,
+            'simple_av/perception/predicted_objects',
+            self.predictedObjects_callback,
+            10
+        )
+        self.predictedObjects = PredictedObjects()
+
+        self.subscriptionRsuDanger = self.create_subscription(
+            Bool,
+            'simple_av/perception/rsu_danger_detected',
+            self.rsu_danger_callback,
+            10
+        )
+        self.rsu_danger_detected = False
+
+        self.subscriptionRsuZones = self.create_subscription(
+            String,
+            'simple_av/perception/rsu_danger_zones',
+            self.rsu_zones_callback,
+            10
+        )
+        self.rsu_danger_zones = []
 
         # Logging points visualization
         self.logging_points_marker_pub = self.create_publisher(
@@ -330,8 +354,21 @@ class Logger(Node):
     def trafficSignal_callback(self, msg):
         self.trafficSignal = msg
     
-    def detectedObjects_callback(self, msg):
-        self.detectedObjects = msg
+    def predictedObjects_callback(self, msg):
+        self.predictedObjects = msg
+
+    def rsu_danger_callback(self, msg):
+        self.rsu_danger_detected = bool(msg.data)
+
+    def rsu_zones_callback(self, msg):
+        try:
+            zones = json.loads(msg.data)
+            if isinstance(zones, list):
+                self.rsu_danger_zones = zones
+            else:
+                self.rsu_danger_zones = []
+        except Exception:
+            self.rsu_danger_zones = []
 
     def calculate_distance(self, point1, point2, z=False):
         """
@@ -363,16 +400,16 @@ class Logger(Node):
         Returns a list of detected objects with labels:
         - 7: Cyclist/Bicycle & Pedestrian
         """
-        if not self.detectedObjects or not self.detectedObjects.objects:
-            self.get_logger().debug("No perception data or no objects detected")
-            return []  # Return empty list instead of None
+        if not self.predictedObjects or not self.predictedObjects.objects:
+            self.get_logger().debug("No predicted objects available")
+            return []
 
         detected_pedestrians = []
-        for obj in self.detectedObjects.objects:
-            object_type = obj.label
-            # Label is int32, check for pedestrian and cyclist (7)
-            if object_type in [7]:
-                detected_pedestrians.append(obj)
+        for obj in self.predictedObjects.objects:
+            label = obj.classification[0].label if obj.classification else 0
+            if label in [7]:
+                pose = obj.kinematics.initial_pose_with_covariance.pose
+                detected_pedestrians.append((int(label), pose.position))
 
         if detected_pedestrians:
             self.get_logger().debug(f"Found {len(detected_pedestrians)} pedestrians/cyclists")
@@ -422,8 +459,6 @@ class Logger(Node):
         vehicle_orientation = self.pose.pose.orientation
 
         detected_pedestrians = self.get_detected_pedestrians()
-        if not detected_pedestrians:
-            return False, False, False   # nobody detected at all
 
         # Validate intersection layout exists
         if not self.intersections_layouts:
@@ -434,32 +469,21 @@ class Logger(Node):
             if p.intersection_id == intersection_id and p.polygon_type == "sw"
         ]
 
-        any_detected = False
-        rsu_detected = False
+        rsu_detected = bool(self.rsu_danger_detected)
         obu_detected = False
 
-        for ped in detected_pedestrians:
-
-            # Convert from relative → absolute position
+        for label, position in detected_pedestrians:
             ped_abs = self.get_object_absolute_position(
-                vehicle_orientation, vehicle_pose, ped.position
+                vehicle_orientation, vehicle_pose, position
             )
-
             for polygon in danger_zones:
-                if polygon.polygon_id == '3':  # skip zone 3
+                if polygon.polygon_id == '3':
                     continue
                 if self.is_point_in_polygon(ped_abs, polygon.points):
-
-                    any_detected = True
-
-                    if ped.is_from_rsu:
-                        rsu_detected = True
-                    else:
-                        obu_detected = True
-
-                    # No need to check more polygons for this pedestrian
+                    obu_detected = True
                     break
 
+        any_detected = rsu_detected or obu_detected
         return any_detected, rsu_detected, obu_detected
 
     
@@ -682,8 +706,6 @@ class Logger(Node):
         vehicle_orientation = self.pose.pose.orientation
 
         detected_pedestrians = self.get_detected_pedestrians()
-        if not detected_pedestrians:
-            return []
         
         # Validate intersection layout exists
         if not self.intersections_layouts:
@@ -701,41 +723,30 @@ class Logger(Node):
 
         objects = []
 
-        for ped in detected_pedestrians:
-            if rsu_check:
-                if ped.is_from_rsu:
-                    # Convert from relative → absolute position
-                    ped_abs = self.get_object_absolute_position(
-                        vehicle_orientation, vehicle_pose, ped.position
-                    )
+        if rsu_check:
+            for zone_name in self.rsu_danger_zones:
+                if '_' in zone_name:
+                    zone_type, zone_id = zone_name.split('_', 1)
+                else:
+                    zone_type, zone_id = zone_name, ''
+                objects.append(('rsu', zone_type, zone_id, '', ''))
+            return objects
 
-                    for polygon in sw_danger_zones:
-                        if polygon.polygon_id == '3':  # skip zone 3
-                            continue
-                        if self.is_point_in_polygon(ped_abs, polygon.points):
-                            objects.append((ped.label,'sw',polygon.polygon_id,f"{ped_abs.x:.4f}",f"{ped_abs.y:.4f}"))
-                    
-                    for polygon in cw_danger_zones:
-                        if self.is_point_in_polygon(ped_abs, polygon.points):
-                            objects.append((ped.label,'cw',polygon.polygon_id,f"{ped_abs.x:.4f}",f"{ped_abs.y:.4f}"))
-            else:
-                if not ped.is_from_rsu:
-                    # Convert from relative → absolute position
-                    ped_abs = self.get_object_absolute_position(
-                        vehicle_orientation, vehicle_pose, ped.position
-                    )
+        for label, position in detected_pedestrians:
+            ped_abs = self.get_object_absolute_position(
+                vehicle_orientation, vehicle_pose, position
+            )
 
-                    for polygon in sw_danger_zones:
-                        if polygon.polygon_id == '3':  # skip zone 3
-                            continue
-                        if self.is_point_in_polygon(ped_abs, polygon.points):
-                            objects.append((ped.label,'sw',polygon.polygon_id,ped_abs.x,ped_abs.y))
-                    
-                    for polygon in cw_danger_zones:
-                        if self.is_point_in_polygon(ped_abs, polygon.points):
-                            objects.append((ped.label,'cw',polygon.polygon_id,f"{ped_abs.x:.4f}",f"{ped_abs.y:.4f}"))
-                        
-                        
+            for polygon in sw_danger_zones:
+                if polygon.polygon_id == '3':  # skip zone 3
+                    continue
+                if self.is_point_in_polygon(ped_abs, polygon.points):
+                    objects.append((label, 'sw', polygon.polygon_id, f"{ped_abs.x:.4f}", f"{ped_abs.y:.4f}"))
+
+            for polygon in cw_danger_zones:
+                if self.is_point_in_polygon(ped_abs, polygon.points):
+                    objects.append((label, 'cw', polygon.polygon_id, f"{ped_abs.x:.4f}", f"{ped_abs.y:.4f}"))
+
         return objects
 
 

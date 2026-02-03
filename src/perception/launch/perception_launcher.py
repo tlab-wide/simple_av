@@ -24,13 +24,14 @@ def generate_launch_description():
             output='screen',
             arguments=['--ros-args', '--log-level', LaunchConfiguration('log_level')]
         ),
-        Node(
-            package='perception',
-            executable='object_detection_handler',
-            name='object_detection_handler_node',
-            output='screen',
-            arguments=['--ros-args', '--log-level', LaunchConfiguration('log_level')]
-        ),
+        # Disabled: superseded by object_prediction_handler + v2x_handler
+        # Node(
+        #     package='perception',
+        #     executable='object_detection_handler',
+        #     name='object_detection_handler_node',
+        #     output='screen',
+        #     arguments=['--ros-args', '--log-level', LaunchConfiguration('log_level')]
+        # ),
         Node(
             package='perception',
             executable='object_tracking_handler',
