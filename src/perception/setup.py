@@ -22,6 +22,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
+            'obu_perception = perception.obu_perception:main',
             'traffic_light_handler = perception.trafficLightHandler:main',
             'object_detection_handler = perception.objectDetectionHandler:main',
         ],

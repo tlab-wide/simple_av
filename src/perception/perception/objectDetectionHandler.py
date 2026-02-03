@@ -17,6 +17,7 @@ import numpy as np
 from tf2_ros import Buffer, TransformListener
 from tf2_geometry_msgs import do_transform_pose
 from rclpy.duration import Duration
+from rclpy.time import Time
 from autoware_perception_msgs.msg import ObjectClassification, DetectedObjectKinematics, Shape
 from geometry_msgs.msg import PoseWithCovariance, TwistWithCovariance
 # import transformations as tf
@@ -45,8 +46,8 @@ class Perception(Node):
         self.direction_lateral_threshold = float(self.direction_filter_cfg.get('lateral_threshold', 2.25))
 
         
-        # Create subscriber for /OBU/Sensing topic. This topic publishes the information of detected objects from vehicle-mounted sensors.
-        self.subscriptionSensor = self.create_subscription(DetectedObjects, '/OBU/Sensing', self.detectedObjects_callback, 10)
+        # Create subscriber for OBU sensing topic (re-stamped by obu_perception).
+        self.subscriptionSensor = self.create_subscription(DetectedObjects, '/simple_av/perception/obu_sensing', self.detectedObjects_callback, 10)
         self.detectedObjects = DetectedObjects()  # Initialize detected objects message
         self.detectedObjects_header = None
 
@@ -296,6 +297,11 @@ class Perception(Node):
         if source_header is None or not source_header.frame_id:
             self.get_logger().warning("Detected objects are missing frame_id; cannot transform.")
             return None
+        # If a PoseStamped was passed in, unwrap to Pose
+        if hasattr(pose, 'pose') and not hasattr(pose, 'position'):
+            pose = pose.pose
+        if source_header.frame_id == self.target_frame:
+            return pose
         pose_stamped = PoseStamped()
         pose_stamped.header = source_header
         pose_stamped.pose = pose
@@ -308,10 +314,20 @@ class Perception(Node):
             )
             return do_transform_pose(pose_stamped, transform).pose
         except Exception as exc:
-            self.get_logger().warning(
-                f"TF transform failed {source_header.frame_id} -> {self.target_frame}: {exc}"
-            )
-            return None
+            # Fallback to latest available transform to avoid dropping all detections
+            try:
+                transform = self.tf_buffer.lookup_transform(
+                    self.target_frame,
+                    source_header.frame_id,
+                    Time(),
+                    timeout=Duration(seconds=0.1),
+                )
+                return do_transform_pose(pose_stamped, transform).pose
+            except Exception:
+                self.get_logger().warning(
+                    f"TF transform failed {source_header.frame_id} -> {self.target_frame}: {exc}"
+                )
+                return None
 
     def handle_detected_objects(self, detected_objects, is_from_rsu, source_header):
         detected_objects_list = []

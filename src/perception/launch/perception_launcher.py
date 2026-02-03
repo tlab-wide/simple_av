@@ -12,6 +12,13 @@ def generate_launch_description():
         ),
         Node(
             package='perception',
+            executable='obu_perception',
+            name='obu_perception_node',
+            output='screen',
+            arguments=['--ros-args', '--log-level', LaunchConfiguration('log_level')]
+        ),
+        Node(
+            package='perception',
             executable='traffic_light_handler',
             name='traffic_light_handler_node',
             output='screen',

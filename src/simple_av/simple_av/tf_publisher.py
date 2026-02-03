@@ -2,7 +2,7 @@ import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import TransformStamped
 from nav_msgs.msg import Odometry
-from tf2_ros import TransformBroadcaster
+from tf2_ros import StaticTransformBroadcaster
 import yaml
 import os
 import math
@@ -20,19 +20,11 @@ class SensorTFPublisher(Node):
         self.base_to_sensor_kit = self.sensors_calibration['base_link']['sensor_kit_base_link']
         self.sensor_kit_children = self.sensors_calibration.get('sensor_kit_base_link', {})
 
-        # Setup TF broadcaster
-        self.br = TransformBroadcaster(self)
+        # Setup static TF broadcaster
+        self.br = StaticTransformBroadcaster(self)
 
-        # Subscribe to EKF output for timestamps
-        self.sub = self.create_subscription(
-            Odometry,
-            '/simple_av/localization/odometry_fused',
-            self.odom_callback,
-            10
-        )
-
-        # Always publish fixed base_link -> sensor_kit_base_link and its children
-        self.timer = self.create_timer(0.02, self.publish_sensor_tfs)
+        # Publish fixed transforms once on startup
+        self.publish_sensor_tfs(self.get_clock().now().to_msg())
     
     def config_file_loader(self, file_name):
         # Path to the YAML file
@@ -43,20 +35,17 @@ class SensorTFPublisher(Node):
             config = yaml.safe_load(file)
         return config
 
-    def odom_callback(self, msg: Odometry):
-        self.publish_sensor_tfs(msg.header.stamp)
-
     def publish_sensor_tfs(self, stamp=None):
-        # Publish even when GNSS isn't available yet
         if stamp is None:
             stamp = self.get_clock().now().to_msg()
-        self.br.sendTransform(
+        transforms = [
             self.build_tf('base_link', 'sensor_kit_base_link', self.base_to_sensor_kit, stamp)
-        )
+        ]
         for child_frame, spec in self.sensor_kit_children.items():
-            self.br.sendTransform(
+            transforms.append(
                 self.build_tf('sensor_kit_base_link', child_frame, spec, stamp)
             )
+        self.br.sendTransform(transforms)
 
     def build_tf(self, parent_frame, child_frame, spec, stamp):
         t_base_sensor = TransformStamped()

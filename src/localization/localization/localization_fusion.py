@@ -124,7 +124,7 @@ class LocalizationFusion(Node):
 
     def publish_map_tf_from_odom(self, odom: Odometry):
         t_map_base = TransformStamped()
-        t_map_base.header.stamp = odom.header.stamp
+        t_map_base.header.stamp = self.get_clock().now().to_msg()
         t_map_base.header.frame_id = self.map_frame
         t_map_base.child_frame_id = self.base_frame
         t_map_base.transform.translation.x = odom.pose.pose.position.x
