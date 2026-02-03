@@ -705,11 +705,7 @@ Visualization Manager:
                     Color: 119; 11; 32
                   Name: DetectedObjects
                   Namespaces:
-                    label: true
-                    position covariance: true
-                    shape: true
-                    twist: true
-                    velocity: true
+                    {}
                   Object Fill Type: skeleton
                   PEDESTRIAN:
                     Alpha: 0.9990000128746033
@@ -732,7 +728,7 @@ Visualization Manager:
                     Color: 255; 255; 255
                   Value: true
                   Visualization Type: Normal
-              Enabled: true
+              Enabled: false
               Name: Detection
             - Class: rviz_common/Group
               Displays:
@@ -768,13 +764,7 @@ Visualization Manager:
                     Color: 119; 11; 32
                   Name: TrackedObjects
                   Namespaces:
-                    acceleration: true
-                    label: true
-                    position covariance: true
-                    shape: true
-                    twist: true
-                    uuid: true
-                    velocity: true
+                    {}
                   Object Fill Type: skeleton
                   PEDESTRIAN:
                     Alpha: 0.9990000128746033
@@ -797,7 +787,7 @@ Visualization Manager:
                     Color: 255; 255; 255
                   Value: true
                   Visualization Type: Normal
-              Enabled: true
+              Enabled: false
               Name: Tracking
             - Class: rviz_common/Group
               Displays:
@@ -3245,11 +3235,36 @@ Visualization Manager:
                     Value: true
                   Map: true
                   Perception:
-                    "": true
+                    CameraLidarFusion(purple): true
+                    Centerpoint(red1): true
+                    CenterpointROIFusion(red2): true
+                    CenterpointValidator(red3): true
+                    Detection(yellow): true
+                    DetectionByTracker(orange): true
+                    PointPainting(light_green1): true
+                    PointPaintingROIFusion(light_green2): true
+                    PointPaintingValidator(light_green3): true
+                    Prediction(light_blue): true
+                    RadarFarObjects(white): true
+                    Tracking(green): true
                     Value: true
                   Planning:
-                    "":
-                      "": true
+                    Objects Of Interest:
+                      AvoidanceByLCLeft: true
+                      AvoidanceByLCRight: true
+                      AvoidanceLeft: true
+                      AvoidanceRight: true
+                      BlindSpot: true
+                      Crosswalk: true
+                      DetectionArea: true
+                      GoalPlanner: true
+                      Intersection: true
+                      LaneChangeLeft: true
+                      LaneChangeRight: true
+                      NoStoppingArea: true
+                      ObstacleCruise: true
+                      StartPlanner: true
+                      TrafficLight: true
                       Value: true
                     Value: true
                   Sensing:
@@ -5014,7 +5029,6 @@ Visualization Manager:
       Enabled: true
       Name: MarkerArray
       Namespaces:
-        predicted_collision: true
         predicted_trajectories: true
       Topic:
         Depth: 5
@@ -5172,25 +5186,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/ThirdPersonFollower
-      Distance: 55.666725158691406
+      Distance: 50.29218292236328
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 35.99921417236328
-        Y: -12.69959831237793
-        Z: 0
+        X: 33.90087127685547
+        Y: -7.777118682861328
+        Z: -2.277892235724721e-05
       Focal Shape Fixed Size: false
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.42039868235588074
+      Pitch: 0.5653988122940063
       Target Frame: base_link
       Value: ThirdPersonFollower (rviz_default_plugins)
-      Yaw: 2.440401554107666
+      Yaw: 3.8653979301452637
     Saved:
       - Class: rviz_default_plugins/ThirdPersonFollower
         Distance: 18

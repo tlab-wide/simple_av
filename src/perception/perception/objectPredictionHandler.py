@@ -9,11 +9,11 @@ from rclpy.node import Node
 from rclpy.time import Time
 
 from autoware_perception_msgs.msg import TrackedObjects, PredictedObjects, PredictedObject, PredictedObjectKinematics, PredictedPath
-from geometry_msgs.msg import Pose, PoseWithCovariance, TwistWithCovariance, AccelWithCovariance
+from geometry_msgs.msg import Pose, PoseWithCovariance, TwistWithCovariance, AccelWithCovariance, Vector3Stamped
 from builtin_interfaces.msg import Duration
 from rclpy.duration import Duration as RclpyDuration
 from tf2_ros import Buffer, TransformListener
-from tf2_geometry_msgs import do_transform_pose
+from tf2_geometry_msgs import do_transform_pose, do_transform_vector3
 
 
 @dataclass
@@ -33,6 +33,9 @@ class ObjectPrediction(Node):
         self.declare_parameter('prediction_time_step_sec', 0.5)
         self.declare_parameter('use_twist_from_input', False)
         self.declare_parameter('use_heading_from_velocity', False)
+        self.declare_parameter('use_heading_for_twist', False)
+        self.declare_parameter('use_velocity_for_heading', True)
+        self.declare_parameter('min_speed_for_heading', 0.2)
         self.declare_parameter('history_size', 5)
         self.declare_parameter('min_history_samples', 3)
 
@@ -44,6 +47,9 @@ class ObjectPrediction(Node):
         self.prediction_time_step_sec = float(self.get_parameter('prediction_time_step_sec').value)
         self.use_twist_from_input = bool(self.get_parameter('use_twist_from_input').value)
         self.use_heading_from_velocity = bool(self.get_parameter('use_heading_from_velocity').value)
+        self.use_heading_for_twist = bool(self.get_parameter('use_heading_for_twist').value)
+        self.use_velocity_for_heading = bool(self.get_parameter('use_velocity_for_heading').value)
+        self.min_speed_for_heading = float(self.get_parameter('min_speed_for_heading').value)
         self.history_size = int(self.get_parameter('history_size').value)
         self.min_history_samples = int(self.get_parameter('min_history_samples').value)
 
@@ -76,20 +82,18 @@ class ObjectPrediction(Node):
         q.z = math.sin(yaw / 2.0)
         return q
 
-    def rotate_vector(self, v: np.ndarray, q):
-        # Rotate vector v by quaternion q (geometry_msgs/Quaternion)
-        qx, qy, qz, qw = q.x, q.y, q.z, q.w
-        # Quaternion-vector multiplication: v' = q * v * q^-1
-        vx, vy, vz = v[0], v[1], v[2]
-        # t = 2 * cross(q_vec, v)
-        tx = 2.0 * (qy * vz - qz * vy)
-        ty = 2.0 * (qz * vx - qx * vz)
-        tz = 2.0 * (qx * vy - qy * vx)
-        # v' = v + qw * t + cross(q_vec, t)
-        vxp = vx + qw * tx + (qy * tz - qz * ty)
-        vyp = vy + qw * ty + (qz * tx - qx * tz)
-        vzp = vz + qw * tz + (qx * ty - qy * tx)
-        return np.array([vxp, vyp, vzp], dtype=float)
+    def yaw_from_quat(self, q):
+        siny_cosp = 2.0 * (q.w * q.z + q.x * q.y)
+        cosy_cosp = 1.0 - 2.0 * (q.y * q.y + q.z * q.z)
+        return math.atan2(siny_cosp, cosy_cosp)
+
+    def transform_vector(self, v: np.ndarray, transform) -> np.ndarray:
+        vec = Vector3Stamped()
+        vec.vector.x = float(v[0])
+        vec.vector.y = float(v[1])
+        vec.vector.z = float(v[2])
+        vec_out = do_transform_vector3(vec, transform)
+        return np.array([vec_out.vector.x, vec_out.vector.y, vec_out.vector.z], dtype=float)
 
     def estimate_velocity_from_history(self, history):
         if len(history) < 2:
@@ -200,11 +204,6 @@ class ObjectPrediction(Node):
             kin.initial_pose_with_covariance.covariance = obj.kinematics.pose_with_covariance.covariance
 
             kin.initial_twist_with_covariance = TwistWithCovariance()
-            vel_bl = self.rotate_vector(velocity, map_in_base_tf.transform.rotation)
-            kin.initial_twist_with_covariance.twist.linear.x = float(vel_bl[0])
-            kin.initial_twist_with_covariance.twist.linear.y = float(vel_bl[1])
-            kin.initial_twist_with_covariance.twist.linear.z = float(vel_bl[2])
-
             kin.initial_acceleration_with_covariance = AccelWithCovariance()
 
             path = PredictedPath()
@@ -214,6 +213,8 @@ class ObjectPrediction(Node):
             use_vel_heading = self.use_heading_from_velocity and np.linalg.norm(velocity[:2]) > 1e-3
             yaw = math.atan2(velocity[1], velocity[0]) if use_vel_heading else None
 
+            first_map = None
+            second_map = None
             for i in range(steps + 1):
                 t = i * dt_step
                 p_map = Pose()
@@ -224,8 +225,36 @@ class ObjectPrediction(Node):
                     p_map.orientation = self.quat_from_yaw(yaw)
                 else:
                     p_map.orientation = pose_map.orientation
+                if i == 0:
+                    first_map = p_map
+                elif i == 1:
+                    second_map = p_map
                 p_bl = do_transform_pose(p_map, map_in_base_tf)
+                if i == 0 and self.use_velocity_for_heading and use_vel_heading:
+                    kin.initial_pose_with_covariance.pose.orientation = p_bl.orientation
                 path.path.append(p_bl)
+
+            if first_map is not None and second_map is not None:
+                vel_map = np.array([
+                    (second_map.position.x - first_map.position.x) / dt_step,
+                    (second_map.position.y - first_map.position.y) / dt_step,
+                    (second_map.position.z - first_map.position.z) / dt_step,
+                ], dtype=float)
+                vel_bl = self.transform_vector(vel_map, map_in_base_tf)
+            else:
+                vel_bl = self.transform_vector(velocity, map_in_base_tf)
+
+            kin.initial_twist_with_covariance = TwistWithCovariance()
+            speed = float(np.linalg.norm(vel_bl[:2]))
+            if self.use_heading_for_twist and speed >= self.min_speed_for_heading:
+                yaw_bl = self.yaw_from_quat(kin.initial_pose_with_covariance.pose.orientation)
+                kin.initial_twist_with_covariance.twist.linear.x = speed * math.cos(yaw_bl)
+                kin.initial_twist_with_covariance.twist.linear.y = speed * math.sin(yaw_bl)
+                kin.initial_twist_with_covariance.twist.linear.z = float(vel_bl[2])
+            else:
+                kin.initial_twist_with_covariance.twist.linear.x = float(vel_bl[0])
+                kin.initial_twist_with_covariance.twist.linear.y = float(vel_bl[1])
+                kin.initial_twist_with_covariance.twist.linear.z = float(vel_bl[2])
 
             kin.predicted_paths = [path]
             predicted_obj.kinematics = kin
