@@ -11,12 +11,14 @@ from rclpy.time import Time
 from autoware_perception_msgs.msg import TrackedObjects, PredictedObjects, PredictedObject, PredictedObjectKinematics, PredictedPath
 from geometry_msgs.msg import Pose, PoseWithCovariance, TwistWithCovariance, AccelWithCovariance
 from builtin_interfaces.msg import Duration
+from rclpy.duration import Duration as RclpyDuration
+from tf2_ros import Buffer, TransformListener
+from tf2_geometry_msgs import do_transform_pose
 
 
 @dataclass
 class LastState:
-    pos: np.ndarray
-    stamp_ns: int
+    history: list  # list of (stamp_ns, pos)
 
 
 class ObjectPrediction(Node):
@@ -26,18 +28,24 @@ class ObjectPrediction(Node):
         self.declare_parameter('input_topic', '/simple_av/perception/tracked_objects')
         self.declare_parameter('output_topic', '/simple_av/perception/predicted_objects')
         self.declare_parameter('target_frame', 'base_link')
+        self.declare_parameter('map_frame', 'map')
         self.declare_parameter('prediction_horizon_sec', 3.0)
         self.declare_parameter('prediction_time_step_sec', 0.5)
         self.declare_parameter('use_twist_from_input', False)
         self.declare_parameter('use_heading_from_velocity', False)
+        self.declare_parameter('history_size', 5)
+        self.declare_parameter('min_history_samples', 3)
 
         self.input_topic = self.get_parameter('input_topic').value
         self.output_topic = self.get_parameter('output_topic').value
         self.target_frame = self.get_parameter('target_frame').value
+        self.map_frame = self.get_parameter('map_frame').value
         self.prediction_horizon_sec = float(self.get_parameter('prediction_horizon_sec').value)
         self.prediction_time_step_sec = float(self.get_parameter('prediction_time_step_sec').value)
         self.use_twist_from_input = bool(self.get_parameter('use_twist_from_input').value)
         self.use_heading_from_velocity = bool(self.get_parameter('use_heading_from_velocity').value)
+        self.history_size = int(self.get_parameter('history_size').value)
+        self.min_history_samples = int(self.get_parameter('min_history_samples').value)
 
         self.subscription = self.create_subscription(
             TrackedObjects,
@@ -46,6 +54,9 @@ class ObjectPrediction(Node):
             10
         )
         self.publisher = self.create_publisher(PredictedObjects, self.output_topic, 10)
+
+        self.tf_buffer = Buffer()
+        self.tf_listener = TransformListener(self.tf_buffer, self)
 
         self.last_states = {}
 
@@ -65,9 +76,67 @@ class ObjectPrediction(Node):
         q.z = math.sin(yaw / 2.0)
         return q
 
+    def rotate_vector(self, v: np.ndarray, q):
+        # Rotate vector v by quaternion q (geometry_msgs/Quaternion)
+        qx, qy, qz, qw = q.x, q.y, q.z, q.w
+        # Quaternion-vector multiplication: v' = q * v * q^-1
+        vx, vy, vz = v[0], v[1], v[2]
+        # t = 2 * cross(q_vec, v)
+        tx = 2.0 * (qy * vz - qz * vy)
+        ty = 2.0 * (qz * vx - qx * vz)
+        tz = 2.0 * (qx * vy - qy * vx)
+        # v' = v + qw * t + cross(q_vec, t)
+        vxp = vx + qw * tx + (qy * tz - qz * ty)
+        vyp = vy + qw * ty + (qz * tx - qx * tz)
+        vzp = vz + qw * tz + (qx * ty - qy * tx)
+        return np.array([vxp, vyp, vzp], dtype=float)
+
+    def estimate_velocity_from_history(self, history):
+        if len(history) < 2:
+            return None
+        stamps = np.array([h[0] for h in history], dtype=float) / 1e9
+        t0 = stamps[0]
+        t = stamps - t0
+        if np.max(t) <= 1e-6:
+            return None
+        positions = np.array([h[1] for h in history], dtype=float)
+        # Fit x(t), y(t), z(t) with least squares line: p = a*t + b
+        A = np.vstack([t, np.ones_like(t)]).T
+        vx, _ = np.linalg.lstsq(A, positions[:, 0], rcond=None)[0]
+        vy, _ = np.linalg.lstsq(A, positions[:, 1], rcond=None)[0]
+        vz, _ = np.linalg.lstsq(A, positions[:, 2], rcond=None)[0]
+        return np.array([vx, vy, vz], dtype=float)
+
+    def lookup_transform(self, target_frame, source_frame, stamp):
+        try:
+            return self.tf_buffer.lookup_transform(
+                target_frame,
+                source_frame,
+                stamp,
+                timeout=RclpyDuration(seconds=0.0),
+            )
+        except Exception:
+            try:
+                return self.tf_buffer.lookup_transform(
+                    target_frame,
+                    source_frame,
+                    Time(),
+                    timeout=RclpyDuration(seconds=0.0),
+                )
+            except Exception as exc:
+                self.get_logger().warning(
+                    f"TF transform failed {source_frame} -> {target_frame}: {exc}"
+                )
+                return None
+
     def tracked_objects_callback(self, msg: TrackedObjects):
         stamp = Time.from_msg(msg.header.stamp)
         now_ns = stamp.nanoseconds
+
+        base_in_map_tf = self.lookup_transform(self.map_frame, self.target_frame, msg.header.stamp)
+        map_in_base_tf = self.lookup_transform(self.target_frame, self.map_frame, msg.header.stamp)
+        if base_in_map_tf is None or map_in_base_tf is None:
+            return
 
         out = PredictedObjects()
         out.header = msg.header
@@ -80,7 +149,8 @@ class ObjectPrediction(Node):
         for obj in msg.objects:
             key = self.uuid_key(obj.object_id)
             pose = obj.kinematics.pose_with_covariance.pose
-            pos = np.array([pose.position.x, pose.position.y, pose.position.z], dtype=float)
+            pose_map = do_transform_pose(pose, base_in_map_tf)
+            pos = np.array([pose_map.position.x, pose_map.position.y, pose_map.position.z], dtype=float)
 
             velocity = np.zeros(3, dtype=float)
             input_twist = np.array([
@@ -89,20 +159,33 @@ class ObjectPrediction(Node):
                 obj.kinematics.twist_with_covariance.twist.linear.z,
             ], dtype=float)
 
+            history_state = self.last_states.get(key)
+            if history_state is None:
+                history_state = LastState(history=[])
+                self.last_states[key] = history_state
+
+            history_state.history.append((now_ns, pos))
+            if len(history_state.history) > self.history_size:
+                history_state.history = history_state.history[-self.history_size:]
+
             if self.use_twist_from_input and np.linalg.norm(input_twist[:2]) > 1e-3:
                 velocity = input_twist
             else:
-                last = self.last_states.get(key)
-                if last is not None:
-                    dt = (now_ns - last.stamp_ns) / 1e9
+                if len(history_state.history) >= max(2, self.min_history_samples):
+                    v = self.estimate_velocity_from_history(history_state.history)
+                    if v is not None:
+                        velocity = v
+                    else:
+                        velocity = input_twist
+                elif len(history_state.history) >= 2:
+                    prev_ns, prev_pos = history_state.history[-2]
+                    dt = (now_ns - prev_ns) / 1e9
                     if dt > 1e-6:
-                        velocity = (pos - last.pos) / dt
+                        velocity = (pos - prev_pos) / dt
                     else:
                         velocity = input_twist
                 else:
                     velocity = input_twist
-
-            self.last_states[key] = LastState(pos=pos, stamp_ns=now_ns)
 
             predicted_obj = PredictedObject()
             predicted_obj.object_id = obj.object_id
@@ -112,13 +195,15 @@ class ObjectPrediction(Node):
 
             kin = PredictedObjectKinematics()
             kin.initial_pose_with_covariance = PoseWithCovariance()
-            kin.initial_pose_with_covariance.pose = pose
+            pose_bl = do_transform_pose(pose_map, map_in_base_tf)
+            kin.initial_pose_with_covariance.pose = pose_bl
             kin.initial_pose_with_covariance.covariance = obj.kinematics.pose_with_covariance.covariance
 
             kin.initial_twist_with_covariance = TwistWithCovariance()
-            kin.initial_twist_with_covariance.twist.linear.x = float(velocity[0])
-            kin.initial_twist_with_covariance.twist.linear.y = float(velocity[1])
-            kin.initial_twist_with_covariance.twist.linear.z = float(velocity[2])
+            vel_bl = self.rotate_vector(velocity, map_in_base_tf.transform.rotation)
+            kin.initial_twist_with_covariance.twist.linear.x = float(vel_bl[0])
+            kin.initial_twist_with_covariance.twist.linear.y = float(vel_bl[1])
+            kin.initial_twist_with_covariance.twist.linear.z = float(vel_bl[2])
 
             kin.initial_acceleration_with_covariance = AccelWithCovariance()
 
@@ -131,15 +216,16 @@ class ObjectPrediction(Node):
 
             for i in range(steps + 1):
                 t = i * dt_step
-                p = Pose()
-                p.position.x = pose.position.x + velocity[0] * t
-                p.position.y = pose.position.y + velocity[1] * t
-                p.position.z = pose.position.z + velocity[2] * t
+                p_map = Pose()
+                p_map.position.x = pose_map.position.x + velocity[0] * t
+                p_map.position.y = pose_map.position.y + velocity[1] * t
+                p_map.position.z = pose_map.position.z + velocity[2] * t
                 if use_vel_heading:
-                    p.orientation = self.quat_from_yaw(yaw)
+                    p_map.orientation = self.quat_from_yaw(yaw)
                 else:
-                    p.orientation = pose.orientation
-                path.path.append(p)
+                    p_map.orientation = pose_map.orientation
+                p_bl = do_transform_pose(p_map, map_in_base_tf)
+                path.path.append(p_bl)
 
             kin.predicted_paths = [path]
             predicted_obj.kinematics = kin
