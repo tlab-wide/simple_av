@@ -171,7 +171,7 @@ class BehaviorMotionPlanning(Node):
         )
         self.collision_points_marker_pub = self.create_publisher(
             MarkerArray,
-            "simple_av/motion_planner/collision_points",
+            "simple_av/motion_planner/visualization/collision_points",
             10
         )
 
