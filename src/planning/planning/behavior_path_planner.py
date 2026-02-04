@@ -1060,6 +1060,9 @@ class BehaviorPathPlanner(Node):
             points_marker.points.append(Point(x=waypoint.x, y=waypoint.y, z=waypoint.z))
             points_marker.colors.append(color)
 
+            if i % 5 != 0:
+                continue
+
             speed_marker = Marker()
             speed_marker.header.frame_id = "map"
             speed_marker.header.stamp = now
