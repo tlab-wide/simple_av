@@ -216,6 +216,9 @@ class BehaviorPathPlanner(Node):
         #Shutting down
         self.node_shut = False
         self._last_log_time = {}
+        # Path planning loop timer (uses ROS time when use_sim_time is enabled)
+        self.loop_period_sec = 0.05
+        self.loop_timer = self.create_timer(self.loop_period_sec, self.lane_following)
     
     def load_intersections(self):
         package_share_directory = get_package_share_directory('common')
@@ -1313,9 +1316,7 @@ def main(args=None):
     rclpy.init(args=args)
     node = BehaviorPathPlanner()
     try:
-        while rclpy.ok() and not node.node_shut:
-            rclpy.spin_once(node, timeout_sec=0.1)# Set timeout to 0 to avoid delay
-            node.lane_following()
+        rclpy.spin(node)
     except KeyboardInterrupt:
         pass
     finally:
