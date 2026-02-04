@@ -497,7 +497,7 @@ class VehicleControl(Node):
         target_speed = current_speed * (distance_to_stop / (speed_limit * 3.0))**1.0
         
         # Clamp for realistic behavior
-        return min(speed_limit, max(1.0, target_speed))
+        return min(speed_limit, max(0.0, target_speed))
 
     def filter(self, new_value, previous_value, gain):
         return gain * previous_value + (1 - gain) * new_value
