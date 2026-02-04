@@ -19,7 +19,7 @@ from simple_av_msgs.msg import PlanningInternalMsg, PlanningInternalMissionPlanM
 from simple_av_msgs.msg import LocalizationMsg, LocalizationIntersectionStatus
 from simple_av_msgs.msg import SimMonitor, Portal
 import numpy as np
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from scipy.spatial.transform import Rotation as R
 from autoware_vehicle_msgs.msg import VelocityReport
 from rclpy.qos import QoSProfile, QoSHistoryPolicy, QoSReliabilityPolicy, QoSDurabilityPolicy
@@ -35,6 +35,7 @@ class SimpleObject:
     distance: float
     size_x: float
     size_y: float
+    predicted_paths: list = field(default_factory=list)
 
 class BehaviorMotionPlanning(Node):
     def __init__(self):
@@ -223,6 +224,13 @@ class BehaviorMotionPlanning(Node):
         self.vehicle_config = self.load_vehicle_config(self.vehicle_model)
         self.ego_length = float(self.vehicle_config['dimensions']['length'])
         self.ego_width = float(self.vehicle_config['dimensions']['width'])
+        self.wheel_base = float(self.vehicle_config['dimensions'].get('wheel_base', 0.0))
+        self.front_overhang = float(self.vehicle_config['dimensions'].get('front_overhang', 0.0))
+        self.front_offset = self.wheel_base + self.front_overhang
+        if self.densify_interval > 0.0:
+            self.front_offset_steps = int(self.front_offset / self.densify_interval)
+        else:
+            self.front_offset_steps = 0
         
         #Traffic light
         self.traffic_light_stopPoint_lastState = Point()
@@ -330,6 +338,13 @@ class BehaviorMotionPlanning(Node):
             distance = math.sqrt(pose.position.x ** 2 + pose.position.y ** 2)
             size_x = float(obj.shape.dimensions.x) if obj.shape and obj.shape.dimensions else 0.0
             size_y = float(obj.shape.dimensions.y) if obj.shape and obj.shape.dimensions else 0.0
+            predicted_paths = []
+            for pred_path in obj.kinematics.predicted_paths:
+                if not pred_path.path:
+                    continue
+                dt = pred_path.time_step.sec + pred_path.time_step.nanosec * 1e-9
+                path_points = [p.position for p in pred_path.path]
+                predicted_paths.append((path_points, dt))
             objs.append(SimpleObject(
                 label=int(label),
                 position=pose.position,
@@ -338,6 +353,7 @@ class BehaviorMotionPlanning(Node):
                 distance=float(distance),
                 size_x=size_x,
                 size_y=size_y,
+                predicted_paths=predicted_paths,
             ))
         self.predicted_objects = objs
 
@@ -690,10 +706,13 @@ class BehaviorMotionPlanning(Node):
             for obj in objects_in_range
         ]
 
-        start_idx = current_closest_waypoint_to_vehicle_index
+        start_idx = min(
+            len(self.path_of_waypoints) - 1,
+            current_closest_waypoint_to_vehicle_index + self.front_offset_steps
+        )
         end_idx = min(
             len(self.path_of_waypoints) - 1,
-            current_closest_waypoint_to_vehicle_index + int(self.on_path_detection_range / self.densify_interval) + 1
+            start_idx + int(self.on_path_detection_range / self.densify_interval) + 1
         )
 
         candidates = []  # (object, waypoint, dist_vehicle_to_waypoint, object_global_pos)
@@ -792,6 +811,32 @@ class BehaviorMotionPlanning(Node):
         # Apply the rotation to the local forward vector
         global_forward = rotation.apply(local_forward)
         return global_forward [:2]
+
+    def find_segment_intersection(self, p1, p2, q1, q2, eps=1e-6):
+        denom = (p1.x - p2.x) * (q1.y - q2.y) - (p1.y - p2.y) * (q1.x - q2.x)
+        if abs(denom) < eps:
+            return None
+        det_p = p1.x * p2.y - p1.y * p2.x
+        det_q = q1.x * q2.y - q1.y * q2.x
+        x = (det_p * (q1.x - q2.x) - (p1.x - p2.x) * det_q) / denom
+        y = (det_p * (q1.y - q2.y) - (p1.y - p2.y) * det_q) / denom
+        if (x < min(p1.x, p2.x) - eps or x > max(p1.x, p2.x) + eps or
+                y < min(p1.y, p2.y) - eps or y > max(p1.y, p2.y) + eps):
+            return None
+        if (x < min(q1.x, q2.x) - eps or x > max(q1.x, q2.x) + eps or
+                y < min(q1.y, q2.y) - eps or y > max(q1.y, q2.y) + eps):
+            return None
+        return Point(x=x, y=y, z=q1.z)
+
+    def get_predicted_path_time(self, path_points, dt, segment_index, collision_point):
+        if dt is None or dt <= 0.0:
+            return None
+        seg_len = self.calculate_distance(path_points[segment_index], path_points[segment_index + 1])
+        if seg_len < 1e-6:
+            frac = 0.0
+        else:
+            frac = self.calculate_distance(path_points[segment_index], collision_point) / seg_len
+        return (segment_index + frac) * dt
     
     def get_time_to_collison(self, current_pose, collision_point, speed):
         if speed == 0.0:
@@ -1080,55 +1125,66 @@ class BehaviorMotionPlanning(Node):
             self.publish_empty_collision_info()
             return None
 
-        # Extract waypoints ahead
+        # Extract waypoints ahead starting from the front of the vehicle
+        start_idx = min(
+            len(self.path_of_waypoints) - 1,
+            current_closest_waypoint_to_vehicle_index + self.front_offset_steps
+        )
         waypoints = self.path_of_waypoints[
-            current_closest_waypoint_to_vehicle_index:
-            current_closest_waypoint_to_vehicle_index + int(self.reaction_range / self.densify_interval) + 1
+            start_idx:
+            start_idx + int(self.reaction_range / self.densify_interval) + 1
         ]
 
-        # Transform object positions into global coordinates
-        objects_absolute_positions = [
-            self.get_object_absolute_position(self.pose.pose.orientation, vehicle_pose, obj.position)
-            for obj in objects_in_range
-        ]
-        objects_forward_vectors = [
-            self.get_forward_vector(obj.orientation) for obj in objects_in_range
-        ]
+        for obj in objects_in_range:
+            if not obj.predicted_paths:
+                continue
 
-        for i in range(len(objects_in_range)):
-            obj = objects_in_range[i]
-            for j in range(1, len(waypoints) - 1):
+            for path_points, dt in obj.predicted_paths:
+                if len(path_points) < 2:
+                    continue
 
-                forward_vector = objects_forward_vectors[i]
-                collide_point = self.find_intersection_point(objects_absolute_positions[i],forward_vector,waypoints[j],waypoints[j+1])
+                abs_points = [
+                    self.get_object_absolute_position(self.pose.pose.orientation, vehicle_pose, p)
+                    for p in path_points
+                ]
 
-                if collide_point:
-                    if self.is_point_on_segment(objects_absolute_positions[i],collide_point,waypoints[j],waypoints[j+1],forward_vector):
-                        
-                        current_vehicle_speed = self.velocity_report.longitudinal_velocity if self.velocity_report else 0.0   
+                for k in range(len(abs_points) - 1):
+                    p1 = abs_points[k]
+                    p2 = abs_points[k + 1]
+
+                    for j in range(1, len(waypoints) - 1):
+                        w1 = waypoints[j]
+                        w2 = waypoints[j + 1]
+                        collide_point = self.find_segment_intersection(p1, p2, w1, w2)
+                        if not collide_point:
+                            continue
+
+                        current_vehicle_speed = self.velocity_report.longitudinal_velocity if self.velocity_report else 0.0
                         current_vehicle_speed = current_vehicle_speed if current_vehicle_speed > 1.5 else 1.5
                         t_vehicle = self.get_time_to_collison(vehicle_pose, collide_point, current_vehicle_speed)
-                        t_object = self.get_time_to_collison(objects_absolute_positions[i], collide_point, obj.velocity)
+
+                        t_object = self.get_predicted_path_time(abs_points, dt, k, collide_point)
+                        if t_object is None:
+                            t_object = self.get_time_to_collison(abs_points[0], collide_point, obj.velocity)
+
                         ttc_diff = abs(t_vehicle - t_object)
-                        ttc_candidates.append((ttc_diff, objects_absolute_positions[i], obj.label, obj.velocity))
+                        ttc_candidates.append((ttc_diff, abs_points[0], obj.label, obj.velocity))
 
-                        if self.will_collide_on_path_in_threshold(obj.label,obj.velocity,objects_absolute_positions[i],vehicle_pose,collide_point,waypoints[j]):
+                        if ttc_diff <= self.reaction_time_threshold:
                             self.get_logger().debug('P - Collide predicted!!!')
-                            stop_point, event_waypoint = self.get_stop_point_by_safety_distance(waypoints[j], vehicle_pose, 'prediction')
+                            stop_point, event_waypoint = self.get_stop_point_by_safety_distance(w1, vehicle_pose, 'prediction')
 
-                            # compute distance to vehicle for nearest selection
                             distance = self.calculate_distance(stop_point, vehicle_pose)
                             candidates.append((
                                 stop_point,
                                 event_waypoint,
                                 distance,
                                 ttc_diff,
-                                objects_absolute_positions[i],
+                                abs_points[0],
                                 obj.label,
                                 obj.velocity,
                                 collide_point
                             ))
-
                             break
 
         # No collision candidates → publish smallest time-to-collision
