@@ -20,6 +20,7 @@ behavior:
     prediction: 
       safety_distance: 16.0  # Minimum stopping distance behind an object (meters)
       reaction_time_threshold: 5.0  # Time delay before reacting to an event (seconds)
+      detection_angle_deg: 120.0  # Forward field-of-view angle for prediction filtering (degrees)
       reaction_range:
         coefficient: 10.0  # Scaling factor for reaction distance
         base: 75.0         # Base reaction distance (meters)
@@ -31,6 +32,7 @@ behavior:
     on_path:
       safety_distance: 4.0  # Minimum stopping distance behind an object (meters)
       path_distance_threshold: 1.5 # Max lateral distance from path to consider object on-path (meters)
+      detection_angle_deg: 120.0  # Forward field-of-view angle for detected-object filtering (degrees)
       detection_range:
         coefficient: 5.0  # Scaling factor for detection radius
         base: 50.0      # Base detection radius (meters)

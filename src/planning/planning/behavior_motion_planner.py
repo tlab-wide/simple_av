@@ -14,7 +14,7 @@ from std_msgs.msg import String, ColorRGBA
 import math
 from collections import deque
 from simple_av_msgs.msg import TrafficSignalsArray
-from autoware_perception_msgs.msg import PredictedObjects
+from autoware_perception_msgs.msg import PredictedObjects, DetectedObjects
 from simple_av_msgs.msg import PlanningInternalMsg, PlanningInternalMissionPlanMsg, PlanningMotionPlanningMsg, CollisionPredictionInfo
 from simple_av_msgs.msg import LocalizationMsg, LocalizationIntersectionStatus
 from simple_av_msgs.msg import SimMonitor, Portal
@@ -33,6 +33,8 @@ class SimpleObject:
     orientation: Quaternion
     velocity: float
     distance: float
+    size_x: float
+    size_y: float
 
 class BehaviorMotionPlanning(Node):
     def __init__(self):
@@ -76,8 +78,10 @@ class BehaviorMotionPlanning(Node):
         self.saftey_distance = self.motion_behavior_config['behavior']['collision_avoidance']['on_path']['safety_distance'] #meters
         self.on_path_avoidance_saftey_distance = self.motion_behavior_config['behavior']['collision_avoidance']['on_path']['safety_distance'] #meters
         self.on_path_distance_threshold = self.motion_behavior_config['behavior']['collision_avoidance']['on_path'].get('path_distance_threshold', 1.5)
+        self.on_path_detection_angle_deg = self.motion_behavior_config['behavior']['collision_avoidance']['on_path'].get('detection_angle_deg', 120.0)
 
         self.reaction_time_threshold = self.motion_behavior_config['behavior']['collision_avoidance']['prediction']['reaction_time_threshold'] #meters
+        self.prediction_detection_angle_deg = self.motion_behavior_config['behavior']['collision_avoidance']['prediction'].get('detection_angle_deg', 120.0)
         
         self.prediction_reaction_range_C = self.motion_behavior_config['behavior']['collision_avoidance']['prediction']['reaction_range']['coefficient']#meters
         self.prediction_reaction_range_B = self.motion_behavior_config['behavior']['collision_avoidance']['prediction']['reaction_range']['base']#meters
@@ -95,6 +99,14 @@ class BehaviorMotionPlanning(Node):
 
         self.subscriptionTrafficSignal = self.create_subscription(TrafficSignalsArray, 'simple_av/perception/traffic_signals', self.trafficSignal_callback, 10)
         self.trafficSignal = TrafficSignalsArray()
+
+        self.subscriptionDetectedObjects = self.create_subscription(
+            DetectedObjects,
+            'simple_av/perception/obu_sensing',
+            self.detectedObjects_callback,
+            10
+        )
+        self.detected_objects = []
 
         self.subscriptionPredictedObjects = self.create_subscription(
             PredictedObjects,
@@ -194,6 +206,11 @@ class BehaviorMotionPlanning(Node):
         self.stop_reason = String() # Cruise, Decelerate, PrepareToStop, Turn
 
         self.densify_interval = self.motion_behavior_config['motion']['path']['densify_interval']
+
+        # Vehicle dimensions for overlap checks
+        self.vehicle_config = self.load_vehicle_config(self.vehicle_model)
+        self.ego_length = float(self.vehicle_config['dimensions']['length'])
+        self.ego_width = float(self.vehicle_config['dimensions']['width'])
         
         #Traffic light
         self.traffic_light_stopPoint_lastState = Point()
@@ -219,6 +236,15 @@ class BehaviorMotionPlanning(Node):
         with open(json_file_path, 'r') as json_file:
             map_data = json.load(json_file)
             return map_data
+
+    def load_vehicle_config(self, vehicle_model):
+        package_share_directory = get_package_share_directory('common')
+        config_path = os.path.join(package_share_directory, "configs", "vehicle_config.yaml")
+        with open(config_path, "r") as file:
+            config = yaml.safe_load(file)
+        if vehicle_model in config["vehicles"]:
+            return config["vehicles"][vehicle_model]
+        raise ValueError(f"Vehicle type '{vehicle_model}' not found in the configuration.")
 
     def mission_plan_callback(self, msg):
         self.mission_plan = msg
@@ -287,14 +313,37 @@ class BehaviorMotionPlanning(Node):
             twist = obj.kinematics.initial_twist_with_covariance.twist.linear
             speed = math.sqrt(twist.x ** 2 + twist.y ** 2 + twist.z ** 2)
             distance = math.sqrt(pose.position.x ** 2 + pose.position.y ** 2)
+            size_x = float(obj.shape.dimensions.x) if obj.shape and obj.shape.dimensions else 0.0
+            size_y = float(obj.shape.dimensions.y) if obj.shape and obj.shape.dimensions else 0.0
             objs.append(SimpleObject(
                 label=int(label),
                 position=pose.position,
                 orientation=pose.orientation,
                 velocity=float(speed),
                 distance=float(distance),
+                size_x=size_x,
+                size_y=size_y,
             ))
         self.predicted_objects = objs
+
+    def detectedObjects_callback(self, msg: DetectedObjects):
+        objs = []
+        for obj in msg.objects:
+            label = obj.classification[0].label if obj.classification else 0
+            pose = obj.kinematics.pose_with_covariance.pose
+            distance = math.sqrt(pose.position.x ** 2 + pose.position.y ** 2)
+            size_x = float(obj.shape.dimensions.x) if obj.shape and obj.shape.dimensions else 0.0
+            size_y = float(obj.shape.dimensions.y) if obj.shape and obj.shape.dimensions else 0.0
+            objs.append(SimpleObject(
+                label=int(label),
+                position=pose.position,
+                orientation=pose.orientation,
+                velocity=0.0,
+                distance=float(distance),
+                size_x=size_x,
+                size_y=size_y,
+            ))
+        self.detected_objects = objs
 
     def object_direction(self, x, y):
         if y <= self.direction_lateral_threshold and y >= -self.direction_lateral_threshold:
@@ -482,15 +531,22 @@ class BehaviorMotionPlanning(Node):
         return 'Cruise', None, None
         
 
-    def get_detected_objects_in_front(self):
-        if not self.predicted_objects:
+    def filter_objects_by_range_and_angle(self, objects, max_range, fov_deg):
+        if not objects:
             self.get_logger().debug("no object detected!")
             return None
-
+        half_fov = math.radians(fov_deg / 2.0)
         objects_ahead = []
-        for obj in self.predicted_objects:
-            object_direction = self.object_direction(obj.position.x, obj.position.y)
-            if object_direction in self.allowed_object_directions:
+        for obj in objects:
+            dx = obj.position.x
+            dy = obj.position.y
+            dist = obj.distance if obj.distance is not None else math.sqrt(dx ** 2 + dy ** 2)
+            if dist > max_range:
+                continue
+            if dx <= 0.0:
+                continue
+            angle = abs(math.atan2(dy, dx))
+            if angle <= half_fov:
                 objects_ahead.append(obj)
         return objects_ahead
         
@@ -546,6 +602,39 @@ class BehaviorMotionPlanning(Node):
             self.get_logger().debug(f"DEBUG - ped : Found {len(detected_pedestrians)} pedestrians/cyclists")
 
         return detected_pedestrians
+
+    def get_path_yaw(self, waypoint_index):
+        if len(self.path_of_waypoints) < 2:
+            return 0.0
+        if waypoint_index < len(self.path_of_waypoints) - 1:
+            p1 = self.path_of_waypoints[waypoint_index]
+            p2 = self.path_of_waypoints[waypoint_index + 1]
+        else:
+            p1 = self.path_of_waypoints[waypoint_index - 1]
+            p2 = self.path_of_waypoints[waypoint_index]
+        dx = p2.x - p1.x
+        dy = p2.y - p1.y
+        if abs(dx) < 1e-6 and abs(dy) < 1e-6:
+            return 0.0
+        return math.atan2(dy, dx)
+
+    def is_overlapping_at_waypoint(self, object_position, obj, waypoint, yaw):
+        dx = object_position.x - waypoint.x
+        dy = object_position.y - waypoint.y
+        cos_y = math.cos(-yaw)
+        sin_y = math.sin(-yaw)
+        x_local = dx * cos_y - dy * sin_y
+        y_local = dx * sin_y + dy * cos_y
+
+        ego_half_x = self.ego_length / 2.0
+        ego_half_y = self.ego_width / 2.0
+        obj_half_x = max(obj.size_x, 0.0) / 2.0
+        obj_half_y = max(obj.size_y, 0.0) / 2.0
+
+        return (
+            abs(x_local) <= (ego_half_x + obj_half_x) and
+            abs(y_local) <= (ego_half_y + obj_half_y)
+        )
     
     def find_nearest_obstacle_on_path(self, objects_in_range, current_closest_waypoint_to_vehicle_index, vehicle_pose):
         """
@@ -564,27 +653,32 @@ class BehaviorMotionPlanning(Node):
             for obj in objects_in_range
         ]
 
-        # Extract path waypoints ahead
-        waypoints = self.path_of_waypoints[
-            current_closest_waypoint_to_vehicle_index:
+        start_idx = current_closest_waypoint_to_vehicle_index
+        end_idx = min(
+            len(self.path_of_waypoints) - 1,
             current_closest_waypoint_to_vehicle_index + int(self.on_path_detection_range / self.densify_interval) + 1
-        ]
+        )
 
-        candidates = []  # (object, waypoint, dist_vehicle_to_waypoint)
+        candidates = []  # (object, waypoint, dist_vehicle_to_waypoint, object_global_pos)
 
         # Check each object against path waypoints
         for i, obj in enumerate(objects_in_range):
             obj_global_pos = objects_absolute_positions[i]
 
-            for waypoint in waypoints:
+            for wp_idx in range(start_idx, end_idx + 1):
+                waypoint = self.path_of_waypoints[wp_idx]
                 dist_obj_to_wp = self.calculate_distance(obj_global_pos, waypoint)
 
-                # Object is considered on the path if it sits close to any waypoint
+                # Object is considered near the path if it sits close to any waypoint
                 if dist_obj_to_wp <= self.on_path_distance_threshold:
+                    yaw = self.get_path_yaw(wp_idx)
+                    if not self.is_overlapping_at_waypoint(obj_global_pos, obj, waypoint, yaw):
+                        continue
+
                     # distance from vehicle → waypoint determines the nearest obstacle
                     dist_vehicle_to_wp = self.calculate_distance(vehicle_pose, waypoint)
 
-                    candidates.append((obj, waypoint, dist_vehicle_to_wp))
+                    candidates.append((obj, waypoint, dist_vehicle_to_wp, obj_global_pos))
                     break  # Go to next object once a waypoint match is found
 
         # No objects lying on the path
@@ -592,11 +686,12 @@ class BehaviorMotionPlanning(Node):
             return None
 
         # Select nearest object by vehicle distance
-        obj, wp, _ = min(candidates, key=lambda x: x[2])
+        obj, wp, _, obj_global_pos = min(candidates, key=lambda x: x[2])
 
         return {
             "object": obj,
-            "waypoint": wp
+            "waypoint": wp,
+            "object_position": obj_global_pos,
         }
 
     
@@ -705,7 +800,13 @@ class BehaviorMotionPlanning(Node):
             self.get_logger().debug("No Immediate danger")
             return None
         self.get_logger().debug("Imediate threat. Objects ahead in danger zone")
-        return self.get_stop_point_by_safety_distance(closest_object_info['waypoint'], vehicle_pose, 'on_path')
+        stop_point, event_waypoint = self.get_stop_point_by_safety_distance(closest_object_info['waypoint'], vehicle_pose, 'on_path')
+        return (
+            stop_point,
+            event_waypoint,
+            closest_object_info.get('object_position'),
+            closest_object_info['object'],
+        )
     
     def publish_collision_info(self, abs_pos, ttc, label, velocity):
         msg = CollisionPredictionInfo()
@@ -887,6 +988,44 @@ class BehaviorMotionPlanning(Node):
             text_marker.text = reason
             marker_array.markers.append(text_marker)
 
+            object_position = event.get("object_position")
+            if object_position is not None:
+                obj_marker = Marker()
+                obj_marker.header.frame_id = "map"
+                obj_marker.header.stamp = now
+                obj_marker.ns = "collision_objects"
+                obj_marker.id = marker_id
+                marker_id += 1
+                obj_marker.type = Marker.CUBE
+                obj_marker.action = Marker.ADD
+                obj_marker.pose.position = object_position
+                obj_marker.pose.orientation.w = 1.0
+                obj_marker.scale.x = 1.0
+                obj_marker.scale.y = 0.2
+                obj_marker.scale.z = 1.2
+                obj_marker.color = ColorRGBA(r=0.9, g=0.2, b=0.8, a=0.9)
+                marker_array.markers.append(obj_marker)
+
+                obj_text = Marker()
+                obj_text.header.frame_id = "map"
+                obj_text.header.stamp = now
+                obj_text.ns = "collision_objects_text"
+                obj_text.id = marker_id
+                marker_id += 1
+                obj_text.type = Marker.TEXT_VIEW_FACING
+                obj_text.action = Marker.ADD
+                obj_text.pose.position.x = object_position.x
+                obj_text.pose.position.y = object_position.y
+                obj_text.pose.position.z = object_position.z + 2.0
+                obj_text.pose.orientation.w = 1.0
+                obj_text.scale.z = 0.9
+                obj_text.color.a = 1.0
+                obj_text.color.r = 1.0
+                obj_text.color.g = 1.0
+                obj_text.color.b = 1.0
+                obj_text.text = "colliding_object"
+                marker_array.markers.append(obj_text)
+
         self.collision_points_marker_pub.publish(marker_array)
 
 
@@ -1049,7 +1188,7 @@ class BehaviorMotionPlanning(Node):
         # 1. On-path collision
         # -------------------------------
         if on_path_collision_avoidance_result:
-            on_path_collision_stop_point, obstacle_occupied_wp = on_path_collision_avoidance_result
+            on_path_collision_stop_point, obstacle_occupied_wp, _, _ = on_path_collision_avoidance_result
             distance_to_obstacle = self.calculate_distance(vehicle_pose, obstacle_occupied_wp)
             distance_to_stop_point = self.calculate_distance(vehicle_pose, on_path_collision_stop_point)
             candidate_events.append({
@@ -1141,18 +1280,29 @@ class BehaviorMotionPlanning(Node):
         trafficLightTask, traffic_light_stopPoint, current_lane_traffic_light_id = self.manage_traffic_lights(current_lane_obj)
         self.get_logger().debug(f"DEBUG_trafficlight - trafficLightTask: {trafficLightTask} - traffic_light_stopPoint: {traffic_light_stopPoint}")
         # Collision avoidance
-        objects_ahead = self.get_detected_objects_in_front()
-        on_path_collision_avoidance_result = self.on_path_collision_avoidance(objects_ahead, current_closest_waypoint_to_vehicle_index, vehicle_pose)
-        prediction_result = self.collison_prediction_core(objects_ahead, current_closest_waypoint_to_vehicle_index, vehicle_pose, current_lane_traffic_light_id)
+        objects_ahead_detected = self.filter_objects_by_range_and_angle(
+            self.detected_objects,
+            self.on_path_detection_range,
+            self.on_path_detection_angle_deg,
+        )
+        objects_ahead_predicted = self.filter_objects_by_range_and_angle(
+            self.predicted_objects,
+            self.detection_range,
+            self.prediction_detection_angle_deg,
+        )
+        on_path_collision_avoidance_result = self.on_path_collision_avoidance(objects_ahead_detected, current_closest_waypoint_to_vehicle_index, vehicle_pose)
+        prediction_result = self.collison_prediction_core(objects_ahead_predicted, current_closest_waypoint_to_vehicle_index, vehicle_pose, current_lane_traffic_light_id)
         closest_event = self.find_closest_stop_point(traffic_light_stopPoint, on_path_collision_avoidance_result, prediction_result, self.destination, vehicle_pose)
 
         candidate_events = []
         if on_path_collision_avoidance_result:
-            on_path_stop_point, _ = on_path_collision_avoidance_result
+            on_path_stop_point, _, on_path_object_pos, on_path_object = on_path_collision_avoidance_result
             candidate_events.append({
                 "type": "on_path",
                 "stop_point": on_path_stop_point,
                 "reason": "collision_avoidance",
+                "object_position": on_path_object_pos,
+                "object_label": on_path_object.label if on_path_object else None,
             })
         if prediction_result:
             prediction_stop_point, _ = prediction_result
