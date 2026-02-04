@@ -1201,7 +1201,6 @@ class BehaviorPathPlanner(Node):
         self.intersection_markers_pub.publish(marker_array)
 
     def lane_following(self):
-        self.log_throttle("info", "lane_following_tick", "lane_following tick", period_sec=1.0)
         if self.pending_reset:
             self.get_logger().warning("RESET")
             self.isPathPlanned = False
