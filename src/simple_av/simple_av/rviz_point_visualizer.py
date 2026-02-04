@@ -5,7 +5,7 @@ from geometry_msgs.msg import Point
 import yaml
 import os
 from ament_index_python.packages import get_package_share_directory
-from simple_av_msgs.msg import PlanningPathPlanningMsg, PlanningMotionPlanningMsg, LocalizationMsg  # adjust if needed
+from simple_av_msgs.msg import PlanningPathPlanningMsg, LocalizationMsg  # adjust if needed
 from dataclasses import dataclass
 from typing import List, Tuple
 from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy
@@ -34,7 +34,6 @@ class point_visualizer(Node):
 
         # Publishers
         self.lookahead_pub = self.create_publisher(Marker, '/simple_av/visualization/lookahead_point_marker', 10)
-        self.stop_point_pub = self.create_publisher(Marker, '/simple_av/visualization/stop_point_marker', 10)
         self.closest_point_pub = self.create_publisher(Marker, '/simple_av/visualization/closest_point_marker', 10)
 
         # Subscriptions
@@ -42,12 +41,6 @@ class point_visualizer(Node):
             PlanningPathPlanningMsg,
             '/simple_av/planning/path_planning',
             self.lookahead_callback,
-            10
-        )
-        self.create_subscription(
-            PlanningMotionPlanningMsg,
-            '/simple_av/planning/motion_planning',
-            self.stop_point_callback,
             10
         )
         self.create_subscription(
@@ -80,28 +73,6 @@ class point_visualizer(Node):
         self.lookahead_pub.publish(marker)
         self.get_logger().debug(f"Published lookahead point at {msg.look_ahead_point.x}, {msg.look_ahead_point.y}, {msg.look_ahead_point.z}")
 
-
-    def stop_point_callback(self, msg: PlanningMotionPlanningMsg):
-        marker = Marker()
-        marker.header.frame_id = "map"  # display in map frame
-        marker.header.stamp = self.get_clock().now().to_msg()
-        marker.ns = "stop_point"
-        marker.id = 0
-        marker.type = Marker.SPHERE
-        marker.action = Marker.ADD
-        marker.pose.position = msg.stop_point  # geometry_msgs/Point
-        marker.pose.orientation.w = 1.0
-        marker.scale.x = 2.0
-        marker.scale.y = 2.0
-        marker.scale.z = 2.0
-        marker.color.r = 200.0/255.0
-        marker.color.g = 23.0/255.0
-        marker.color.b = 38.0/255.0
-        marker.color.a = 0.8
-        marker.lifetime.sec = 0  # 0 = forever
-
-        self.stop_point_pub.publish(marker)
-        self.get_logger().debug(f"Published stop point at {msg.stop_point.x}, {msg.stop_point.y}, {msg.stop_point.z}")
 
     def closest_point_callback(self, msg: LocalizationMsg):
         marker = Marker()

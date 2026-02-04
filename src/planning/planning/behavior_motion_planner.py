@@ -168,6 +168,11 @@ class BehaviorMotionPlanning(Node):
             "simple_av/visualization/collision_prediction_markers",
             10
         )
+        self.stop_point_marker_pub = self.create_publisher(
+            MarkerArray,
+            "simple_av/visualization/stop_point_marker",
+            10
+        )
 
         #Path
         self.isPathPlanned = False
@@ -792,6 +797,57 @@ class BehaviorMotionPlanning(Node):
 
         self.prediction_marker_pub.publish(marker_array)
 
+    def publish_stop_point_marker(self, stop_point, stop_reason):
+        marker_array = MarkerArray()
+        clear_marker = Marker()
+        clear_marker.action = Marker.DELETEALL
+        marker_array.markers.append(clear_marker)
+
+        if stop_point is None:
+            self.stop_point_marker_pub.publish(marker_array)
+            return
+
+        now = self.get_clock().now().to_msg()
+
+        marker = Marker()
+        marker.header.frame_id = "map"
+        marker.header.stamp = now
+        marker.ns = "stop_point"
+        marker.id = 0
+        marker.type = Marker.SPHERE
+        marker.action = Marker.ADD
+        marker.pose.position = stop_point
+        marker.pose.orientation.w = 1.0
+        marker.scale.x = 2.0
+        marker.scale.y = 2.0
+        marker.scale.z = 2.0
+        marker.color.r = 200.0 / 255.0
+        marker.color.g = 23.0 / 255.0
+        marker.color.b = 38.0 / 255.0
+        marker.color.a = 0.8
+        marker_array.markers.append(marker)
+
+        text_marker = Marker()
+        text_marker.header.frame_id = "map"
+        text_marker.header.stamp = now
+        text_marker.ns = "stop_reason"
+        text_marker.id = 1
+        text_marker.type = Marker.TEXT_VIEW_FACING
+        text_marker.action = Marker.ADD
+        text_marker.pose.position.x = stop_point.x
+        text_marker.pose.position.y = stop_point.y
+        text_marker.pose.position.z = stop_point.z + 3.0
+        text_marker.pose.orientation.w = 1.0
+        text_marker.scale.z = 1.2
+        text_marker.color.a = 1.0
+        text_marker.color.r = 1.0
+        text_marker.color.g = 1.0
+        text_marker.color.b = 1.0
+        text_marker.text = stop_reason if stop_reason else "unknown"
+        marker_array.markers.append(text_marker)
+
+        self.stop_point_marker_pub.publish(marker_array)
+
 
     def predict_nearest_collision(self, objects_ahead, current_closest_waypoint_to_vehicle_index, vehicle_pose):
         """
@@ -1098,12 +1154,14 @@ class BehaviorMotionPlanning(Node):
         if not self.path :
             self.get_logger().warning("Path has not initialized from Mission Planner!!")
             self.isPathPlanned = False
+            self.publish_stop_point_marker(None, "no_path")
             return
         
         if self.finished:
             self.status.data = 'Park'
             self.node_shut = True
             self.publish_motion_planning_msgs(None) # publishing
+            self.publish_stop_point_marker(None, "park")
             return
         
         if self.reset:
@@ -1112,9 +1170,11 @@ class BehaviorMotionPlanning(Node):
             self.route = self.path_as_lanes[:]
             self.current_lane_index = 0
             self.reset = False
+            self.publish_stop_point_marker(None, "reset")
             return
 
         if self.reset_cooldown_active():
+            self.publish_stop_point_marker(None, "reset_cooldown")
             return
 
         search_area, search_area_as_lanes = self.create_search_area()
@@ -1127,6 +1187,7 @@ class BehaviorMotionPlanning(Node):
         stop_point = self.motion_planner(current_closest_waypoint_to_vehicle_index)
         
         self.publish_motion_planning_msgs(stop_point) # publishing
+        self.publish_stop_point_marker(stop_point, self.stop_reason.data)
         
         self.get_logger().debug(
             f'behavior motion planning\n'

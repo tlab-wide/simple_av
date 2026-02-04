@@ -126,14 +126,6 @@ def generate_launch_description():
         ),
         Node(
             package='simple_av',
-            executable='rviz_status_publisher',
-            name='rviz_status_publisher_node',
-            output='screen',
-            arguments=['--ros-args', '--log-level', LaunchConfiguration('log_level')]
-        ),
-
-        Node(
-            package='simple_av',
             executable='rviz_waypoint_speed_visualizer',
             name='rviz_waypoint_speed_visualizer_node',
             output='screen',
