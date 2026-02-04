@@ -39,6 +39,8 @@ class SimpleObject:
 class BehaviorMotionPlanning(Node):
     def __init__(self):
         super().__init__('behavior_motion_planner_node')
+        if not self.has_parameter('use_sim_time'):
+            self.declare_parameter('use_sim_time', True)
 
         # Load scenario configs
         self.scenario_config = self.config_file_loader("scenario_config.yaml")
@@ -224,6 +226,9 @@ class BehaviorMotionPlanning(Node):
 
         #Shutting down
         self.node_shut = False
+        # Motion planning loop timer (uses ROS time when use_sim_time is enabled)
+        self.loop_period_sec = 0.05
+        self.loop_timer = self.create_timer(self.loop_period_sec, self.motion_planning)
 
     def load_map_data(self, vehicle_model):
         """
@@ -1423,9 +1428,7 @@ def main(args=None):
     rclpy.init(args=args)
     node = BehaviorMotionPlanning()
     try:
-        while rclpy.ok() and not node.node_shut:
-            rclpy.spin_once(node, timeout_sec=0.1)# Set timeout to 0 to avoid delay
-            node.motion_planning()
+        rclpy.spin(node)
     except KeyboardInterrupt:
         pass
     finally:
