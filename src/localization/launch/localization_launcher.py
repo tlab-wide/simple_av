@@ -19,6 +19,13 @@ def generate_launch_description():
         ),
         Node(
             package='localization',
+            executable='global_localization',
+            name='global_localization_node',
+            output='screen',
+            arguments=['--ros-args', '--log-level', LaunchConfiguration('log_level')]
+        ),
+        Node(
+            package='localization',
             executable='intersection_detector',
             name='intersection_detector_node',
             output='screen',

@@ -10,6 +10,7 @@ from geometry_msgs.msg import PoseStamped, Point
 from std_msgs.msg import String
 from collections import deque
 from simple_av_msgs.msg import LocalizationMsg, Portal, PlanningInternalMissionPlanMsg, PlanningWaypoint
+from std_srvs.srv import Trigger
 from simple_av_msgs.srv import TriggerMissionPlan
 import numpy as np
 from rclpy.qos import QoSProfile, QoSHistoryPolicy, QoSReliabilityPolicy, QoSDurabilityPolicy
@@ -92,11 +93,18 @@ class MissionPlanner(Node):
         } for lanelet in self.map_data}
 
         # Subscribe topics
-        self.subscriptionLocation = self.create_subscription(LocalizationMsg, 'simple_av/localization/location', self.location_callback, 10)
-        self.location = LocalizationMsg()
+        self.subscriptionLocation = self.create_subscription(
+            LocalizationMsg,
+            'simple_av/localization/global_location',
+            self.location_callback,
+            10,
+        )
+        self.global_location = LocalizationMsg()
+        self.global_location_stamp_ns = None
 
         # Service
         self.replan_service = self.create_service(TriggerMissionPlan, '/planning/trigger_mission_plan', self.handle_mission_plan_request)
+        self.global_localization_client = self.create_client(Trigger, '/localization/trigger_global_localization')
 
         # Publish topics
         qos_profile = QoSProfile(
@@ -119,6 +127,11 @@ class MissionPlanner(Node):
         self.densify_interval = float(
             self.motion_behavior_config['motion']['path']['densify_interval']
         )
+        self.pending_replan = False
+        self.global_loc_request_time_ns = None
+        self.global_loc_in_flight = False
+        self.global_loc_wait_timeout_sec = 1.0
+        self.replan_timer = self.create_timer(0.1, self.replan_tick)
         
         #Shutting down
         self.node_shut = False
@@ -155,7 +168,59 @@ class MissionPlanner(Node):
         Args:
             msg (LocalizationMsg): The localization message received from the topic.
         """
-        self.location = msg
+        self.global_location = msg
+        self.global_location_stamp_ns = (msg.header.stamp.sec * 1_000_000_000) + msg.header.stamp.nanosec
+
+    def request_global_localization(self):
+        if self.global_loc_in_flight:
+            return False
+        if not self.global_localization_client.wait_for_service(timeout_sec=0.1):
+            self.get_logger().warning("Global localization service not available")
+            return False
+        self.global_location_stamp_ns = None
+        self.global_loc_request_time_ns = self.get_clock().now().nanoseconds
+        self.global_loc_in_flight = True
+        self.get_logger().info("Requesting global localization")
+        future = self.global_localization_client.call_async(Trigger.Request())
+        future.add_done_callback(self.on_global_localization_done)
+        return True
+
+    def on_global_localization_done(self, future):
+        self.global_loc_in_flight = False
+        if future.done() and future.result() is not None:
+            if not future.result().success:
+                self.get_logger().warning(f"Global localization failed: {future.result().message}")
+            else:
+                self.get_logger().info(f"Global localization success: {future.result().message}")
+        else:
+            self.get_logger().warning("Global localization call did not return a result.")
+
+    def replan_tick(self):
+        if not self.pending_replan:
+            return
+        if self.global_loc_request_time_ns is None and not self.global_loc_in_flight:
+            self.request_global_localization()
+            return
+        if self.global_location_stamp_ns is None:
+            return
+        now_ns = self.get_clock().now().nanoseconds
+        if self.global_loc_request_time_ns is not None:
+            elapsed = (now_ns - self.global_loc_request_time_ns) / 1e9
+            if self.global_location_stamp_ns < self.global_loc_request_time_ns and elapsed < self.global_loc_wait_timeout_sec:
+                return
+
+        self.initial_lane = self.global_location.closest_lane_names.data
+        self.get_logger().info(
+            f"Mission plan seed lane: {self.initial_lane}, closest_point: "
+            f"({self.global_location.closest_point.x:.2f}, "
+            f"{self.global_location.closest_point.y:.2f}, {self.global_location.closest_point.z:.2f})"
+        )
+        self.mission_planning()
+        self.get_logger().info(f"path_as_lanes: {self.path_as_lanes}")
+        self.publisher()
+        self.get_logger().info(f"Published mission plan with {len(self.path)} points.")
+        self.pending_replan = False
+        self.global_loc_request_time_ns = None
     
     def find_lane_by_name(self, lane_name):
         """
@@ -180,13 +245,82 @@ class MissionPlanner(Node):
             lane_obj = self.find_lane_by_name(lane_name)
             waypoints = lane_obj['dense_waypoints']
             for waypoint in waypoints:
-                points.append(waypoint)
+                points.append(Point(x=waypoint['x'], y=waypoint['y'], z=waypoint['z']))
 
         # Remove duplicate points
         self.path = [
             points[i] for i in range(len(points))
-            if i == 0 or (points[i]['x'] != points[i - 1]['x'] or points[i]['y'] != points[i - 1]['y'] or points[i]['z'] != points[i - 1]['z'])
+            if i == 0 or (points[i].x != points[i - 1].x or points[i].y != points[i - 1].y or points[i].z != points[i - 1].z)
         ]
+
+    def smooth_points(self, points, window_size=5):
+        if len(points) < 3:
+            return list(points)
+        half = max(1, window_size // 2)
+        smoothed = []
+        for i in range(len(points)):
+            start = max(0, i - half)
+            end = min(len(points), i + half + 1)
+            sx = sum(p.x for p in points[start:end])
+            sy = sum(p.y for p in points[start:end])
+            sz = sum(p.z for p in points[start:end])
+            count = end - start
+            smoothed.append(Point(x=sx / count, y=sy / count, z=sz / count))
+        return smoothed
+
+    def resample_points(self, points, spacing):
+        if len(points) < 2:
+            return list(points)
+        resampled = [points[0]]
+        carry = 0.0
+        for i in range(1, len(points)):
+            p0 = points[i - 1]
+            p1 = points[i]
+            dx = p1.x - p0.x
+            dy = p1.y - p0.y
+            dz = p1.z - p0.z
+            seg_len = math.sqrt(dx * dx + dy * dy + dz * dz)
+            if seg_len <= 1e-6:
+                continue
+            dist = carry
+            while dist + spacing <= seg_len:
+                dist += spacing
+                t = dist / seg_len
+                resampled.append(Point(
+                    x=p0.x + dx * t,
+                    y=p0.y + dy * t,
+                    z=p0.z + dz * t,
+                ))
+            carry = seg_len - dist
+        if (resampled[-1].x != points[-1].x or
+                resampled[-1].y != points[-1].y or
+                resampled[-1].z != points[-1].z):
+            resampled.append(points[-1])
+        return resampled
+
+    def compute_curves(self, points, curve_calc_dist=6):
+        if len(points) < 2 * curve_calc_dist:
+            return [0.0 for _ in points]
+        curves = []
+        for _ in range(curve_calc_dist):
+            curves.append(0.0)
+        for i in range(curve_calc_dist, len(points) - curve_calc_dist):
+            p1 = points[i - curve_calc_dist]
+            p2 = points[i]
+            p3 = points[i + curve_calc_dist]
+            v1 = np.array([p2.x - p1.x, p2.y - p1.y])
+            v2 = np.array([p3.x - p2.x, p3.y - p2.y])
+            mag1 = np.linalg.norm(v1)
+            mag2 = np.linalg.norm(v2)
+            if mag1 < 1e-6 or mag2 < 1e-6:
+                curves.append(0.0)
+                continue
+            dot = float(np.dot(v1, v2))
+            cosang = max(-1.0, min(1.0, dot / (mag1 * mag2)))
+            curves.append(math.acos(cosang))
+        for _ in range(len(points) - curve_calc_dist, len(points)):
+            curves.append(0.0)
+        return curves
     
 
     def bfs(self, start_lanelet, dest_lanelet):
@@ -228,7 +362,7 @@ class MissionPlanner(Node):
         if self.path_as_lanes is not None:
             self.path_as_lanes.clear()
 
-        if self.location:
+        if self.global_location_stamp_ns is not None:
             self.start_lanelet = self.initial_lane
             self.get_logger().info(
                 f"Conducting mission plan with start_lanelet={self.start_lanelet} "
@@ -236,9 +370,10 @@ class MissionPlanner(Node):
             )
             self.bfs(self.start_lanelet, self.dest_lanelet) # Creates the path
             if self.path and self.path_as_lanes:
-                # self.isPathPlanned = True
-                curve_detector = CurveDetector2D(self.path)
-                self.curves = curve_detector.detect_curves()
+                smoothed_points = self.smooth_points(self.path, window_size=5)
+                dense_points = self.resample_points(smoothed_points, self.densify_interval)
+                self.path = dense_points
+                self.curves = self.compute_curves(self.path)
         else:
             self.get_logger().warning("No Location data to process mission planning")
             
@@ -247,8 +382,7 @@ class MissionPlanner(Node):
 
         point_list = []
         for i, wp in enumerate(self.path):
-            point = Point(x=wp['x'], y=wp['y'], z=wp['z'])
-            waypoint_profile = PlanningWaypoint(waypoint=point, curve=self.curves[i])
+            waypoint_profile = PlanningWaypoint(waypoint=wp, curve=self.curves[i])
             point_list.append(waypoint_profile)
 
          # path_as_lanes is list of strings already
@@ -258,27 +392,17 @@ class MissionPlanner(Node):
 
     def handle_mission_plan_request(self, request, response):
         self.get_logger().info("Received mission planning request.")
-        if self.location:
-            self.initial_lane = self.location.closest_lane_names.data
-            self.get_logger().info(
-                f"Mission plan seed lane: {self.initial_lane}, closest_point: "
-                f"({self.location.closest_point.x:.2f}, "
-                f"{self.location.closest_point.y:.2f}, {self.location.closest_point.z:.2f})"
-            )
-        else:
-            self.get_logger().warning("No location data; keeping previous initial lane.")
-        # self.isFirstRequest = False 
+        if self.pending_replan:
+            response.success = True
+            response.message = "Mission replan already pending."
+            return response
 
-        # Generate path and path_as_lanes
-        self.mission_planning()
-        self.get_logger().info(f"path_as_lanes: {self.path_as_lanes}")
-        
-        # Publish the new mission
-        self.publisher()
-        self.get_logger().info(f"Published mission plan with {len(self.path)} points.")
+        self.pending_replan = True
+        if not self.request_global_localization():
+            self.get_logger().warning("Global localization request could not be sent.")
 
         response.success = True
-        response.message = "Mission replanned and published."
+        response.message = "Mission replan accepted."
         return response
     
 

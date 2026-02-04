@@ -14,7 +14,7 @@ from std_msgs.msg import String, ColorRGBA, Bool
 import math
 from collections import deque
 from simple_av_msgs.msg import PlanningPathPlanningMsg, PlanningInternalMsg, PlanningInternalMissionPlanMsg, PlanningWaypoint
-from simple_av_msgs.msg import LocalizationMsg, LocalizationIntersectionStatus
+from simple_av_msgs.msg import LocalizationIntersectionStatus
 from simple_av_msgs.msg import Portal
 from visualization_msgs.msg import Marker, MarkerArray
 from autoware_vehicle_msgs.msg import VelocityReport
@@ -111,9 +111,6 @@ class BehaviorPathPlanner(Node):
         self.tf_buffer = Buffer()
         self.tf_listener = TransformListener(self.tf_buffer, self)
 
-        self.subscriptionLocation = self.create_subscription(LocalizationMsg, 'simple_av/localization/location', self.location_callback, 10)
-        self.location = LocalizationMsg()
-
         self.subscriptionVelocityReport = self.create_subscription(
             VelocityReport,
             '/vehicle/status/velocity_status',
@@ -138,7 +135,6 @@ class BehaviorPathPlanner(Node):
         self.path_as_lanes = None  # List of lanes from start lane to destination
         self.path = None  # List of [waypoints,curve] in order of path_as_lanes
         self.path_of_waypoints = [] # List of waypoints in order of path_as_lanes
-        self.path_original = []
         self.intersection_points = []
         self.cool4_triggered = False
 
@@ -203,8 +199,6 @@ class BehaviorPathPlanner(Node):
         self.mission_plan_retry_base_seconds = 0.5
         self.mission_plan_retry_max_seconds = 5.0
         self.mission_plan_retry_backoff = 2.0
-        self.waiting_for_localization = False
-        self.got_localization_after_reset = False
         self.route = None # List of lanes from start lane to destination
         self.current_lane_index = 0
         self.initial_lane = None
@@ -391,18 +385,6 @@ class BehaviorPathPlanner(Node):
         self.pose = pose_msg
         return True
 
-    def location_callback(self, msg):
-        self.location = msg
-        if self.waiting_for_localization:
-            if self.last_reset_time_ns is None:
-                self.got_localization_after_reset = True
-                self.get_logger().info("Got localization after reset (no reset time)")
-                return
-            msg_time_ns = (msg.header.stamp.sec * 1_000_000_000) + msg.header.stamp.nanosec
-            if msg_time_ns > self.last_reset_time_ns:
-                self.got_localization_after_reset = True
-                self.get_logger().info("Got localization after reset (timestamp ok)")
-
     def velocity_report_callback(self, msg):
         self.velocity_report = msg
         self.current_speed = msg.longitudinal_velocity
@@ -560,35 +542,27 @@ class BehaviorPathPlanner(Node):
         
         return lookahead_point_index, self.path[lookahead_point_index].waypoint
     
-    # TODO: create search area based on waypoints not lanes
+    # Create search area based on waypoint indices instead of lanes.
     def create_search_area(self):
-        try:
-            lane_index = self.route.index(self.location.closest_lane_names.data)
-        except:
-            # vehicle is out of path
-            self.get_logger().debug("create_search_area - Vehicle is out of the Path")
-            lane_index = self.current_lane_index
-        if lane_index in range(self.current_lane_index, self.current_lane_index + self.search_depth):
-            self.current_lane_index = lane_index
+        if not self.path_of_waypoints:
+            return [], []
+
+        if self.last_closest_point_index is None:
+            center_idx = 0
+        else:
+            center_idx = max(0, min(self.last_closest_point_index, len(self.path_of_waypoints) - 1))
+
+        points_per_lane = 20
+        window = max(self.search_depth * points_per_lane, 50)
+        start_idx = max(0, center_idx - window)
+        end_idx = min(len(self.path_of_waypoints), center_idx + window)
+        search_area = self.path_of_waypoints[start_idx:end_idx]
         self.get_logger().debug(
-            f"create_search_area - lane_index={lane_index} "
-            f"current_lane_index={self.current_lane_index} "
-            f"search_depth={self.search_depth} "
-            f"total_lanes={len(self.path_as_lanes) if self.path_as_lanes else 0}"
-        )
-        search_area_as_lanes = self.path_as_lanes[self.current_lane_index: self.current_lane_index + self.search_depth]
-        # convert lanes in the search are into a list of waypoints
-        search_area = []
-        for lane in search_area_as_lanes:
-            lane_obj = self.find_lane_by_name(lane)
-            waypoints = lane_obj['dense_waypoints']
-            for waypoint in waypoints:
-                search_area.append(Point(x=waypoint['x'], y=waypoint['y'], z=waypoint['z']))
-        self.get_logger().debug(
-            f"create_search_area - lanes_in_window={len(search_area_as_lanes)} "
+            f"create_search_area - index_window=[{start_idx}:{end_idx}] "
+            f"center_idx={center_idx} "
             f"search_area_points={len(search_area)}"
         )
-        return search_area, search_area_as_lanes
+        return search_area, []
 
     def find_closest_waypoint_to_vehicle(self, vehicle_pose, search_area):
         # Finding the index of the closest point in search area
@@ -629,11 +603,7 @@ class BehaviorPathPlanner(Node):
         self.internal_msg_publisher.publish(internal_msg)
 
     def request_mission_plan(self):
-        self.get_logger().info(
-            f"Requesting mission plan with lane={self.location.closest_lane_names.data} "
-            f"closest_point=({self.location.closest_point.x:.2f}, "
-            f"{self.location.closest_point.y:.2f}, {self.location.closest_point.z:.2f})"
-        )
+        self.get_logger().info("Requesting mission plan")
         request = TriggerMissionPlan.Request()
         future = self.mission_planner_client.call_async(request)
         return future
@@ -974,15 +944,7 @@ class BehaviorPathPlanner(Node):
     def handle_mission_plan(self):
         if self.path and self.path_as_lanes:
             self.get_logger().info(f"received mission planed response")
-            self.path_original = self.path
-            original_points = [wp.waypoint for wp in self.path_original]
-            smoothed_points = self.smooth_points(original_points, window_size=5)
-            dense_points = self.resample_points(smoothed_points, self.densify_interval)
-            curves = self.compute_curves(dense_points)
-            smoothed_path = []
-            for i, p in enumerate(dense_points):
-                smoothed_path.append(PlanningWaypoint(waypoint=p, curve=curves[i]))
-            self.path = smoothed_path
+            self.path = self.mission_plan.path
             self.destination = self.path[-1].waypoint
             self.speeds_on_path = self.simple_av_speed_profile_maker(self.path)
 
@@ -1227,23 +1189,17 @@ class BehaviorPathPlanner(Node):
             self.path_of_waypoints.clear()
             self.speeds_on_path = []
             self.publish_path_planning_msgs(None, 0)
-            self.waiting_for_localization = True
-            self.got_localization_after_reset = False
             self.pending_reset = False
             self.reset = False
             return
         self.update_pose_from_tf()
-        if not self.location and not self.pose:
-            self.get_logger().warning("No location/pose input")
+        if not self.pose:
+            self.get_logger().warning("No pose input")
             return None
 
         if not self.isPathPlanned:
             if self.reset_cooldown_active():
                 return
-            if self.waiting_for_localization and not self.got_localization_after_reset:
-                return
-            if self.waiting_for_localization and self.got_localization_after_reset:
-                self.waiting_for_localization = False
             if self.mission_plan_requested:
                 self.handle_mission_plan()
                 if self.isPathPlanned:

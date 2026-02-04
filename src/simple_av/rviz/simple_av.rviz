@@ -15,19 +15,17 @@ Panels:
         - /Perception1/ObjectRecognition1/Tracking1
         - /Perception1/ObjectRecognition1/Prediction1
         - /RSU2 PO1/PEDESTRIAN1
-        - /CurrentWaypoint1
         - /LookAheadPoint1/Topic1
         - /Stop reason1/Topic1
         - /intersection layouts1/Topic1
+        - /SpeedProfile1/Namespaces1
         - /MarkerArray1/Topic1
         - /MarkerArray1/Namespaces1
         - /MarkerArray2/Topic1
         - /MarkerArray2/Namespaces1
         - /Loggin points1/Topic1
-        - /StopPointMarker1
         - /StopPointMarker1/Topic1
         - /MarkerArray4
-        - /MarkerArray4/Status1
       Splitter Ratio: 0.557669460773468
     Tree Height: 666
   - Class: rviz_common/Selection
@@ -3238,7 +3236,6 @@ Visualization Manager:
                 Value: /sensing/camera/camera6/image_raw
               Value: true
               Visibility:
-                "": true
                 Control:
                   Debug/AEB: true
                   Debug/MPC: true
@@ -3263,36 +3260,11 @@ Visualization Manager:
                     Value: true
                   Map: true
                   Perception:
-                    CameraLidarFusion(purple): true
-                    Centerpoint(red1): true
-                    CenterpointROIFusion(red2): true
-                    CenterpointValidator(red3): true
-                    Detection(yellow): true
-                    DetectionByTracker(orange): true
-                    PointPainting(light_green1): true
-                    PointPaintingROIFusion(light_green2): true
-                    PointPaintingValidator(light_green3): true
-                    Prediction(light_blue): true
-                    RadarFarObjects(white): true
-                    Tracking(green): true
+                    "": true
                     Value: true
                   Planning:
-                    Objects Of Interest:
-                      AvoidanceByLCLeft: true
-                      AvoidanceByLCRight: true
-                      AvoidanceLeft: true
-                      AvoidanceRight: true
-                      BlindSpot: true
-                      Crosswalk: true
-                      DetectionArea: true
-                      GoalPlanner: true
-                      Intersection: true
-                      LaneChangeLeft: true
-                      LaneChangeRight: true
-                      NoStoppingArea: true
-                      ObstacleCruise: true
-                      StartPlanner: true
-                      TrafficLight: true
+                    "":
+                      "": true
                       Value: true
                     Value: true
                   Sensing:
@@ -4736,14 +4708,20 @@ Visualization Manager:
       Display Yaw Covariance: false
       Display Yaw Rate: false
       Display Yaw Rate Covariance: false
-      Enabled: false
+      Enabled: true
       Line Width: 0.20000000298023224
       MOTORCYCLE:
         Alpha: 0.9990000128746033
         Color: 220; 138; 221
       Name: RSU2 PO
       Namespaces:
-        {}
+        acceleration: true
+        label: true
+        position covariance: true
+        shape: true
+        twist: true
+        uuid: true
+        velocity: true
       Object Fill Type: skeleton
       PEDESTRIAN:
         Alpha: 0.9990000128746033
@@ -4764,7 +4742,7 @@ Visualization Manager:
       UNKNOWN:
         Alpha: 0.9990000128746033
         Color: 255; 255; 255
-      Value: false
+      Value: true
       Visualization Type: Normal
     - BUS:
         Alpha: 0.9990000128746033
@@ -4994,7 +4972,7 @@ Visualization Manager:
         Value: /simple_av/visualization/path_of_waypoints_markers
       Value: false
     - Class: rviz_default_plugins/MarkerArray
-      Enabled: false
+      Enabled: true
       Name: search_area
       Namespaces:
         {}
@@ -5004,7 +4982,7 @@ Visualization Manager:
         History Policy: Keep Last
         Reliability Policy: Reliable
         Value: /simple_av/visualization/search_area_markers
-      Value: false
+      Value: true
     - Class: rviz_default_plugins/MarkerArray
       Enabled: false
       Name: Cool4_intersection_points
@@ -5072,8 +5050,6 @@ Visualization Manager:
       Enabled: true
       Name: StopPointMarker
       Namespaces:
-        collision_objects: true
-        collision_objects_text: true
         collision_points: true
         collision_points_text: true
       Topic:
@@ -5194,25 +5170,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/ThirdPersonFollower
-      Distance: 47.77727508544922
+      Distance: 63.78640365600586
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 1.100960612297058
-        Y: -2.3583831787109375
-        Z: -3.277761425124481e-05
+        X: -3.546530246734619
+        Y: -15.236597061157227
+        Z: -4.722334779216908e-05
       Focal Shape Fixed Size: false
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.23479703068733215
+      Pitch: 0.3697972297668457
       Target Frame: base_link
       Value: ThirdPersonFollower (rviz_default_plugins)
-      Yaw: 0.2190360426902771
+      Yaw: 3.179034471511841
     Saved:
       - Class: rviz_default_plugins/ThirdPersonFollower
         Distance: 18
@@ -5275,21 +5251,21 @@ Window Geometry:
   AutowareStatePanel:
     collapsed: false
   Displays:
-    collapsed: false
+    collapsed: true
   Height: 1016
   Hide Left Dock: false
-  Hide Right Dock: false
+  Hide Right Dock: true
   PointcloudOnCamera:
     collapsed: false
-  QMainWindow State: 000000ff00000000fd0000000400000000000000ef00000281fc020000000efb0000001200530065006c0065006300740069006f006e00000001e10000009b0000005c00fffffffb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb00000024004100750074006f00770061007200650053007400610074006500500061006e0065006c000000003d000001cb0000006e00fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261fb0000000c00430061006d0065007200610100000682000000eb0000000000000000fb0000000a0049006d0061006700650100000505000002680000000000000000fb0000002c0049006e0069007400690061006c0050006f007300650042007500740074006f006e00500061006e0065006c000000068f000000de0000000000000000fb0000002c0049006e0069007400690061006c0050006f007300650042007500740074006f006e00500061006e0065006c000000068f000000de0000000000000000fb00000030005200650063006f0067006e006900740069006f006e0052006500730075006c0074004f006e0049006d006100670065000000003d000002810000002800fffffffb0000002a004100750074006f0077006100720065004400610074006500540069006d006500500061006e0065006c0000000332000000720000004100fffffffb000000240050006f0069006e00740063006c006f00750064004f006e00430061006d006500720061000000039d000000560000002800ffffff00000001000002e60000039efc0200000004fb000000100044006900730070006c006100790073010000003d000002d7000000c900fffffffc0000031a000000c1000000c10100001cfa000000010100000002fb0000000a0056006900650077007301000005d5000001ab0000010000fffffffb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000000ffffffff0000009d00fffffffb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000e7a0000005afc0100000001fb0000000a00560069006500770073030000004e00000080000002e1000001970000000300000e7a0000005afc0100000002fb0000000800540069006d0065010000000000000e7a0000000000000000fb0000000800540069006d006501000000000000045000000000000000000000044e0000039e00000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  QMainWindow State: 000000ff00000000fd0000000400000000000000ef00000281fc020000000efb0000001200530065006c0065006300740069006f006e00000001e10000009b0000005c00fffffffb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb00000024004100750074006f00770061007200650053007400610074006500500061006e0065006c000000003d000001cb0000006e00fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261fb0000000c00430061006d0065007200610100000682000000eb0000000000000000fb0000000a0049006d0061006700650100000505000002680000000000000000fb0000002c0049006e0069007400690061006c0050006f007300650042007500740074006f006e00500061006e0065006c000000068f000000de0000000000000000fb0000002c0049006e0069007400690061006c0050006f007300650042007500740074006f006e00500061006e0065006c000000068f000000de0000000000000000fb00000030005200650063006f0067006e006900740069006f006e0052006500730075006c0074004f006e0049006d006100670065000000003d000002810000002800fffffffb0000002a004100750074006f0077006100720065004400610074006500540069006d006500500061006e0065006c0000000332000000720000004100fffffffb000000240050006f0069006e00740063006c006f00750064004f006e00430061006d006500720061000000039d000000560000002800ffffff00000001000002e60000039efc0200000004fb000000100044006900730070006c006100790073000000003d000002d7000000c900fffffffc0000031a000000c10000000000fffffffaffffffff0100000002fb0000000a0056006900650077007300000005d5000001ab0000010000fffffffb0000001e0054006f006f006c002000500072006f00700065007200740069006500730000000000ffffffff0000009d00fffffffb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000e7a0000005afc0100000001fb0000000a00560069006500770073030000004e00000080000002e1000001970000000300000e7a0000005afc0100000002fb0000000800540069006d0065010000000000000e7a0000000000000000fb0000000800540069006d006501000000000000045000000000000000000000039d0000039e00000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
   RecognitionResultOnImage:
     collapsed: false
   Selection:
     collapsed: false
   Tool Properties:
-    collapsed: false
+    collapsed: true
   Views:
-    collapsed: false
-  Width: 1850
-  X: 70
+    collapsed: true
+  Width: 925
+  X: 995
   Y: 27

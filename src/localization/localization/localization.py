@@ -13,9 +13,10 @@ from geometry_msgs.msg import Point as GeoPoint
 from std_msgs.msg import String
 import math
 from sensor_msgs.msg import Imu
-from simple_av_msgs.msg import LocalizationMsg
+from simple_av_msgs.msg import LocalizationMsg, PlanningInternalMissionPlanMsg
 from simple_av_msgs.msg import Portal
 import yaml
+from rclpy.qos import QoSProfile, QoSHistoryPolicy, QoSReliabilityPolicy, QoSDurabilityPolicy
 
 
 class Point:
@@ -61,6 +62,25 @@ class Localization(Node):
         # Initialize the publisher
         self.localization_publisher = self.create_publisher(LocalizationMsg, 'simple_av/localization/location', 10)
 
+        qos_profile = QoSProfile(
+            history=QoSHistoryPolicy.KEEP_LAST,
+            depth=1,
+            reliability=QoSReliabilityPolicy.RELIABLE,
+            durability=QoSDurabilityPolicy.TRANSIENT_LOCAL,
+        )
+        self.subscription_mission_plan = self.create_subscription(
+            PlanningInternalMissionPlanMsg,
+            'simple_av/planning/mission_plan',
+            self.mission_plan_callback,
+            qos_profile,
+        )
+        self.subscription_mission_plan_smoothed = self.create_subscription(
+            PlanningInternalMissionPlanMsg,
+            'simple_av/planning/mission_plan_smoothed',
+            self.mission_plan_smoothed_callback,
+            qos_profile,
+        )
+
         self.pose_msg = PoseStamped()
         self.ground_truth_msg = PoseStamped()
         self.imu_msg = Imu()
@@ -79,6 +99,11 @@ class Localization(Node):
         self.closest_point = None
         self.closest_lane_name = String()
         self.min_distance = float('inf')
+
+        self.mission_plan_points = []
+        self.mission_plan_lanes = []
+        self.mission_plan_smoothed_points = []
+        self.mission_plan_smoothed_lanes = []
 
         self.node_shut = False
 
@@ -115,7 +140,41 @@ class Localization(Node):
         self.finished = msg.finished
         if self.reset:
             self.last_reset_time_ns = now_ns
+            # Clear mission plan caches so localization falls back to map search after reset.
+            self.mission_plan_points = []
+            self.mission_plan_lanes = []
+            self.mission_plan_smoothed_points = []
+            self.mission_plan_smoothed_lanes = []
         self.prev_reset = msg.reset
+
+    def mission_plan_callback(self, msg):
+        self.mission_plan_points = [
+            Point(wp.waypoint.x, wp.waypoint.y, wp.waypoint.z) for wp in msg.path
+        ]
+        self.mission_plan_lanes = list(msg.path_as_lanes)
+
+    def mission_plan_smoothed_callback(self, msg):
+        self.mission_plan_smoothed_points = [
+            Point(wp.waypoint.x, wp.waypoint.y, wp.waypoint.z) for wp in msg.path
+        ]
+        self.mission_plan_smoothed_lanes = list(msg.path_as_lanes)
+
+    def get_active_mission_path(self):
+        if self.mission_plan_smoothed_points:
+            return self.mission_plan_smoothed_points, self.mission_plan_smoothed_lanes
+        if self.mission_plan_points:
+            return self.mission_plan_points, self.mission_plan_lanes
+        return [], []
+
+    def get_closest_point_on_path(self, current_position, path_points):
+        closest_point = None
+        min_distance = float('inf')
+        for point in path_points:
+            distance = current_position.distance_to(point)
+            if distance < min_distance:
+                min_distance = distance
+                closest_point = point
+        return closest_point, min_distance
 
     def reset_cooldown_active(self):
         if self.last_reset_time_ns is None:
@@ -317,9 +376,15 @@ class Localization(Node):
         """
         pose_msg = self.get_pose_msg()
         if pose_msg and pose_msg.pose.position.x != 0 and pose_msg.pose.position.y != 0 and pose_msg.pose.position.z != 0:
-            # print(pose_msg.pose.position.x, pose_msg.pose.position.y, pose_msg.pose.position.z)
             current_position = Point(pose_msg.pose.position.x, pose_msg.pose.position.y, pose_msg.pose.position.z)
-            closest_point, closest_lane_name, min_distance = self.get_closest_point_and_lane(current_position)
+            mission_points, mission_lanes = self.get_active_mission_path()
+            if not mission_points:
+                return None, [], float('inf'), Point(0.0, 0.0, 0.0)
+            closest_point, min_distance = self.get_closest_point_on_path(current_position, mission_points)
+            if mission_lanes:
+                _, closest_lane_name, _ = self.get_closest_point_and_lane(current_position, mission_lanes)
+            else:
+                closest_lane_name = String()
             self.display_vehicle_position(pose_msg, closest_point, closest_lane_name, min_distance)
             self.isGlobalPositioningDone = True
             return closest_point, closest_lane_name, min_distance, current_position
@@ -352,9 +417,20 @@ class Localization(Node):
         local_search_area = self.build_search_area(closest_lane_name)
         pose_msg = self.get_pose_msg()
         if pose_msg:
-            # local_search_area = self.build_search_area(closest_lane_name)
             current_position = Point(pose_msg.pose.position.x, pose_msg.pose.position.y, pose_msg.pose.position.z)
-            closest_point, closest_lane_name, min_distance = self.get_closest_point_and_lane(current_position, local_search_area)
+            mission_points, mission_lanes = self.get_active_mission_path()
+            if not mission_points:
+                return closest_point, closest_lane_name, min_distance, current_position
+            closest_point, min_distance = self.get_closest_point_on_path(current_position, mission_points)
+            lane_search = list(local_search_area)
+            if mission_lanes:
+                filtered = [lane for lane in lane_search if lane in mission_lanes]
+                if filtered:
+                    lane_search = filtered
+            if lane_search:
+                _, closest_lane_name, _ = self.get_closest_point_and_lane(current_position, lane_search)
+            else:
+                closest_lane_name = String()
             self.display_vehicle_position(pose_msg, closest_point, closest_lane_name, min_distance)
             return closest_point, closest_lane_name, min_distance, current_position
         else:
@@ -379,6 +455,10 @@ class Localization(Node):
             return
 
         if self.reset_cooldown_active():
+            return
+
+        mission_points, _ = self.get_active_mission_path()
+        if not mission_points:
             return
 
         if not self.isInitialPoseSampled:

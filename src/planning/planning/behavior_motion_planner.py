@@ -1415,7 +1415,7 @@ class BehaviorMotionPlanning(Node):
             return None
         
         if not self.path :
-            self.get_logger().warning("Path has not initialized from Mission Planner!!")
+            #self.get_logger().warning("Path has not initialized from Mission Planner!!")
             self.isPathPlanned = False
             self.publish_stop_point_marker(None, "no_path")
             return
