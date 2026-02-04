@@ -290,41 +290,6 @@ Visualization Manager:
           Name: LiDAR
         - Class: rviz_common/Group
           Displays:
-            - Alpha: 0.9990000128746033
-              Axes Length: 1
-              Axes Radius: 0.10000000149011612
-              Class: rviz_default_plugins/PoseWithCovariance
-              Color: 233; 185; 110
-              Covariance:
-                Orientation:
-                  Alpha: 0.5
-                  Color: 255; 255; 127
-                  Color Style: Unique
-                  Frame: Local
-                  Offset: 1
-                  Scale: 1
-                  Value: false
-                Position:
-                  Alpha: 0.20000000298023224
-                  Color: 204; 51; 204
-                  Scale: 1
-                  Value: false
-                Value: false
-              Enabled: true
-              Head Length: 0.699999988079071
-              Head Radius: 1.2000000476837158
-              Name: PoseWithCovariance
-              Shaft Length: 1
-              Shaft Radius: 0.5
-              Shape: Arrow
-              Topic:
-                Depth: 5
-                Durability Policy: Volatile
-                Filter size: 10
-                History Policy: Keep Last
-                Reliability Policy: Reliable
-                Value: /sensing/gnss/pose_with_covariance
-              Value: true
             - Alpha: 1
               Axes Length: 1
               Axes Radius: 0.10000000149011612
@@ -344,6 +309,45 @@ Visualization Manager:
                 History Policy: Keep Last
                 Reliability Policy: Reliable
                 Value: /sensing/gnss/pose
+              Value: true
+            - Angle Tolerance: 0.10000000149011612
+              Class: rviz_default_plugins/Odometry
+              Covariance:
+                Orientation:
+                  Alpha: 0.5
+                  Color: 255; 255; 127
+                  Color Style: Unique
+                  Frame: Local
+                  Offset: 1
+                  Scale: 1
+                  Value: true
+                Position:
+                  Alpha: 0.30000001192092896
+                  Color: 204; 51; 204
+                  Scale: 1
+                  Value: true
+                Value: true
+              Enabled: true
+              Keep: 100
+              Name: Fused_pose
+              Position Tolerance: 0.10000000149011612
+              Shape:
+                Alpha: 1
+                Axes Length: 1
+                Axes Radius: 0.10000000149011612
+                Color: 255; 25; 0
+                Head Length: 0.30000001192092896
+                Head Radius: 0.10000000149011612
+                Shaft Length: 1
+                Shaft Radius: 0.05000000074505806
+                Value: Arrow
+              Topic:
+                Depth: 5
+                Durability Policy: Volatile
+                Filter size: 10
+                History Policy: Keep Last
+                Reliability Policy: Reliable
+                Value: /simple_av/localization/odometry_fused
               Value: true
           Enabled: true
           Name: GNSS
@@ -3257,8 +3261,22 @@ Visualization Manager:
                     "": true
                     Value: true
                   Planning:
-                    "":
-                      "": true
+                    Objects Of Interest:
+                      AvoidanceByLCLeft: true
+                      AvoidanceByLCRight: true
+                      AvoidanceLeft: true
+                      AvoidanceRight: true
+                      BlindSpot: true
+                      Crosswalk: true
+                      DetectionArea: true
+                      GoalPlanner: true
+                      Intersection: true
+                      LaneChangeLeft: true
+                      LaneChangeRight: true
+                      NoStoppingArea: true
+                      ObstacleCruise: true
+                      StartPlanner: true
+                      TrafficLight: true
                       Value: true
                     Value: true
                   Sensing:
@@ -3458,8 +3476,8 @@ Visualization Manager:
                 RSU5 PO: true
                 Sensing:
                   GNSS:
-                    GNSS Pose: true
-                    PoseWithCovariance: true
+                    Fused_pose: true
+                    Pose: true
                     Value: true
                   LiDAR:
                     ConcatenatePointCloud: true
@@ -5139,7 +5157,7 @@ Visualization Manager:
   Value: true
   Views:
     Current:
-      Angle: 0
+      Angle: 1.8149996995925903
       Class: rviz_default_plugins/TopDownOrtho
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
@@ -5149,11 +5167,11 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Scale: 32.83972930908203
+      Scale: 11.186617851257324
       Target Frame: map
       Value: TopDownOrtho (rviz_default_plugins)
-      X: 4813.39453125
-      Y: 73110.171875
+      X: 4504.28076171875
+      Y: 72958.8828125
     Saved:
       - Class: rviz_default_plugins/ThirdPersonFollower
         Distance: 18
