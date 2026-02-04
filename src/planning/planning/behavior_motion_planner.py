@@ -73,6 +73,11 @@ class BehaviorMotionPlanning(Node):
         self.motion_behavior_config = self.config_file_loader("motion_behavior_config.yaml")
         self.base_speed = self.motion_behavior_config['motion']['speed_limits']['base'] # m/s
         self.turning_speed = self.motion_behavior_config['motion']['speed_limits']['turning_speed'] # m/s
+        self.traffic_light_stop_offset = float(
+            self.motion_behavior_config.get('behavior', {})
+            .get('traffic_light', {})
+            .get('stop_offset', 1.0)
+        )
 
         self.range_low_pass_gain = self.motion_behavior_config['behavior']['range_low_pass_gain'] #meters
         
@@ -415,6 +420,28 @@ class BehaviorMotionPlanning(Node):
         return np.array([point2.x - point1.x, 
                         point2.y - point1.y, 
                         point2.z - point1.z])
+
+    def find_closest_waypoint_index_to_point(self, target_point):
+        if not self.path_of_waypoints:
+            return None
+        min_idx = None
+        min_dist = float('inf')
+        for i, wp in enumerate(self.path_of_waypoints):
+            d = self.calculate_distance(wp, target_point)
+            if d < min_dist:
+                min_dist = d
+                min_idx = i
+        return min_idx
+
+    def offset_stop_point_before_line(self, stop_point, offset_m):
+        if stop_point is None or not self.path_of_waypoints or offset_m <= 0.0:
+            return stop_point
+        stop_idx = self.find_closest_waypoint_index_to_point(stop_point)
+        if stop_idx is None:
+            return stop_point
+        offset_idx = int(offset_m / max(self.densify_interval, 1e-6))
+        new_idx = max(0, stop_idx - offset_idx)
+        return self.path_of_waypoints[new_idx]
 
     def calculate_dot_product(self, vector1, vector2):
         """
@@ -1289,6 +1316,17 @@ class BehaviorMotionPlanning(Node):
         # Traffic light detection
         trafficLightTask, traffic_light_stopPoint, current_lane_traffic_light_id = self.manage_traffic_lights(current_lane_obj)
         self.get_logger().debug(f"DEBUG_trafficlight - trafficLightTask: {trafficLightTask} - traffic_light_stopPoint: {traffic_light_stopPoint}")
+        if trafficLightTask == 'Stop_red' and traffic_light_stopPoint is not None:
+            stop_line_idx = self.find_closest_waypoint_index_to_point(traffic_light_stopPoint)
+            if stop_line_idx is not None and current_closest_waypoint_to_vehicle_index >= stop_line_idx:
+                self.get_logger().debug("Passed stop line on red/yellow -> proceed through intersection")
+                trafficLightTask = 'Cruise'
+                traffic_light_stopPoint = None
+            else:
+                traffic_light_stopPoint = self.offset_stop_point_before_line(
+                    traffic_light_stopPoint,
+                    self.traffic_light_stop_offset
+                )
         # Collision avoidance
         objects_ahead_detected = self.filter_objects_by_range_and_angle(
             self.detected_objects,

@@ -36,3 +36,6 @@ behavior:
       detection_range:
         coefficient: 5.0  # Scaling factor for detection radius
         base: 50.0      # Base detection radius (meters)
+
+  traffic_light:
+    stop_offset: 1.0  # Stop this many meters before the stop line (meters)
