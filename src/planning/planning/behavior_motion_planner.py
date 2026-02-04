@@ -1205,7 +1205,6 @@ class BehaviorMotionPlanning(Node):
 
         # Publish TTC information of the *nearest collision object*
         self.publish_collision_info(abs_pos, best_ttc, label, velocity)
-        objects_info = list(zip(objects_absolute_positions, objects_forward_vectors))
         return (stop_point, event_waypoint)
 
 
