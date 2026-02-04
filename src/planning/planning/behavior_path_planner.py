@@ -130,6 +130,11 @@ class BehaviorPathPlanner(Node):
         )
         self.subscription_mission_plan = self.create_subscription(PlanningInternalMissionPlanMsg, 'simple_av/planning/mission_plan', self.mission_plan_callback, qos_profile)
         self.mission_plan = PlanningInternalMissionPlanMsg()
+        self.mission_plan_densified_pub = self.create_publisher(
+            PlanningInternalMissionPlanMsg,
+            'simple_av/planning/mission_plan_smoothed',
+            qos_profile
+        )
         self.path_as_lanes = None  # List of lanes from start lane to destination
         self.path = None  # List of [waypoints,curve] in order of path_as_lanes
         self.path_of_waypoints = [] # List of waypoints in order of path_as_lanes
@@ -994,6 +999,10 @@ class BehaviorPathPlanner(Node):
             self.last_closest_point_index = None
             self.publish_speed_profile_markers()
             self.publish_path_of_waypoints_markers()
+            densified_msg = PlanningInternalMissionPlanMsg()
+            densified_msg.path = self.path
+            densified_msg.path_as_lanes = self.path_as_lanes
+            self.mission_plan_densified_pub.publish(densified_msg)
 
             if self.is_cool4_speed_profile_enable:
                 self.intersection_points = self.find_intersection_start_and_exit_using_config(self.path)

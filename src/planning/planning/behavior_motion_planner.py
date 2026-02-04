@@ -150,7 +150,12 @@ class BehaviorMotionPlanning(Node):
             reliability=QoSReliabilityPolicy.RELIABLE,
             durability=QoSDurabilityPolicy.TRANSIENT_LOCAL
         )
-        self.subscription_mission_plan = self.create_subscription(PlanningInternalMissionPlanMsg, 'simple_av/planning/mission_plan', self.mission_plan_callback, qos_profile)
+        self.subscription_mission_plan = self.create_subscription(
+            PlanningInternalMissionPlanMsg,
+            'simple_av/planning/mission_plan_smoothed',
+            self.mission_plan_callback,
+            qos_profile
+        )
         self.mission_plan = PlanningInternalMissionPlanMsg()
         self.path_as_lanes = None  # List of lanes from start lane to destination
         self.path = None  # List of waypoints in order of path_as_lanes
