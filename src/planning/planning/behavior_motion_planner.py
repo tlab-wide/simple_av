@@ -75,6 +75,7 @@ class BehaviorMotionPlanning(Node):
         self.collision_prediction_saftey_distance = self.motion_behavior_config['behavior']['collision_avoidance']['prediction']['safety_distance'] #meters
         self.saftey_distance = self.motion_behavior_config['behavior']['collision_avoidance']['on_path']['safety_distance'] #meters
         self.on_path_avoidance_saftey_distance = self.motion_behavior_config['behavior']['collision_avoidance']['on_path']['safety_distance'] #meters
+        self.on_path_distance_threshold = self.motion_behavior_config['behavior']['collision_avoidance']['on_path'].get('path_distance_threshold', 1.5)
 
         self.reaction_time_threshold = self.motion_behavior_config['behavior']['collision_avoidance']['prediction']['reaction_time_threshold'] #meters
         
@@ -573,7 +574,7 @@ class BehaviorMotionPlanning(Node):
                 dist_obj_to_wp = self.calculate_distance(obj_global_pos, waypoint)
 
                 # Object is considered on the path if it sits close to any waypoint
-                if dist_obj_to_wp <= self.densify_interval * 1.3:
+                if dist_obj_to_wp <= self.on_path_distance_threshold:
                     # distance from vehicle → waypoint determines the nearest obstacle
                     dist_vehicle_to_wp = self.calculate_distance(vehicle_pose, waypoint)
 
