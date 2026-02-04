@@ -769,24 +769,6 @@ class BehaviorMotionPlanning(Node):
 
         now = self.get_clock().now().to_msg()
         line_id = 0
-        for abs_pos, forward_vec in objects_info:
-            marker = Marker()
-            marker.header.frame_id = "map"
-            marker.header.stamp = now
-            marker.ns = "predicted_trajectories"
-            marker.id = line_id
-            line_id += 1
-            marker.type = Marker.LINE_STRIP
-            marker.action = Marker.ADD
-            marker.pose.orientation.w = 1.0
-            marker.scale.x = 0.15
-            marker.color = ColorRGBA(r=0.2, g=1.0, b=0.6, a=0.8)
-
-            end_x = abs_pos.x + forward_vec[0] * self.reaction_range
-            end_y = abs_pos.y + forward_vec[1] * self.reaction_range
-            marker.points.append(Point(x=abs_pos.x, y=abs_pos.y, z=abs_pos.z))
-            marker.points.append(Point(x=end_x, y=end_y, z=abs_pos.z))
-            marker_array.markers.append(marker)
 
         if collision_point is not None:
             marker = Marker()
