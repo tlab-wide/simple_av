@@ -6,6 +6,9 @@ import json
 import os
 from ament_index_python.packages import get_package_share_directory
 from geometry_msgs.msg import PoseStamped
+from rclpy.duration import Duration as RclpyDuration
+from rclpy.time import Time
+from tf2_ros import Buffer, TransformListener
 from geometry_msgs.msg import Point as GeoPoint
 from std_msgs.msg import String
 import math
@@ -43,8 +46,11 @@ class Localization(Node):
         self.map_data = self.load_map(self.vehicle_model)
         self.map_data = self.map_data["LaneLetsArray"]
 
-        # Create subscriber to gnss/pos topic
-        self.subscriptionPose = self.create_subscription(PoseStamped, '/sensing/gnss/pose', self.pose_callback, 10)
+        # Use TF from localization fusion (map -> base_link)
+        self.map_frame = 'map'
+        self.base_frame = 'base_link'
+        self.tf_buffer = Buffer()
+        self.tf_listener = TransformListener(self.tf_buffer, self)
         # Create subscriber to simple_av/portal topic
         self.subscriptionPortal = self.create_subscription(Portal, 'simple_av/portal', self.portal_callback, 10)
         self.reset = False
@@ -118,8 +124,25 @@ class Localization(Node):
         return (now_ns - self.last_reset_time_ns) / 1e9 < self.reset_cooldown
 
 
-    def pose_callback(self, msg):
-        self.pose_msg = msg
+    def update_pose_from_tf(self):
+        try:
+            tf = self.tf_buffer.lookup_transform(
+                self.map_frame,
+                self.base_frame,
+                Time(),
+                timeout=RclpyDuration(seconds=0.0),
+            )
+        except Exception:
+            return False
+
+        pose_msg = PoseStamped()
+        pose_msg.header = tf.header
+        pose_msg.pose.position.x = tf.transform.translation.x
+        pose_msg.pose.position.y = tf.transform.translation.y
+        pose_msg.pose.position.z = tf.transform.translation.z
+        pose_msg.pose.orientation = tf.transform.rotation
+        self.pose_msg = pose_msg
+        return True
     
     def get_pose_msg(self):
         return self.pose_msg
@@ -339,6 +362,7 @@ class Localization(Node):
 
 
     def localization(self):
+        self.update_pose_from_tf()
         """
         Performs localization by first attempting global positioning, then local positioning.
 

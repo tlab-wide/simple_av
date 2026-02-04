@@ -3,6 +3,9 @@
 import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import PoseStamped, Point
+from rclpy.duration import Duration as RclpyDuration
+from rclpy.time import Time
+from tf2_ros import Buffer, TransformListener
 from visualization_msgs.msg import Marker, MarkerArray
 
 from autoware_vehicle_msgs.msg import GearCommand, VelocityReport
@@ -94,9 +97,12 @@ class VehicleControl(Node):
         self.normal_braking_deceleration_rate = self.vehicle_config['performance']['normal_braking_deceleration_rate']
         self.max_braking_deceleration_rate = self.vehicle_config['performance']['max_braking_deceleration_rate']
         
-        # Subscribe topics
-        self.subscriptionPose = self.create_subscription(PoseStamped, '/sensing/gnss/pose', self.pose_callback, 10)
+        # Use TF from localization fusion (map -> base_link)
         self.pose = PoseStamped()
+        self.map_frame = 'map'
+        self.base_frame = 'base_link'
+        self.tf_buffer = Buffer()
+        self.tf_listener = TransformListener(self.tf_buffer, self)
         
         self.subscriptionPose = self.create_subscription(PoseStamped, '/awsim/ground_truth/vehicle/pose', self.ground_truth_callback, 10)
         self.ground_truth = PoseStamped()
@@ -210,8 +216,25 @@ class VehicleControl(Node):
         now_ns = self.get_clock().now().nanoseconds
         return (now_ns - self.last_reset_time_ns) / 1e9 < self.reset_cooldown
 
-    def pose_callback(self, msg):
-        self.pose = msg
+    def update_pose_from_tf(self):
+        try:
+            tf = self.tf_buffer.lookup_transform(
+                self.map_frame,
+                self.base_frame,
+                Time(),
+                timeout=RclpyDuration(seconds=0.0),
+            )
+        except Exception:
+            return False
+
+        pose_msg = PoseStamped()
+        pose_msg.header = tf.header
+        pose_msg.pose.position.x = tf.transform.translation.x
+        pose_msg.pose.position.y = tf.transform.translation.y
+        pose_msg.pose.position.z = tf.transform.translation.z
+        pose_msg.pose.orientation = tf.transform.rotation
+        self.pose = pose_msg
+        return True
 
     def ground_truth_callback(self, msg):
         self.ground_truth = msg
@@ -239,6 +262,7 @@ class VehicleControl(Node):
         return np.sqrt((point1.x - point2.x)**2 + (point1.y - point2.y)**2)
 
     def control(self):
+        self.update_pose_from_tf()
 
         if not self.velocity_report and not self.path_plan and not self.pose:
             self.get_logger().error("No, velocity report or lookahead or pose data")
@@ -318,6 +342,8 @@ class VehicleControl(Node):
         if self.motion_plan.status.data == "Decelerate" and self.collision_prediction_info.collision_detected:
             stop_point = self.collision_prediction_info.object_position
         distance_to_stop = self.calculate_distance(stop_point, self.pose.pose.position)
+        front_offset = self.wheel_base + self.front_overhang
+        distance_to_stop = max(0.0, distance_to_stop - front_offset)
 
         self.get_logger().debug(f"status: {self.motion_plan.status.data}")
         self.get_logger().debug(f"current_speed: {current_speed}")
@@ -472,19 +498,19 @@ class VehicleControl(Node):
         return gain * previous_value + (1 - gain) * new_value
     
     def pure_pursuit_rear_axel(self):
-        # Calculate the rear axle position from the front axle (GNSS position)
         yaw = self.get_yaw_from_pose(self.pose.pose.orientation)  # Vehicle heading (yaw angle)
-        rear_axle_x = self.pose.pose.position.x - self.wheel_base * math.cos(yaw)
-        rear_axle_y = self.pose.pose.position.y - self.wheel_base * math.sin(yaw)
-        
-        # Calculate lookahead point relative to rear axle
-        lookahead_x = self.path_plan.look_ahead_point.x - rear_axle_x
-        lookahead_y = self.path_plan.look_ahead_point.y - rear_axle_y
+
+        # Calculate lookahead point relative to base_link (rear axle center)
+        lookahead_x = self.path_plan.look_ahead_point.x - self.pose.pose.position.x
+        lookahead_y = self.path_plan.look_ahead_point.y - self.pose.pose.position.y
 
         # Adjust lookahead distance for vehicle length
-        effective_lookahead_distance = math.sqrt(lookahead_x ** 2 + lookahead_y ** 2) + self.front_overhang
-        lookahead_x = effective_lookahead_distance * (lookahead_x / math.sqrt(lookahead_x ** 2 + lookahead_y ** 2))
-        lookahead_y = effective_lookahead_distance * (lookahead_y / math.sqrt(lookahead_x ** 2 + lookahead_y ** 2))
+        lookahead_dist = math.sqrt(lookahead_x ** 2 + lookahead_y ** 2)
+        if lookahead_dist < 1e-6:
+            return 0.0
+        effective_lookahead_distance = lookahead_dist + self.front_overhang
+        lookahead_x = effective_lookahead_distance * (lookahead_x / lookahead_dist)
+        lookahead_y = effective_lookahead_distance * (lookahead_y / lookahead_dist)
 
         # Transform lookahead point to the vehicle's local coordinate system
         local_x = math.cos(yaw) * lookahead_x + math.sin(yaw) * lookahead_y
