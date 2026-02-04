@@ -6,6 +6,11 @@ from launch_ros.actions import Node
 def generate_launch_description():
     return LaunchDescription([
         DeclareLaunchArgument(
+            'use_sim_time',
+            default_value='true',
+            description='Use simulation time'
+        ),
+        DeclareLaunchArgument(
             'log_level',
             default_value='WARN',
             description='Console log level: DEBUG, INFO, WARN'
@@ -16,6 +21,7 @@ def generate_launch_description():
             executable='mission_planning',
             name='mission_planning_node',
             output='screen',
+            parameters=[{'use_sim_time': LaunchConfiguration('use_sim_time')}],
             arguments=['--ros-args', '--log-level', LaunchConfiguration('log_level')]
         ),
 
@@ -28,6 +34,7 @@ def generate_launch_description():
                     executable='behavior_path_planner',
                     name='behavior_path_planner_node',
                     output='screen',
+                    parameters=[{'use_sim_time': LaunchConfiguration('use_sim_time')}],
                     arguments=['--ros-args', '--log-level', LaunchConfiguration('log_level')]
                 )
             ]
@@ -42,6 +49,7 @@ def generate_launch_description():
                     executable='behavior_motion_planner',
                     name='behavior_motion_planner_node',
                     output='screen',
+                    parameters=[{'use_sim_time': LaunchConfiguration('use_sim_time')}],
                     arguments=['--ros-args', '--log-level', LaunchConfiguration('log_level')]
                 )
             ]

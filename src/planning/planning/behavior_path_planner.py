@@ -24,6 +24,7 @@ from dataclasses import dataclass
 from simple_av_msgs.srv import TriggerMissionPlan
 from rclpy.qos import QoSProfile, QoSHistoryPolicy, QoSReliabilityPolicy, QoSDurabilityPolicy
 from scipy.spatial.transform import Rotation as R
+import traceback
 
 # ---------------------------------------
 #              DATACLASSES
@@ -42,6 +43,8 @@ class PolygonRegion:
 class BehaviorPathPlanner(Node):
     def __init__(self):
         super().__init__('behavior_path_planner_node')
+        if not self.has_parameter('use_sim_time'):
+            self.declare_parameter('use_sim_time', True)
 
         # Load scenario configs
         self.scenario_config = self.config_file_loader("scenario_config.yaml")
@@ -218,7 +221,13 @@ class BehaviorPathPlanner(Node):
         self._last_log_time = {}
         # Path planning loop timer (uses ROS time when use_sim_time is enabled)
         self.loop_period_sec = 0.05
-        self.loop_timer = self.create_timer(self.loop_period_sec, self.lane_following)
+        self.loop_timer = self.create_timer(self.loop_period_sec, self.lane_following_timer_cb)
+
+    def lane_following_timer_cb(self):
+        try:
+            self.lane_following()
+        except Exception:
+            self.get_logger().error("lane_following exception:\n" + traceback.format_exc())
     
     def load_intersections(self):
         package_share_directory = get_package_share_directory('common')
@@ -339,6 +348,7 @@ class BehaviorPathPlanner(Node):
         self.finished = msg.finished
         if self.reset:
             self.last_reset_time_ns = now_ns
+            self.pending_reset = True
         self.prev_reset = msg.reset
 
     def reset_cooldown_active(self):
@@ -1191,6 +1201,26 @@ class BehaviorPathPlanner(Node):
         self.intersection_markers_pub.publish(marker_array)
 
     def lane_following(self):
+        self.log_throttle("info", "lane_following_tick", "lane_following tick", period_sec=1.0)
+        if self.pending_reset:
+            self.get_logger().warning("RESET")
+            self.isPathPlanned = False
+            self.cool4_triggered = False
+            self.prev_lookahead_index = 0
+            self.current_lane_index = 0
+            self.mission_plan_requested = False
+            self.mission_plan_request_time_ns = None
+            self.mission_plan_retry_count = 0
+            self.path = None
+            self.path_as_lanes = None
+            self.path_of_waypoints.clear()
+            self.speeds_on_path = []
+            self.publish_path_planning_msgs(None, 0)
+            self.waiting_for_localization = True
+            self.got_localization_after_reset = False
+            self.pending_reset = False
+            self.reset = False
+            return
         self.update_pose_from_tf()
         if not self.location and not self.pose:
             self.get_logger().warning("No location/pose input")
@@ -1217,13 +1247,11 @@ class BehaviorPathPlanner(Node):
                 self.request_mission_plan()
                 self.mission_plan_request_time_ns = now_ns
                 self.mission_plan_retry_count += 1
-                rclpy.spin_once(self, timeout_sec=0.2)  # allow 0.25s to receive mission plan
                 self.handle_mission_plan()
                 return
             self.request_mission_plan()
             self.mission_plan_requested = True
             self.mission_plan_request_time_ns = self.get_clock().now().nanoseconds
-            rclpy.spin_once(self, timeout_sec=0.2)  # allow 0.25s to receive mission plan
             self.handle_mission_plan()
             self.get_logger().info("Start Local Path Planning...")
             if self.path and self.path_as_lanes:
@@ -1234,24 +1262,6 @@ class BehaviorPathPlanner(Node):
             self.get_logger().info("Scenario Finished, Parking the Vehicle...")
             self.node_shut = True
             self.publish_path_planning_msgs(None, 0) # publishing
-            return
-
-        if self.reset:
-            self.get_logger().warning("RESET")
-            self.isPathPlanned = False
-            self.cool4_triggered = False
-            self.prev_lookahead_index = 0
-            self.current_lane_index = 0
-            self.mission_plan_requested = False
-            self.mission_plan_request_time_ns = None
-            self.mission_plan_retry_count = 0
-            self.path = None
-            self.path_as_lanes = None
-            self.path_of_waypoints.clear()
-            self.speeds_on_path = []
-            self.publish_path_planning_msgs(None, 0)
-            self.waiting_for_localization = True
-            self.got_localization_after_reset = False
             return
 
         if self.reset_cooldown_active():
