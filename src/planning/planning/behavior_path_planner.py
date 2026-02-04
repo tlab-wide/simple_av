@@ -130,6 +130,7 @@ class BehaviorPathPlanner(Node):
         self.path_as_lanes = None  # List of lanes from start lane to destination
         self.path = None  # List of [waypoints,curve] in order of path_as_lanes
         self.path_of_waypoints = [] # List of waypoints in order of path_as_lanes
+        self.path_original = []
         self.intersection_points = []
         self.cool4_triggered = False
 
@@ -161,7 +162,7 @@ class BehaviorPathPlanner(Node):
         self.internal_msg_publisher = self.create_publisher(PlanningInternalMsg, 'simple_av/planning/internal_msg', 10)
         self.speed_profile_marker_pub = self.create_publisher(
             MarkerArray,
-            'simple_av/planning/speed_profile_markers',
+            'simple_av/planning/speed_profile_markers_smoothed',
             qos_profile
         )
         self.path_markers_pub = self.create_publisher(
@@ -427,6 +428,75 @@ class BehaviorPathPlanner(Node):
             float: The dot product of the two vectors.
         """
         return np.dot(vector1, vector2)
+
+    def smooth_points(self, points, window_size=5):
+        if len(points) < 3:
+            return list(points)
+        half = max(1, window_size // 2)
+        smoothed = []
+        for i in range(len(points)):
+            start = max(0, i - half)
+            end = min(len(points), i + half + 1)
+            sx = sum(p.x for p in points[start:end])
+            sy = sum(p.y for p in points[start:end])
+            sz = sum(p.z for p in points[start:end])
+            count = end - start
+            smoothed.append(Point(x=sx / count, y=sy / count, z=sz / count))
+        return smoothed
+
+    def resample_points(self, points, spacing):
+        if len(points) < 2:
+            return list(points)
+        resampled = [points[0]]
+        carry = 0.0
+        for i in range(1, len(points)):
+            p0 = points[i - 1]
+            p1 = points[i]
+            dx = p1.x - p0.x
+            dy = p1.y - p0.y
+            dz = p1.z - p0.z
+            seg_len = math.sqrt(dx * dx + dy * dy + dz * dz)
+            if seg_len <= 1e-6:
+                continue
+            dist = carry
+            while dist + spacing <= seg_len:
+                dist += spacing
+                t = dist / seg_len
+                resampled.append(Point(
+                    x=p0.x + dx * t,
+                    y=p0.y + dy * t,
+                    z=p0.z + dz * t,
+                ))
+            carry = seg_len - dist
+        if (resampled[-1].x != points[-1].x or
+                resampled[-1].y != points[-1].y or
+                resampled[-1].z != points[-1].z):
+            resampled.append(points[-1])
+        return resampled
+
+    def compute_curves(self, points, curve_calc_dist=6):
+        if len(points) < 2 * curve_calc_dist:
+            return [0.0 for _ in points]
+        curves = []
+        for _ in range(curve_calc_dist):
+            curves.append(0.0)
+        for i in range(curve_calc_dist, len(points) - curve_calc_dist):
+            p1 = points[i - curve_calc_dist]
+            p2 = points[i]
+            p3 = points[i + curve_calc_dist]
+            v1 = np.array([p2.x - p1.x, p2.y - p1.y])
+            v2 = np.array([p3.x - p2.x, p3.y - p2.y])
+            mag1 = np.linalg.norm(v1)
+            mag2 = np.linalg.norm(v2)
+            if mag1 < 1e-6 or mag2 < 1e-6:
+                curves.append(0.0)
+                continue
+            dot = float(np.dot(v1, v2))
+            cosang = max(-1.0, min(1.0, dot / (mag1 * mag2)))
+            curves.append(math.acos(cosang))
+        for _ in range(len(points) - curve_calc_dist, len(points)):
+            curves.append(0.0)
+        return curves
     
     def find_lane_by_name(self, lane_name):
         """
@@ -508,7 +578,13 @@ class BehaviorPathPlanner(Node):
         for waypoint in search_area:
             distances_to_vehicle.append(self.calculate_distance(waypoint, vehicle_pose))
         closest_waypoint_to_vehicle = search_area[distances_to_vehicle.index(min(distances_to_vehicle))]
-        current_closest_point_to_vehicle = self.path_of_waypoints.index(closest_waypoint_to_vehicle)
+        current_closest_point_to_vehicle = None
+        min_path_dist = float('inf')
+        for i, wp in enumerate(self.path_of_waypoints):
+            d = self.calculate_distance(wp, closest_waypoint_to_vehicle)
+            if d < min_path_dist:
+                min_path_dist = d
+                current_closest_point_to_vehicle = i
         if self.last_closest_point_index is not None:
             if current_closest_point_to_vehicle < self.last_closest_point_index:
                 current_closest_point_to_vehicle = self.last_closest_point_index
@@ -552,12 +628,14 @@ class BehaviorPathPlanner(Node):
         speed = math.sqrt(max_lateral_accel / curvature)
         return min(max_speed, speed)
 
-    def simple_av_speed_profile_maker(self, path, waypoint_distance=2.0):
+    def simple_av_speed_profile_maker(self, path, waypoint_distance=None):
         """
         Generate smooth, physically constrained speed profile.
         Vehicle starts at 0 and stops at the last waypoint.
         Enforces acceleration and deceleration limits and minimum speed.
         """
+        if waypoint_distance is None:
+            waypoint_distance = self.densify_interval
 
         _NORMAL_DECEL = abs(self.NORMAL_DECEL) * waypoint_distance
 
@@ -759,7 +837,9 @@ class BehaviorPathPlanner(Node):
     #                 accel_profile.append(v)
     #             self.speeds_on_path[exit_idx:end_idx] = accel_profile
 
-    def cool4_speed_profile_adjustment(self, intersection_points, waypoint_distance=2.0):
+    def cool4_speed_profile_adjustment(self, intersection_points, waypoint_distance=None):
+        if waypoint_distance is None:
+            waypoint_distance = self.densify_interval
         start_idx, exit_idx, end_idx = intersection_points
 
         if exit_idx <= start_idx:
@@ -876,11 +956,20 @@ class BehaviorPathPlanner(Node):
     def handle_mission_plan(self):
         if self.path and self.path_as_lanes:
             self.get_logger().info(f"received mission planed response")
+            self.path_original = self.path
+            original_points = [wp.waypoint for wp in self.path_original]
+            smoothed_points = self.smooth_points(original_points, window_size=5)
+            dense_points = self.resample_points(smoothed_points, self.densify_interval)
+            curves = self.compute_curves(dense_points)
+            smoothed_path = []
+            for i, p in enumerate(dense_points):
+                smoothed_path.append(PlanningWaypoint(waypoint=p, curve=curves[i]))
+            self.path = smoothed_path
             self.destination = self.path[-1].waypoint
             self.speeds_on_path = self.simple_av_speed_profile_maker(self.path)
-                            
+
             self.path_of_waypoints.clear()
-            for i, waypoint in enumerate(self.path):
+            for waypoint in self.path:
                 self.path_of_waypoints.append(waypoint.waypoint)
 
             self.route = self.path_as_lanes[:]

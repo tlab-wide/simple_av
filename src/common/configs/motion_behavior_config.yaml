@@ -11,7 +11,7 @@ motion:
     base: 2.0 # Multiplier based on vehicle speed
 
   path:
-    densify_interval: 2.0 # meters / Distance between each two consecutive waypoints on a lane
+    densify_interval: 0.5 # meters / Distance between each two consecutive waypoints on a lane
 
 behavior:
   range_low_pass_gain: 0.90

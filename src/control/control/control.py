@@ -136,6 +136,10 @@ class VehicleControl(Node):
         self.subscriptionSimMonitor = self.create_subscription(SimMonitor, 'simple_av/sim_monitor', self.sim_monitor_callback, 100)
         self.sim_clock_rate = 0
 
+        # Control loop timer (uses ROS time when use_sim_time is enabled)
+        self.control_period_sec = 0.1
+        self.control_timer = self.create_timer(self.control_period_sec, self.control)
+
         self.subscriptionPortal = self.create_subscription(Portal, 'simple_av/portal', self.portal_callback, 10)
         self.reset = False
         self.finished = False
@@ -366,7 +370,8 @@ class VehicleControl(Node):
             
             self.get_logger().debug(f"Decelerate or stop red target_speed: {target_speed}")
 
-        accel = self.pid_controller.updatePID(current_speed, target_speed, time.time() * self.sim_clock_rate)
+        now_sec = self.get_clock().now().nanoseconds * 1e-9
+        accel = self.pid_controller.updatePID(current_speed, target_speed, now_sec)
         
         deceleration_rate = self.normal_deceleration_rate
 
@@ -569,9 +574,7 @@ def main(args=None):
     node = VehicleControl()
 
     try:
-        while rclpy.ok() and not node.node_shut:
-            rclpy.spin_once(node, timeout_sec=0.1)# Set timeout to 0 to avoid delay
-            node.control()   
+        rclpy.spin(node)
     except KeyboardInterrupt:
         pass
     finally:

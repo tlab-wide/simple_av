@@ -77,6 +77,8 @@ class MissionPlanner(Node):
         self.dest_lanelet = self.scenario_config['scenario']['destination']
         self.start_lanelet = None
         self.vehicle_model = self.scenario_config['scenario']['vehicle_model']
+        self.motion_behavior_config = self.config_file_loader("motion_behavior_config.yaml")
+        self.motion_behavior_config = self.config_file_loader("motion_behavior_config.yaml")
 
         # Load the map
         self.map_data = self.load_map_data(self.vehicle_model)
@@ -108,13 +110,15 @@ class MissionPlanner(Node):
         #Path planning
         # self.isPathPlanned = False  # Flag to check if the path has been planned
         self.path_as_lanes = []  # List of lanes from start lane to destination
-        self.path = []  # List of waypoints in order of path_as_lanes
+        self.path = []  # Raw path from map
         self.curves = []
         self.initial_lane = None
         # self.isFirstRequest = True
         self.search_depth = 5
 
-        self.densify_interval = 2.0 # meters / Distance between each two consecutive waypoints on a lane
+        self.densify_interval = float(
+            self.motion_behavior_config['motion']['path']['densify_interval']
+        )
         
         #Shutting down
         self.node_shut = False
@@ -143,7 +147,7 @@ class MissionPlanner(Node):
         # Load and read the JSON file
         with open(json_file_path, 'r') as json_file:
             map_data = json.load(json_file)
-            return map_data
+        return map_data
 
     def location_callback(self, msg):
         """
@@ -179,7 +183,10 @@ class MissionPlanner(Node):
                 points.append(waypoint)
 
         # Remove duplicate points
-        self.path = [points[i] for i in range(len(points)) if i == 0 or (points[i]['x'] != points[i - 1]['x'] or points[i]['y'] != points[i - 1]['y'] or points[i]['z'] != points[i - 1]['z'])]
+        self.path = [
+            points[i] for i in range(len(points))
+            if i == 0 or (points[i]['x'] != points[i - 1]['x'] or points[i]['y'] != points[i - 1]['y'] or points[i]['z'] != points[i - 1]['z'])
+        ]
     
 
     def bfs(self, start_lanelet, dest_lanelet):

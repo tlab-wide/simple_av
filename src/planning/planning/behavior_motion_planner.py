@@ -186,7 +186,7 @@ class BehaviorMotionPlanning(Node):
         self.status = String() # Cruise, Decelerate, PrepareToStop, Turn
         self.stop_reason = String() # Cruise, Decelerate, PrepareToStop, Turn
 
-        self.densify_interval = 2.0 # meters / Distance between each two consecutive waypoints on a lane
+        self.densify_interval = self.motion_behavior_config['motion']['path']['densify_interval']
         
         #Traffic light
         self.traffic_light_stopPoint_lastState = Point()
@@ -403,7 +403,13 @@ class BehaviorMotionPlanning(Node):
         for waypoint in search_area:
             distances_to_vehicle.append(self.calculate_distance(waypoint, vehicle_pose))
         closest_waypoint_to_vehicle = search_area[distances_to_vehicle.index(min(distances_to_vehicle))]
-        current_closest_point_to_vehicle = self.path_of_waypoints.index(closest_waypoint_to_vehicle)
+        current_closest_point_to_vehicle = None
+        min_path_dist = float('inf')
+        for i, wp in enumerate(self.path_of_waypoints):
+            d = self.calculate_distance(wp, closest_waypoint_to_vehicle)
+            if d < min_path_dist:
+                min_path_dist = d
+                current_closest_point_to_vehicle = i
         return current_closest_point_to_vehicle
 
     def update_observation_range(self, speed, is_speed_declining):
