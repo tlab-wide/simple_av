@@ -271,31 +271,60 @@ class MissionPlanner(Node):
     def resample_points(self, points, spacing):
         if len(points) < 2:
             return list(points)
-        resampled = [points[0]]
-        carry = 0.0
+        if spacing <= 0.0:
+            return list(points)
+
+        # Build cumulative distance along the path.
+        cumulative = [0.0]
         for i in range(1, len(points)):
             p0 = points[i - 1]
             p1 = points[i]
-            dx = p1.x - p0.x
-            dy = p1.y - p0.y
-            dz = p1.z - p0.z
-            seg_len = math.sqrt(dx * dx + dy * dy + dz * dz)
-            if seg_len <= 1e-6:
+            seg_len = math.sqrt(
+                (p1.x - p0.x) ** 2 +
+                (p1.y - p0.y) ** 2 +
+                (p1.z - p0.z) ** 2
+            )
+            cumulative.append(cumulative[-1] + seg_len)
+
+        total_len = cumulative[-1]
+        if total_len <= 1e-6:
+            return [points[0]]
+
+        # Evenly spaced sample distances.
+        num_samples = int(total_len // spacing)
+        sample_distances = [i * spacing for i in range(num_samples + 1)]
+        if sample_distances[-1] < total_len:
+            sample_distances.append(total_len)
+
+        resampled = []
+        seg_idx = 0
+        seg_start_dist = cumulative[0]
+        while seg_idx < len(points) - 1:
+            p0 = points[seg_idx]
+            p1 = points[seg_idx + 1]
+            seg_len = cumulative[seg_idx + 1] - cumulative[seg_idx]
+            if seg_len > 1e-6:
+                break
+            seg_idx += 1
+
+        for d in sample_distances:
+            while seg_idx < len(points) - 1 and d > cumulative[seg_idx + 1]:
+                seg_idx += 1
+            if seg_idx >= len(points) - 1:
+                resampled.append(points[-1])
                 continue
-            dist = carry
-            while dist + spacing <= seg_len:
-                dist += spacing
-                t = dist / seg_len
-                resampled.append(Point(
-                    x=p0.x + dx * t,
-                    y=p0.y + dy * t,
-                    z=p0.z + dz * t,
-                ))
-            carry = seg_len - dist
-        if (resampled[-1].x != points[-1].x or
-                resampled[-1].y != points[-1].y or
-                resampled[-1].z != points[-1].z):
-            resampled.append(points[-1])
+            p0 = points[seg_idx]
+            p1 = points[seg_idx + 1]
+            seg_len = cumulative[seg_idx + 1] - cumulative[seg_idx]
+            if seg_len <= 1e-6:
+                resampled.append(Point(x=p0.x, y=p0.y, z=p0.z))
+                continue
+            t = (d - cumulative[seg_idx]) / seg_len
+            resampled.append(Point(
+                x=p0.x + (p1.x - p0.x) * t,
+                y=p0.y + (p1.y - p0.y) * t,
+                z=p0.z + (p1.z - p0.z) * t,
+            ))
         return resampled
 
     def compute_curves(self, points, curve_calc_dist=6):
