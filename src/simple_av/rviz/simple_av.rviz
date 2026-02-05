@@ -18,6 +18,7 @@ Panels:
         - /LookAheadPoint1/Topic1
         - /Stop reason1/Topic1
         - /intersection layouts1/Topic1
+        - /SpeedProfile1
         - /SpeedProfile1/Namespaces1
         - /MarkerArray1/Topic1
         - /MarkerArray1/Namespaces1
@@ -791,9 +792,7 @@ Visualization Manager:
                     Color: 119; 11; 32
                   Name: TrackedObjects
                   Namespaces:
-                    shape: true
-                    twist: true
-                    velocity: true
+                    {}
                   Object Fill Type: skeleton
                   PEDESTRIAN:
                     Alpha: 0.9990000128746033
@@ -3260,7 +3259,18 @@ Visualization Manager:
                     Value: true
                   Map: true
                   Perception:
-                    "": true
+                    CameraLidarFusion(purple): true
+                    Centerpoint(red1): true
+                    CenterpointROIFusion(red2): true
+                    CenterpointValidator(red3): true
+                    Detection(yellow): true
+                    DetectionByTracker(orange): true
+                    PointPainting(light_green1): true
+                    PointPaintingROIFusion(light_green2): true
+                    PointPaintingValidator(light_green3): true
+                    Prediction(light_blue): true
+                    RadarFarObjects(white): true
+                    Tracking(green): true
                     Value: true
                   Planning:
                     "":
@@ -4948,17 +4958,19 @@ Visualization Manager:
         Value: /intersection_layouts
       Value: true
     - Class: rviz_default_plugins/MarkerArray
-      Enabled: false
+      Enabled: true
       Name: SpeedProfile
       Namespaces:
-        {}
+        speed_profile: true
+        speed_profile_id: false
+        speed_profile_text: true
       Topic:
         Depth: 5
         Durability Policy: Volatile
         History Policy: Keep Last
         Reliability Policy: Reliable
         Value: /simple_av/planning/speed_profile_markers_smoothed
-      Value: false
+      Value: true
     - Class: rviz_default_plugins/MarkerArray
       Enabled: false
       Name: path_of_waypoints
@@ -4984,7 +4996,7 @@ Visualization Manager:
         Value: /simple_av/visualization/search_area_markers
       Value: true
     - Class: rviz_default_plugins/MarkerArray
-      Enabled: false
+      Enabled: true
       Name: Cool4_intersection_points
       Namespaces:
         {}
@@ -4994,7 +5006,7 @@ Visualization Manager:
         History Policy: Keep Last
         Reliability Policy: Reliable
         Value: /simple_av/visualization/intersection_point_markers
-      Value: false
+      Value: true
     - Class: rviz_default_plugins/MarkerArray
       Enabled: true
       Name: MarkerArray
@@ -5050,6 +5062,8 @@ Visualization Manager:
       Enabled: true
       Name: StopPointMarker
       Namespaces:
+        collision_objects: true
+        collision_objects_text: true
         collision_points: true
         collision_points_text: true
       Topic:
@@ -5063,6 +5077,8 @@ Visualization Manager:
       Enabled: true
       Name: MarkerArray
       Namespaces:
+        collision_objects: true
+        collision_objects_text: true
         collision_points: true
         collision_points_text: true
       Topic:
@@ -5170,25 +5186,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/ThirdPersonFollower
-      Distance: 63.78640365600586
+      Distance: 51.87255096435547
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: -3.546530246734619
-        Y: -15.236597061157227
-        Z: -4.722334779216908e-05
-      Focal Shape Fixed Size: false
+        X: 4501.67822265625
+        Y: 72941.7890625
+        Z: 3.814697265625e-06
+      Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.3697972297668457
-      Target Frame: base_link
+      Pitch: 0.6547971963882446
+      Target Frame: map
       Value: ThirdPersonFollower (rviz_default_plugins)
-      Yaw: 3.179034471511841
+      Yaw: 0.4399999976158142
     Saved:
       - Class: rviz_default_plugins/ThirdPersonFollower
         Distance: 18
