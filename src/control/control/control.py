@@ -192,8 +192,11 @@ class VehicleControl(Node):
             10
         )
 
-        # self.pid_controller = PIDController(p_gain=2.8, i_gain=25.0, d_gain=1.5, logger=self.get_logger())
-        self.pid_controller = PIDController(p_gain=5.0, i_gain=20.0, d_gain=1.5, logger=self.get_logger())
+        pid_config = self.motion_behavior_config.get('control', {}).get('pid', {})
+        p_gain = float(pid_config.get('p_gain', 5.0))
+        i_gain = float(pid_config.get('i_gain', 5.0))
+        d_gain = float(pid_config.get('d_gain', 1.5))
+        self.pid_controller = PIDController(p_gain=p_gain, i_gain=i_gain, d_gain=d_gain, logger=self.get_logger())
 
         self.node_shut = False
     

@@ -7,6 +7,7 @@ Panels:
         - /Status1
         - /System1
         - /System1/Grid1/Offset1
+        - /System1/Vehicle1
         - /System1/Vehicle1/VehicleModel1
         - /Sensing1
         - /Sensing1/LiDAR1/ConcatenatePointCloud1/Autocompute Value Bounds1
@@ -15,6 +16,7 @@ Panels:
         - /Perception1/ObjectRecognition1/Tracking1
         - /Perception1/ObjectRecognition1/Prediction1
         - /RSU2 PO1/PEDESTRIAN1
+        - /LookAheadPoint1
         - /LookAheadPoint1/Topic1
         - /Stop reason1/Topic1
         - /intersection layouts1/Topic1
@@ -114,25 +116,20 @@ Visualization Manager:
                 History Policy: Keep Last
                 Reliability Policy: Reliable
                 Value: /robot_description
-              Enabled: true
+              Enabled: false
               Links:
                 All Links Enabled: true
                 Expand Joint Details: false
                 Expand Link Details: false
                 Expand Tree: false
                 Link Tree Style: Links in Alphabetic Order
-                base_link:
-                  Alpha: 1
-                  Show Axes: false
-                  Show Trail: false
-                  Value: true
               Mass Properties:
                 Inertia: false
                 Mass: false
               Name: VehicleModel
               TF Prefix: ""
               Update Interval: 0
-              Value: true
+              Value: false
               Visual Enabled: true
             - Class: rviz_plugins/PolarGridDisplay
               Color: 255; 255; 255
@@ -792,7 +789,9 @@ Visualization Manager:
                     Color: 119; 11; 32
                   Name: TrackedObjects
                   Namespaces:
-                    {}
+                    shape: true
+                    twist: true
+                    velocity: true
                   Object Fill Type: skeleton
                   PEDESTRIAN:
                     Alpha: 0.9990000128746033
@@ -3252,25 +3251,11 @@ Visualization Manager:
                 Debug:
                   Control: true
                   Localization:
-                    EKFPoseHistory: true
-                    NDT pointclouds: true
-                    NDTLoadedPCDMap: true
-                    NDTPoseHistory: true
+                    "": true
                     Value: true
                   Map: true
                   Perception:
-                    CameraLidarFusion(purple): true
-                    Centerpoint(red1): true
-                    CenterpointROIFusion(red2): true
-                    CenterpointValidator(red3): true
-                    Detection(yellow): true
-                    DetectionByTracker(orange): true
-                    PointPainting(light_green1): true
-                    PointPaintingROIFusion(light_green2): true
-                    PointPaintingValidator(light_green3): true
-                    Prediction(light_blue): true
-                    RadarFarObjects(white): true
-                    Tracking(green): true
+                    "": true
                     Value: true
                   Planning:
                     "":
@@ -4892,14 +4877,14 @@ Visualization Manager:
       Enabled: true
       Name: LookAheadPoint
       Namespaces:
-        lookahead: true
+        control_lookahead: true
       Topic:
         Depth: 5
         Durability Policy: Volatile
         Filter size: 10
         History Policy: Keep Last
         Reliability Policy: Reliable
-        Value: /simple_av/visualization/lookahead_point_marker
+        Value: /simple_av/control/visualization/lookahead_point
       Value: true
     - Class: rviz_default_plugins/Marker
       Enabled: true
@@ -4999,7 +4984,7 @@ Visualization Manager:
       Enabled: true
       Name: Cool4_intersection_points
       Namespaces:
-        {}
+        intersection_points: true
       Topic:
         Depth: 5
         Durability Policy: Volatile
@@ -5186,25 +5171,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/ThirdPersonFollower
-      Distance: 51.87255096435547
+      Distance: 48.87112045288086
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 4501.67822265625
-        Y: 72941.7890625
-        Z: 3.814697265625e-06
-      Focal Shape Fixed Size: true
+        X: 0
+        Y: 0
+        Z: 0
+      Focal Shape Fixed Size: false
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.6547971963882446
-      Target Frame: map
+      Pitch: 0.8303983807563782
+      Target Frame: base_link
       Value: ThirdPersonFollower (rviz_default_plugins)
-      Yaw: 0.4399999976158142
+      Yaw: 4.310409069061279
     Saved:
       - Class: rviz_default_plugins/ThirdPersonFollower
         Distance: 18

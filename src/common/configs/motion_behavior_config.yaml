@@ -13,6 +13,12 @@ motion:
   path:
     densify_interval: 0.5 # meters / Distance between each two consecutive waypoints on a lane
 
+control:
+  pid:
+    p_gain: 5.0
+    i_gain: 5.0
+    d_gain: 1.5
+
 behavior:
   range_low_pass_gain: 0.90
 
