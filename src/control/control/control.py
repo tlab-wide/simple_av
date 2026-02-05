@@ -10,6 +10,7 @@ from visualization_msgs.msg import Marker, MarkerArray
 
 from autoware_vehicle_msgs.msg import GearCommand, VelocityReport
 from autoware_control_msgs.msg import Control, Lateral, Longitudinal
+from std_msgs.msg import Float32
 
 from rclpy.qos import QoSProfile, DurabilityPolicy, HistoryPolicy, ReliabilityPolicy
 from simple_av_msgs.msg import PlanningMotionPlanningMsg, CollisionPredictionInfo, PlanningInternalMissionPlanMsg
@@ -191,6 +192,11 @@ class VehicleControl(Node):
             '/simple_av/control/visualization/lookahead_point',
             10
         )
+        self.speed_debug_pub = self.create_publisher(
+            Float32,
+            '/simple_av/control/debug/vehicle_speed',
+            10
+        )
 
         pid_config = self.motion_behavior_config.get('control', {}).get('pid', {})
         p_gain = float(pid_config.get('p_gain', 5.0))
@@ -351,7 +357,13 @@ class VehicleControl(Node):
         self.control_publisher.publish(control_msg)
         # self.turn_indicator_publisher.publish(turn_indicator_msg)
         self.gear_publisher.publish(gear_msg)  
+        self.publish_speed_debug()
 
+    def publish_speed_debug(self):
+        speed_msg = Float32()
+        speed_mps = float(self.velocity_report.longitudinal_velocity) if self.velocity_report else 0.0
+        speed_msg.data = speed_mps * 3.6
+        self.speed_debug_pub.publish(speed_msg)
 
     
     def get_lateral_command(self):
