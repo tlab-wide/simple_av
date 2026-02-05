@@ -17,7 +17,6 @@ find_package(std_msgs REQUIRED)
 rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/LocalizationMsg.msg"
   "msg/LocalizationIntersectionStatus.msg"
-  "msg/PlanningPathPlanningMsg.msg"
   "msg/PlanningInternalMsg.msg"
   "msg/PlanningWaypoint.msg"
   "msg/PlanningInternalMissionPlanMsg.msg"
