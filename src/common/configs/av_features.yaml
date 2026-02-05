@@ -6,7 +6,7 @@ traffic_light:
 # Object Detection Configuration
 object_detection:
   enable: True  # Enable or disable object detection
-  use_rsu: True # Enable or disable RSU for Object Detection
+  use_rsu: False # Enable or disable RSU for Object Detection
   direction_filter:
     lateral_threshold: 2.25 # meters; |y| <= threshold is "straight ahead" in vehicle frame
     allowed_directions: ["above", "NW", "NE", "SW", "SE", ] # directions considered "ahead" for planning filters. Other values "behind"

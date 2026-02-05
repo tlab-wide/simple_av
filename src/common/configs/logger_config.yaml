@@ -13,25 +13,30 @@ logger_module:
   # Points to log when the vehicle approaches them.
   # Distance threshold is in meters.
   logging_points:
-    default_threshold: 2.0
+    default_threshold: 1.0
     points:
-      - name: "enter intersection"
-        x: 4515.74
-        y: 72941.41
+      - name: "I2_ZE_E_BusHead"
+        x: 4525.74
+        y: 72947.64
         z: 18.63
-        threshold: 3.0
-      - name: "exit intersection"
+        threshold: 1.0
+      - name: "I2_ZE_E_BusRearWheel"
+        x: 4519.52
+        y: 72943.90
+        z: 18.63
+        threshold: 1.0
+      - name: "I2_ZN_S_BusRearWheel"
         x: 4496.31
         y: 72947.96
         z: 18.76
-        threshold: 3.0
-      - name: "exit intersection tail"
-        x: 4496.31
-        y: 72957.96
+        threshold: 1.0
+      - name: "I2_ZN_N_BusTail"
+        x: 4493.42
+        y: 72954.55
         z: 18.76
-        threshold: 3.0
-      - name: "after 30km point"
+        threshold: 1.0
+      - name: "after_30km"
         x: 4415.47
         y: 73150.55
         z: 18.62
-        threshold: 3.0
+        threshold: 1.0

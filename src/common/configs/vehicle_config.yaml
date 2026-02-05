@@ -48,10 +48,10 @@ vehicles:
       accel_profile:            # Speed-dependent accel (m/s) - Primary
         - min_speed: 0.0
           max_speed: 3.33
-          accel: 0.227the 
+          accel: 0.227
         - min_speed: 3.33
           max_speed: 20.0
           accel: 0.455
       acceleration_rate: 1.2     # Acceleration rate (m/s²) - Fallback
-      normal_braking_deceleration_rate: -2.5 # Braking deceleration (m/s²)
+      normal_braking_deceleration_rate: -1.5 # Braking deceleration (m/s²)
       max_braking_deceleration_rate: -3.0 # Maximum braking deceleration (m/s²)
