@@ -12,7 +12,7 @@ from autoware_vehicle_msgs.msg import GearCommand, VelocityReport
 from autoware_control_msgs.msg import Control, Lateral, Longitudinal
 
 from rclpy.qos import QoSProfile, DurabilityPolicy, HistoryPolicy, ReliabilityPolicy
-from simple_av_msgs.msg import PlanningPathPlanningMsg, PlanningMotionPlanningMsg, CollisionPredictionInfo
+from simple_av_msgs.msg import PlanningMotionPlanningMsg, CollisionPredictionInfo, PlanningInternalMissionPlanMsg
 from simple_av_msgs.msg import SimMonitor, LocalizationIntersectionStatus
 import time
 import math
@@ -80,6 +80,7 @@ class VehicleControl(Node):
         self.scenario_config = self.config_file_loader("scenario_config.yaml")
         self.vehicle_model = self.scenario_config['scenario']['vehicle_model']
         self.vehicle_config = self.load_vehicle_config(self.vehicle_model)
+        self.motion_behavior_config = self.config_file_loader("motion_behavior_config.yaml")
 
         self.vehicle_length = self.vehicle_config['dimensions']['length'] #meters
         self.vehicle_width = self.vehicle_config['dimensions']['width'] #meters
@@ -110,8 +111,27 @@ class VehicleControl(Node):
         self.subscriptionVelocityReport = self.create_subscription(VelocityReport, '/vehicle/status/velocity_status', self.velocity_report_callback, 10)
         self.velocity_report = VelocityReport()
 
-        self.subscriptionBehaviorPathPlanning = self.create_subscription(PlanningPathPlanningMsg, '/simple_av/planning/path_planning', self.path_planning_callback, 10)
-        self.path_plan = PlanningPathPlanningMsg()
+        qos_profile_path = QoSProfile(
+            history=HistoryPolicy.KEEP_LAST,
+            depth=1,
+            reliability=ReliabilityPolicy.RELIABLE,
+            durability=DurabilityPolicy.TRANSIENT_LOCAL
+        )
+        self.subscriptionMissionPlan = self.create_subscription(
+            PlanningInternalMissionPlanMsg,
+            'simple_av/planning/mission_plan_smoothed',
+            self.mission_plan_callback,
+            qos_profile_path
+        )
+        self.path_of_waypoints = []
+        self.speeds_on_path = []
+        self.last_closest_point_index = None
+        self.lookahead_point = None
+        self.lookahead_index = None
+        self.speed_limit = 0.0
+        self.lookahead_distance_C = float(self.motion_behavior_config['motion']['lookahead']['coefficient'])
+        self.lookahead_distance_B = float(self.motion_behavior_config['motion']['lookahead']['base'])
+        self.densify_interval = float(self.motion_behavior_config['motion']['path']['densify_interval'])
         
         self.subscriptionBehaviorMotionPlanning = self.create_subscription(PlanningMotionPlanningMsg, '/simple_av/planning/motion_planning', self.motion_planning_callback, 10)
         self.motion_plan = PlanningMotionPlanningMsg()
@@ -164,6 +184,11 @@ class VehicleControl(Node):
         self.status_marker_pub = self.create_publisher(
             MarkerArray,
             'simple_av/visualization/control_status_text',
+            10
+        )
+        self.lookahead_marker_pub = self.create_publisher(
+            Marker,
+            '/simple_av/control/visualization/lookahead_point',
             10
         )
 
@@ -246,8 +271,12 @@ class VehicleControl(Node):
     def velocity_report_callback(self, msg):
         self.velocity_report = msg
 
-    def path_planning_callback(self, msg):
-        self.path_plan = msg
+    def mission_plan_callback(self, msg):
+        self.path_of_waypoints = [wp.waypoint for wp in msg.path]
+        self.speeds_on_path = [float(getattr(wp, 'speed', 0.0)) for wp in msg.path]
+        self.last_closest_point_index = None
+        self.lookahead_point = None
+        self.lookahead_index = None
     
     def motion_planning_callback(self, msg):
         self.motion_plan = msg
@@ -268,9 +297,11 @@ class VehicleControl(Node):
     def control(self):
         self.update_pose_from_tf()
 
-        if not self.velocity_report and not self.path_plan and not self.pose:
-            self.get_logger().error("No, velocity report or lookahead or pose data")
+        if not self.pose or not self.path_of_waypoints:
+            self.get_logger().error("No path or pose data")
             return
+
+        self.update_lookahead_point()
         
         if self.finished:
             self.node_shut = True
@@ -327,7 +358,7 @@ class VehicleControl(Node):
             lateral_command.steering_tire_angle = 0.0
             lateral_command.steering_tire_rotation_rate = 0.0
         else:
-            if self.pose and self.path_plan:
+            if self.pose and self.lookahead_point:
                 steer = self.pure_pursuit_rear_axel()
                 lateral_command.steering_tire_angle = steer
                 lateral_command.steering_tire_rotation_rate = 0.1
@@ -341,7 +372,7 @@ class VehicleControl(Node):
     def get_longitudinal_command(self):
 
         current_speed = self.velocity_report.longitudinal_velocity if self.velocity_report else 0.0
-        target_speed = self.path_plan.speed_limit
+        target_speed = self.speed_limit
         stop_point = self.motion_plan.stop_point
         if self.motion_plan.status.data == "Decelerate" and self.collision_prediction_info.collision_detected:
             stop_point = self.collision_prediction_info.object_position
@@ -491,7 +522,7 @@ class VehicleControl(Node):
         # Using a nonlinear deceleration curve for smoother braking
         
         # Adjusted deceleration factor
-        speed_limit = float(self.path_plan.speed_limit) if self.path_plan else 0.0
+        speed_limit = float(self.speed_limit)
         if speed_limit <= 0.0:
             return 0.0
         target_speed = current_speed * (distance_to_stop / (speed_limit * 3.0))**1.0
@@ -501,13 +532,88 @@ class VehicleControl(Node):
 
     def filter(self, new_value, previous_value, gain):
         return gain * previous_value + (1 - gain) * new_value
+
+    def find_closest_waypoint_index(self, vehicle_pose):
+        if not self.path_of_waypoints:
+            return None
+        if self.last_closest_point_index is None:
+            start_idx = 0
+            end_idx = len(self.path_of_waypoints)
+        else:
+            window = 200
+            start_idx = max(0, self.last_closest_point_index - window)
+            end_idx = min(len(self.path_of_waypoints), self.last_closest_point_index + window)
+
+        min_dist = float('inf')
+        closest_idx = self.last_closest_point_index if self.last_closest_point_index is not None else 0
+        for i in range(start_idx, end_idx):
+            waypoint = self.path_of_waypoints[i]
+            d = self.calculate_distance(waypoint, vehicle_pose)
+            if d < min_dist:
+                min_dist = d
+                closest_idx = i
+
+        if self.last_closest_point_index is not None and closest_idx < self.last_closest_point_index:
+            closest_idx = self.last_closest_point_index
+
+        self.last_closest_point_index = closest_idx
+        return closest_idx
+
+    def update_lookahead_point(self):
+        if not self.path_of_waypoints or not self.pose:
+            self.lookahead_point = None
+            self.lookahead_index = None
+            self.publish_lookahead_marker(None)
+            return
+        vehicle_pose = self.pose.pose.position
+        closest_idx = self.find_closest_waypoint_index(vehicle_pose)
+        if closest_idx is None:
+            self.lookahead_point = None
+            self.lookahead_index = None
+            self.publish_lookahead_marker(None)
+            return
+        current_speed = self.velocity_report.longitudinal_velocity if self.velocity_report else 0.0
+        lookahead_distance = current_speed * self.lookahead_distance_C + self.lookahead_distance_B
+        steps = int(lookahead_distance / self.densify_interval) if self.densify_interval > 0.0 else 0
+        lookahead_idx = min(len(self.path_of_waypoints) - 1, closest_idx + steps)
+        self.lookahead_point = self.path_of_waypoints[lookahead_idx]
+        self.lookahead_index = lookahead_idx
+        if self.speeds_on_path:
+            speed_idx = min(lookahead_idx, len(self.speeds_on_path) - 1)
+            self.speed_limit = float(self.speeds_on_path[speed_idx])
+        else:
+            self.speed_limit = float(self.motion_behavior_config['motion']['speed_limits']['base'])
+        self.publish_lookahead_marker(self.lookahead_point)
+
+    def publish_lookahead_marker(self, point):
+        marker = Marker()
+        marker.header.frame_id = "map"
+        marker.header.stamp = self.get_clock().now().to_msg()
+        marker.ns = "control_lookahead"
+        marker.id = 0
+        if point is None:
+            marker.action = Marker.DELETE
+            self.lookahead_marker_pub.publish(marker)
+            return
+        marker.type = Marker.SPHERE
+        marker.action = Marker.ADD
+        marker.pose.position = point
+        marker.pose.orientation.w = 1.0
+        marker.scale.x = 1.5
+        marker.scale.y = 1.5
+        marker.scale.z = 1.5
+        marker.color.r = 35.0 / 255.0
+        marker.color.g = 199.0 / 255.0
+        marker.color.b = 48.0 / 255.0
+        marker.color.a = 0.8
+        self.lookahead_marker_pub.publish(marker)
     
     def pure_pursuit_rear_axel(self):
         yaw = self.get_yaw_from_pose(self.pose.pose.orientation)  # Vehicle heading (yaw angle)
 
         # Calculate lookahead point relative to base_link (rear axle center)
-        lookahead_x = self.path_plan.look_ahead_point.x - self.pose.pose.position.x
-        lookahead_y = self.path_plan.look_ahead_point.y - self.pose.pose.position.y
+        lookahead_x = self.lookahead_point.x - self.pose.pose.position.x
+        lookahead_y = self.lookahead_point.y - self.pose.pose.position.y
 
         # Adjust lookahead distance for vehicle length
         lookahead_dist = math.sqrt(lookahead_x ** 2 + lookahead_y ** 2)
@@ -535,10 +641,8 @@ class VehicleControl(Node):
         return steering_angle
 
     def pure_pursuit_steering_angle(self):
-        # print("coordinates: ",  self.path_plan.look_ahead_point.x, self.path_plan.look_ahead_point.y, self.path_plan.look_ahead_point.z)
-    
-        lookahead_x = self.path_plan.look_ahead_point.x - self.pose.pose.position.x
-        lookahead_y = self.path_plan.look_ahead_point.y - self.pose.pose.position.y
+        lookahead_x = self.lookahead_point.x - self.pose.pose.position.x
+        lookahead_y = self.lookahead_point.y - self.pose.pose.position.y
 
         yaw = self.get_yaw_from_pose(self.pose.pose.orientation)
         self.get_logger().debug(f"degree: {math.degrees(yaw)}")

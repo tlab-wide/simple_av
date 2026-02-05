@@ -13,7 +13,7 @@ from tf2_ros import Buffer, TransformListener
 from std_msgs.msg import String, ColorRGBA, Bool
 import math
 from collections import deque
-from simple_av_msgs.msg import PlanningPathPlanningMsg, PlanningInternalMsg, PlanningInternalMissionPlanMsg, PlanningWaypoint
+from simple_av_msgs.msg import PlanningInternalMsg, PlanningInternalMissionPlanMsg, PlanningWaypoint
 from simple_av_msgs.msg import LocalizationIntersectionStatus
 from simple_av_msgs.msg import Portal
 from visualization_msgs.msg import Marker, MarkerArray
@@ -72,8 +72,6 @@ class BehaviorPathPlanner(Node):
         self.motion_behavior_config = self.config_file_loader("motion_behavior_config.yaml")
         self.base_speed = self.motion_behavior_config['motion']['speed_limits']['base'] # m/s
         self.turning_speed = self.motion_behavior_config['motion']['speed_limits']['turning_speed'] # m/s
-        self.lookahead_distance_C = self.motion_behavior_config['motion']['lookahead']['coefficient']
-        self.lookahead_distance_B = self.motion_behavior_config['motion']['lookahead']['base']
         self.densify_interval = self.motion_behavior_config['motion']['path']['densify_interval']
         self.max_lateral_accel = self.motion_behavior_config['motion'].get('max_lateral_accel', 4.0)
 
@@ -162,7 +160,6 @@ class BehaviorPathPlanner(Node):
         self.rsu_danger_detected = False
 
         # Publish topics
-        self.planning_publisher = self.create_publisher(PlanningPathPlanningMsg, 'simple_av/planning/path_planning', 10)
         self.internal_msg_publisher = self.create_publisher(PlanningInternalMsg, 'simple_av/planning/internal_msg', 10)
         self.speed_profile_marker_pub = self.create_publisher(
             MarkerArray,
@@ -205,14 +202,12 @@ class BehaviorPathPlanner(Node):
         self.search_depth = 5 # previously it was 5
         self.destination = Point()
         
-        #Lookahead
-        self.lookahead_distance = self.base_speed * self.lookahead_distance_C + self.lookahead_distance_B # meters
+        #Lookahead (handled in control now)
         self.current_speed = 0.0
         
         #Curve handling
         self.curves = None
         self.speeds_on_path = []
-        self.prev_lookahead_index = 0
         self.last_closest_point_index = None
 
         #Shutting down
@@ -526,22 +521,6 @@ class BehaviorPathPlanner(Node):
             first_ahead_point_index = current_closest_point_index
         return first_ahead_point_index
         
-    def get_lookahead_distance_as_index(self):
-        return int(self.lookahead_distance //  self.densify_interval)
-       
-
-    def find_lookahead_point(self, current_closest_point_index): 
-
-        path_size = len(self.path)
-        lookahead_point_index = self.get_lookahead_distance_as_index() + current_closest_point_index
-        if lookahead_point_index < current_closest_point_index:
-            lookahead_point_index = current_closest_point_index
-        if lookahead_point_index >= path_size - 2:
-            lookahead_point_index = path_size - 2
-        self.prev_lookahead_index = lookahead_point_index
-        
-        return lookahead_point_index, self.path[lookahead_point_index].waypoint
-    
     # Create search area based on waypoint indices instead of lanes.
     def create_search_area(self):
         if not self.path_of_waypoints:
@@ -586,16 +565,6 @@ class BehaviorPathPlanner(Node):
     def dot_product(self, v1, v2):
         return v1[0] * v2[0] + v1[1] * v2[1]
             
-    def publish_path_planning_msgs(self, look_ahead_point, speed):
-        lookahead_point = PlanningPathPlanningMsg()
-        if look_ahead_point is None:
-            lookahead_point.look_ahead_point = Point(x=0.0, y=0.0, z=0.0)
-        else:
-            # lookahead_point.look_ahead_point = Point(x=look_ahead_point['x'], y=look_ahead_point['y'], z=look_ahead_point['z'])
-            lookahead_point.look_ahead_point = look_ahead_point
-        lookahead_point.speed_limit = float(speed)
-        self.planning_publisher.publish(lookahead_point)
-    
     def publish_curve_internal_msg(self, isTurnDetected, isEndOfPath):
         internal_msg = PlanningInternalMsg()
         internal_msg.is_curve_detected = isTurnDetected
@@ -911,6 +880,8 @@ class BehaviorPathPlanner(Node):
                 if self.calculate_distance(vehicle_pose, self.path[trigger_point_index].waypoint) <= threshold:
                     self.get_logger().info("Reached Cool4 trigger waypoint — adjusting speed profile...")
                     self.cool4_speed_profile_adjustment(self.intersection_points)
+                    self.apply_speed_profile_to_path()
+                    self.publish_smoothed_mission_plan()
                     self.publish_speed_profile_markers()
                     self.cool4_triggered = True
 
@@ -947,6 +918,7 @@ class BehaviorPathPlanner(Node):
             self.path = self.mission_plan.path
             self.destination = self.path[-1].waypoint
             self.speeds_on_path = self.simple_av_speed_profile_maker(self.path)
+            self.apply_speed_profile_to_path()
 
             self.path_of_waypoints.clear()
             for waypoint in self.path:
@@ -961,10 +933,7 @@ class BehaviorPathPlanner(Node):
             self.last_closest_point_index = None
             self.publish_speed_profile_markers()
             self.publish_path_of_waypoints_markers()
-            densified_msg = PlanningInternalMissionPlanMsg()
-            densified_msg.path = self.path
-            densified_msg.path_as_lanes = self.path_as_lanes
-            self.mission_plan_densified_pub.publish(densified_msg)
+            self.publish_smoothed_mission_plan()
 
             if self.is_cool4_speed_profile_enable:
                 self.intersection_points = self.find_intersection_start_and_exit_using_config(self.path)
@@ -973,6 +942,19 @@ class BehaviorPathPlanner(Node):
                 self.publish_intersection_point_markers()
             return True
         return False
+
+    def apply_speed_profile_to_path(self):
+        if not self.path or not self.speeds_on_path:
+            return
+        count = min(len(self.path), len(self.speeds_on_path))
+        for i in range(count):
+            self.path[i].speed = float(self.speeds_on_path[i])
+
+    def publish_smoothed_mission_plan(self):
+        densified_msg = PlanningInternalMissionPlanMsg()
+        densified_msg.path = self.path
+        densified_msg.path_as_lanes = self.path_as_lanes
+        self.mission_plan_densified_pub.publish(densified_msg)
 
     def end_of_path_detection(self, current_closest_point_to_vehicle_index):
         current_pose = self.path_of_waypoints[current_closest_point_to_vehicle_index]
@@ -1179,7 +1161,6 @@ class BehaviorPathPlanner(Node):
             self.get_logger().warning("RESET")
             self.isPathPlanned = False
             self.cool4_triggered = False
-            self.prev_lookahead_index = 0
             self.current_lane_index = 0
             self.mission_plan_requested = False
             self.mission_plan_request_time_ns = None
@@ -1188,7 +1169,6 @@ class BehaviorPathPlanner(Node):
             self.path_as_lanes = None
             self.path_of_waypoints.clear()
             self.speeds_on_path = []
-            self.publish_path_planning_msgs(None, 0)
             self.pending_reset = False
             self.reset = False
             return
@@ -1228,11 +1208,9 @@ class BehaviorPathPlanner(Node):
         if self.finished:
             self.get_logger().info("Scenario Finished, Parking the Vehicle...")
             self.node_shut = True
-            self.publish_path_planning_msgs(None, 0) # publishing
             return
 
         if self.reset_cooldown_active():
-            self.publish_path_planning_msgs(None, 0)
             return
     
         if not self.path and not self.path_as_lanes:
@@ -1248,26 +1226,20 @@ class BehaviorPathPlanner(Node):
 
         search_area, search_area_as_lanes = self.create_search_area()
         current_closest_point_to_vehicle_index = self.find_closest_waypoint_to_vehicle(vehicle_pose, search_area)
-        look_ahead_point_index, look_ahead_point = self.find_lookahead_point(current_closest_point_to_vehicle_index)
         isEndOfPath = self.end_of_path_detection(current_closest_point_to_vehicle_index)
-        if not look_ahead_point and not look_ahead_point_index:
-            self.get_logger().warning("Lookahead point not set in local planning")
+        if current_closest_point_to_vehicle_index is None:
+            self.get_logger().warning("Closest waypoint not set in local planning")
             return
-                  
-        self.lookahead_distance = self.current_speed * self.lookahead_distance_C + self.lookahead_distance_B # meters
 
         isTurnDetected = False
-        if self.speeds_on_path[look_ahead_point_index] < 10.0:
+        if self.speeds_on_path[current_closest_point_to_vehicle_index] < 10.0:
             isTurnDetected = True
 
         self.publish_curve_internal_msg(isTurnDetected, isEndOfPath)
-        self.publish_path_planning_msgs(look_ahead_point, self.speeds_on_path[look_ahead_point_index]) # publishing
 
         self.get_logger().debug(
-            f'lookahead distance:  {self.lookahead_distance}\n'
             f'current point index:  {current_closest_point_to_vehicle_index}\n'
-            f'lookahead point index:  {look_ahead_point_index} {self.prev_lookahead_index}\n'
-            f'speed: {self.speeds_on_path[look_ahead_point_index]}\n'
+            f'speed: {self.speeds_on_path[current_closest_point_to_vehicle_index]}\n'
             f'is turn detected: {isTurnDetected}\n'
         )
 

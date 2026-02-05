@@ -5,7 +5,7 @@ from geometry_msgs.msg import Point
 import yaml
 import os
 from ament_index_python.packages import get_package_share_directory
-from simple_av_msgs.msg import PlanningPathPlanningMsg, LocalizationMsg  # adjust if needed
+from simple_av_msgs.msg import LocalizationMsg  # adjust if needed
 from dataclasses import dataclass
 from typing import List, Tuple
 from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy
@@ -33,45 +33,15 @@ class point_visualizer(Node):
         super().__init__('rviz_point_visualizer')
 
         # Publishers
-        self.lookahead_pub = self.create_publisher(Marker, '/simple_av/visualization/lookahead_point_marker', 10)
         self.closest_point_pub = self.create_publisher(Marker, '/simple_av/visualization/closest_point_marker', 10)
 
         # Subscriptions
-        self.create_subscription(
-            PlanningPathPlanningMsg,
-            '/simple_av/planning/path_planning',
-            self.lookahead_callback,
-            10
-        )
         self.create_subscription(
             LocalizationMsg,
             '/simple_av/localization/location',
             self.closest_point_callback,
             10
         )
-
-
-    def lookahead_callback(self, msg: PlanningPathPlanningMsg):
-        marker = Marker()
-        marker.header.frame_id = "map"  # display in map frame
-        marker.header.stamp = self.get_clock().now().to_msg()
-        marker.ns = "lookahead"
-        marker.id = 0
-        marker.type = Marker.SPHERE
-        marker.action = Marker.ADD
-        marker.pose.position = msg.look_ahead_point  # geometry_msgs/Point
-        marker.pose.orientation.w = 1.0
-        marker.scale.x = 1.5
-        marker.scale.y = 1.5
-        marker.scale.z = 1.5
-        marker.color.r = 35.0/255.0
-        marker.color.g = 199.0/255.0
-        marker.color.b = 48.0/255.0
-        marker.color.a = 0.8
-        marker.lifetime.sec = 0  # 0 = forever
-
-        self.lookahead_pub.publish(marker)
-        self.get_logger().debug(f"Published lookahead point at {msg.look_ahead_point.x}, {msg.look_ahead_point.y}, {msg.look_ahead_point.z}")
 
 
     def closest_point_callback(self, msg: LocalizationMsg):
