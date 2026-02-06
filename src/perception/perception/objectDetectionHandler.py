@@ -70,6 +70,7 @@ class Perception(Node):
         self.reset = False
         self.finished = False
         self.prev_reset = False
+        self.round_number = 0
         self.last_reset_time_ns = None
         self.reset_cooldown = self.scenario_config['scenario'].get('reset_cooldown_seconds', 2.0)
         
@@ -99,13 +100,15 @@ class Perception(Node):
     
     def portal_callback(self, msg):
         now_ns = self.get_clock().now().nanoseconds
+        round_changed = msg.round_number != self.round_number
         reset_edge = msg.reset and not self.prev_reset
         cooldown_ok = (
             self.last_reset_time_ns is None or
             (now_ns - self.last_reset_time_ns) / 1e9 >= self.reset_cooldown
         )
-        self.reset = reset_edge and cooldown_ok
+        self.reset = (reset_edge or round_changed) and cooldown_ok
         self.finished = msg.finished
+        self.round_number = msg.round_number
         if self.reset:
             self.last_reset_time_ns = now_ns
         self.prev_reset = msg.reset

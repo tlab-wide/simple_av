@@ -10,6 +10,8 @@ from geometry_msgs.msg import PoseStamped, Point
 from std_msgs.msg import String
 from collections import deque
 from simple_av_msgs.msg import LocalizationMsg, Portal, PlanningInternalMissionPlanMsg, PlanningWaypoint
+from visualization_msgs.msg import Marker, MarkerArray
+from std_msgs.msg import ColorRGBA
 from std_srvs.srv import Trigger
 from simple_av_msgs.srv import TriggerMissionPlan
 import numpy as np
@@ -79,7 +81,6 @@ class MissionPlanner(Node):
         self.start_lanelet = None
         self.vehicle_model = self.scenario_config['scenario']['vehicle_model']
         self.motion_behavior_config = self.config_file_loader("motion_behavior_config.yaml")
-        self.motion_behavior_config = self.config_file_loader("motion_behavior_config.yaml")
 
         # Load the map
         self.map_data = self.load_map_data(self.vehicle_model)
@@ -113,7 +114,16 @@ class MissionPlanner(Node):
             reliability=QoSReliabilityPolicy.RELIABLE,
             durability=QoSDurabilityPolicy.TRANSIENT_LOCAL
         )
-        self.mission_plan_publisher = self.create_publisher(PlanningInternalMissionPlanMsg, 'simple_av/planning/mission_plan', qos_profile)
+        self.mission_plan_publisher = self.create_publisher(
+            PlanningInternalMissionPlanMsg,
+            '/simple_av/mission_planning/path',
+            qos_profile,
+        )
+        self.path_marker_pub = self.create_publisher(
+            MarkerArray,
+            '/simple_av/mission_planning/visualization/path',
+            qos_profile,
+        )
 
         #Path planning
         # self.isPathPlanned = False  # Flag to check if the path has been planned
@@ -124,9 +134,7 @@ class MissionPlanner(Node):
         # self.isFirstRequest = True
         self.search_depth = 5
 
-        self.densify_interval = float(
-            self.motion_behavior_config['motion']['path']['densify_interval']
-        )
+        self.max_speed = float(self.motion_behavior_config['motion']['speed_limits']['base'])
         self.pending_replan = False
         self.global_loc_request_time_ns = None
         self.global_loc_in_flight = False
@@ -243,7 +251,7 @@ class MissionPlanner(Node):
         points = []
         for lane_name in self.path_as_lanes:
             lane_obj = self.find_lane_by_name(lane_name)
-            waypoints = lane_obj['dense_waypoints']
+            waypoints = lane_obj['waypoints']
             for waypoint in waypoints:
                 points.append(Point(x=waypoint['x'], y=waypoint['y'], z=waypoint['z']))
 
@@ -399,10 +407,8 @@ class MissionPlanner(Node):
             )
             self.bfs(self.start_lanelet, self.dest_lanelet) # Creates the path
             if self.path and self.path_as_lanes:
-                smoothed_points = self.smooth_points(self.path, window_size=5)
-                dense_points = self.resample_points(smoothed_points, self.densify_interval)
-                self.path = dense_points
-                self.curves = self.compute_curves(self.path)
+                # Basic path only; smoothing/densifying happens in path planner.
+                self.curves = [0.0 for _ in self.path]
         else:
             self.get_logger().warning("No Location data to process mission planning")
             
@@ -411,13 +417,82 @@ class MissionPlanner(Node):
 
         point_list = []
         for i, wp in enumerate(self.path):
-            waypoint_profile = PlanningWaypoint(waypoint=wp, curve=self.curves[i])
+            curve_val = self.curves[i] if i < len(self.curves) else 0.0
+            waypoint_profile = PlanningWaypoint(
+                waypoint=wp,
+                curve=curve_val,
+                speed=float(self.max_speed),
+            )
             point_list.append(waypoint_profile)
 
          # path_as_lanes is list of strings already
         mission_msg.path_as_lanes = self.path_as_lanes
         mission_msg.path = point_list
         self.mission_plan_publisher.publish(mission_msg)
+        self.publish_path_markers()
+
+    def speed_to_color(self, speed):
+        max_speed = max(self.max_speed, 1e-3)
+        min_speed = 0.0
+        t = (speed - min_speed) / (max_speed - min_speed)
+        t = max(0.0, min(1.0, t))
+        return ColorRGBA(r=t, g=0.2, b=1.0 - t, a=0.9)
+
+    def publish_path_markers(self):
+        if not self.path:
+            return
+        marker_array = MarkerArray()
+        clear_marker = Marker()
+        clear_marker.action = Marker.DELETEALL
+        marker_array.markers.append(clear_marker)
+
+        now = self.get_clock().now().to_msg()
+        points_marker = Marker()
+        points_marker.header.frame_id = "map"
+        points_marker.header.stamp = now
+        points_marker.ns = "mission_plan_path"
+        points_marker.id = 0
+        points_marker.type = Marker.SPHERE_LIST
+        points_marker.action = Marker.ADD
+        points_marker.pose.orientation.w = 1.0
+        points_marker.scale.x = 1.0
+        points_marker.scale.y = 1.0
+        points_marker.scale.z = 1.0
+
+        for wp in self.path:
+            points_marker.points.append(Point(x=wp.x, y=wp.y, z=wp.z))
+            points_marker.colors.append(self.speed_to_color(self.max_speed))
+
+        marker_array.markers.append(points_marker)
+
+        text_id = 1
+        text_stride = 5
+        for i, wp in enumerate(self.path):
+            if i % text_stride != 0:
+                continue
+            text_marker = Marker()
+            text_marker.header.frame_id = "map"
+            text_marker.header.stamp = now
+            text_marker.ns = "mission_plan_speed"
+            text_marker.id = text_id
+            text_marker.type = Marker.TEXT_VIEW_FACING
+            text_marker.action = Marker.ADD
+            text_marker.pose.position = Point(
+                x=wp.x + 0.8,
+                y=wp.y,
+                z=wp.z + 1.2
+            )
+            text_marker.pose.orientation.w = 1.0
+            text_marker.scale.z = 0.6
+            text_marker.color.r = 1.0
+            text_marker.color.g = 1.0
+            text_marker.color.b = 1.0
+            text_marker.color.a = 0.9
+            text_marker.text = f"{self.max_speed:.1f}"
+            marker_array.markers.append(text_marker)
+            text_id += 1
+
+        self.path_marker_pub.publish(marker_array)
 
     def handle_mission_plan_request(self, request, response):
         self.get_logger().info("Received mission planning request.")

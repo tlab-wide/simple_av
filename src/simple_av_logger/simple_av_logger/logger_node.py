@@ -320,12 +320,13 @@ class Logger(Node):
 
     def portal_callback(self, msg):
         now_ns = self.get_clock().now().nanoseconds
+        round_changed = msg.round_number != self.round_number
         reset_edge = msg.reset and not self.prev_reset
         cooldown_ok = (
             self.last_reset_time_ns is None or
             (now_ns - self.last_reset_time_ns) / 1e9 >= self.reset_cooldown
         )
-        self.reset = reset_edge and cooldown_ok
+        self.reset = (reset_edge or round_changed) and cooldown_ok
         self.round_number = msg.round_number
         self.finished = msg.finished
         if self.reset:

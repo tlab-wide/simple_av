@@ -57,6 +57,7 @@ class Localization(Node):
         self.reset = False
         self.finished = False
         self.prev_reset = False
+        self.round_number = 0
         self.last_reset_time_ns = None
         self.reset_cooldown = 0.5 * self.scenario_config['scenario'].get('reset_cooldown_seconds', 2.0)
         # Initialize the publisher
@@ -70,14 +71,14 @@ class Localization(Node):
         )
         self.subscription_mission_plan = self.create_subscription(
             PlanningInternalMissionPlanMsg,
-            'simple_av/planning/mission_plan',
+            '/simple_av/mission_planning/path',
             self.mission_plan_callback,
             qos_profile,
         )
         self.subscription_mission_plan_smoothed = self.create_subscription(
             PlanningInternalMissionPlanMsg,
-            'simple_av/planning/mission_plan_smoothed',
-            self.mission_plan_smoothed_callback,
+            '/simple_av/path_planning/trajectory',
+            self.trajectory_callback,
             qos_profile,
         )
 
@@ -102,8 +103,8 @@ class Localization(Node):
 
         self.mission_plan_points = []
         self.mission_plan_lanes = []
-        self.mission_plan_smoothed_points = []
-        self.mission_plan_smoothed_lanes = []
+        self.trajectory_points = []
+        self.trajectory_lanes = []
 
         self.node_shut = False
 
@@ -131,20 +132,22 @@ class Localization(Node):
 
     def portal_callback(self, msg):
         now_ns = self.get_clock().now().nanoseconds
+        round_changed = msg.round_number != self.round_number
         reset_edge = msg.reset and not self.prev_reset
         cooldown_ok = (
             self.last_reset_time_ns is None or
             (now_ns - self.last_reset_time_ns) / 1e9 >= self.reset_cooldown
         )
-        self.reset = reset_edge and cooldown_ok
+        self.reset = (reset_edge or round_changed) and cooldown_ok
         self.finished = msg.finished
+        self.round_number = msg.round_number
         if self.reset:
             self.last_reset_time_ns = now_ns
             # Clear mission plan caches so localization falls back to map search after reset.
             self.mission_plan_points = []
             self.mission_plan_lanes = []
-            self.mission_plan_smoothed_points = []
-            self.mission_plan_smoothed_lanes = []
+            self.trajectory_points = []
+            self.trajectory_lanes = []
         self.prev_reset = msg.reset
 
     def mission_plan_callback(self, msg):
@@ -153,15 +156,15 @@ class Localization(Node):
         ]
         self.mission_plan_lanes = list(msg.path_as_lanes)
 
-    def mission_plan_smoothed_callback(self, msg):
-        self.mission_plan_smoothed_points = [
+    def trajectory_callback(self, msg):
+        self.trajectory_points = [
             Point(wp.waypoint.x, wp.waypoint.y, wp.waypoint.z) for wp in msg.path
         ]
-        self.mission_plan_smoothed_lanes = list(msg.path_as_lanes)
+        self.trajectory_lanes = list(msg.path_as_lanes)
 
     def get_active_mission_path(self):
-        if self.mission_plan_smoothed_points:
-            return self.mission_plan_smoothed_points, self.mission_plan_smoothed_lanes
+        if self.trajectory_points:
+            return self.trajectory_points, self.trajectory_lanes
         if self.mission_plan_points:
             return self.mission_plan_points, self.mission_plan_lanes
         return [], []
