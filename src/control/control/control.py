@@ -13,7 +13,7 @@ from autoware_control_msgs.msg import Control, Lateral, Longitudinal
 from std_msgs.msg import Float32
 
 from rclpy.qos import QoSProfile, DurabilityPolicy, HistoryPolicy, ReliabilityPolicy
-from simple_av_msgs.msg import PlanningMotionPlanningMsg, CollisionPredictionInfo, PlanningInternalMissionPlanMsg
+from simple_av_msgs.msg import PlanningInternalMissionPlanMsg
 from simple_av_msgs.msg import SimMonitor, LocalizationIntersectionStatus
 import time
 import math
@@ -96,8 +96,6 @@ class VehicleControl(Node):
         
         self.maximum_Stereing = None
         self.normal_deceleration_rate = self.vehicle_config['performance']['normal_deceleration_rate']
-        self.normal_braking_deceleration_rate = self.vehicle_config['performance']['normal_braking_deceleration_rate']
-        self.max_braking_deceleration_rate = self.vehicle_config['performance']['max_braking_deceleration_rate']
         
         # Use TF from localization fusion (map -> base_link)
         self.pose = PoseStamped()
@@ -118,10 +116,10 @@ class VehicleControl(Node):
             reliability=ReliabilityPolicy.RELIABLE,
             durability=DurabilityPolicy.TRANSIENT_LOCAL
         )
-        self.subscriptionMissionPlan = self.create_subscription(
+        self.subscriptionTrajectory = self.create_subscription(
             PlanningInternalMissionPlanMsg,
-            'simple_av/planning/mission_plan_smoothed',
-            self.mission_plan_callback,
+            '/simple_av/motion_planning/trajectory',
+            self.trajectory_callback,
             qos_profile_path
         )
         self.path_of_waypoints = []
@@ -134,17 +132,6 @@ class VehicleControl(Node):
         self.lookahead_distance_B = float(self.motion_behavior_config['motion']['lookahead']['base'])
         self.densify_interval = float(self.motion_behavior_config['motion']['path']['densify_interval'])
         
-        self.subscriptionBehaviorMotionPlanning = self.create_subscription(PlanningMotionPlanningMsg, '/simple_av/planning/motion_planning', self.motion_planning_callback, 10)
-        self.motion_plan = PlanningMotionPlanningMsg()
-
-        self.subscriptionCollisionPrediction = self.create_subscription(
-            CollisionPredictionInfo,
-            "simple_av/planning/collision_prediction_info",
-            self.collision_prediction_callback,
-            10
-        )
-        self.collision_prediction_info = CollisionPredictionInfo()
-
         self.subscriptionIntersectionAwareness = self.create_subscription(
             LocalizationIntersectionStatus,
             'simple_av/localization/intersection_status',
@@ -169,6 +156,7 @@ class VehicleControl(Node):
         self.reset_cooldown = self.scenario_config['scenario'].get('reset_cooldown_seconds', 2.0)
         self.reset_active = False
         self.round_number = 0
+        self._last_log_time = {}
 
         # Publish topics
         qos_profile = QoSProfile(
@@ -235,12 +223,13 @@ class VehicleControl(Node):
 
     def portal_callback(self, msg):
         now_ns = self.get_clock().now().nanoseconds
+        round_changed = (self.round_number is not None and msg.round_number != self.round_number)
         reset_edge = msg.reset and not self.prev_reset
         cooldown_ok = (
             self.last_reset_time_ns is None or
             (now_ns - self.last_reset_time_ns) / 1e9 >= self.reset_cooldown
         )
-        self.reset = reset_edge and cooldown_ok
+        self.reset = (reset_edge or round_changed) and cooldown_ok
         self.finished = msg.finished
         self.round_number = msg.round_number
         if self.reset:
@@ -280,18 +269,19 @@ class VehicleControl(Node):
     def velocity_report_callback(self, msg):
         self.velocity_report = msg
 
-    def mission_plan_callback(self, msg):
+    def trajectory_callback(self, msg):
         self.path_of_waypoints = [wp.waypoint for wp in msg.path]
         self.speeds_on_path = [float(getattr(wp, 'speed', 0.0)) for wp in msg.path]
         self.last_closest_point_index = None
         self.lookahead_point = None
         self.lookahead_index = None
-    
-    def motion_planning_callback(self, msg):
-        self.motion_plan = msg
-    
-    def collision_prediction_callback(self, msg):
-        self.collision_prediction_info = msg
+        if msg.path:
+            self.log_throttle(
+                "info",
+                "trajectory_rx",
+                f"Received trajectory with {len(msg.path)} points",
+                period_sec=1.0,
+            )
     
     def intersection_awareness_callback(self, msg):
         self.intersection_awareness_intersection_name = msg.intersection_name
@@ -311,6 +301,7 @@ class VehicleControl(Node):
             return
 
         self.update_lookahead_point()
+        current_speed = self.velocity_report.longitudinal_velocity if self.velocity_report else 0.0
         
         if self.finished:
             self.node_shut = True
@@ -339,17 +330,13 @@ class VehicleControl(Node):
         gear_msg = GearCommand()
         gear_msg.stamp = self.get_clock().now().to_msg()
         if self.reset_active:
-            current_speed = self.velocity_report.longitudinal_velocity if self.velocity_report else 0.0
-            if not self.reset_cooldown_active() and (current_speed > 0.1 or self.motion_plan.status.data != "Park"):
+            if not self.reset_cooldown_active() and current_speed > 0.1:
                 self.reset_active = False
                 self.get_logger().debug("drive")
                 gear_msg.command = GearCommand.DRIVE
             else:
                 self.get_logger().debug("park (reset)")
                 gear_msg.command = GearCommand.PARK
-        elif self.motion_plan.status.data == "Park":
-            self.get_logger().debug("park")
-            gear_msg.command = GearCommand.PARK
         else:
             self.get_logger().debug("drive")
             gear_msg.command = GearCommand.DRIVE
@@ -358,6 +345,17 @@ class VehicleControl(Node):
         # self.turn_indicator_publisher.publish(turn_indicator_msg)
         self.gear_publisher.publish(gear_msg)  
         self.publish_speed_debug()
+        self.log_throttle(
+            "info",
+            "control_state",
+            (
+                f"traj_points={len(self.path_of_waypoints)} "
+                f"lookahead_idx={self.lookahead_index} "
+                f"speed_limit={self.speed_limit:.2f} "
+                f"current_speed={current_speed:.2f}"
+            ),
+            period_sec=1.0,
+        )
 
     def publish_speed_debug(self):
         speed_msg = Float32()
@@ -365,10 +363,27 @@ class VehicleControl(Node):
         speed_msg.data = speed_mps * 3.6
         self.speed_debug_pub.publish(speed_msg)
 
+    def log_throttle(self, level, key, msg, period_sec=1.0):
+        now = self.get_clock().now().nanoseconds / 1e9
+        last = self._last_log_time.get(key, 0.0)
+        if now - last < period_sec:
+            return
+        self._last_log_time[key] = now
+        if level == "debug":
+            self.get_logger().debug(msg)
+        elif level == "info":
+            self.get_logger().info(msg)
+        elif level == "warning":
+            self.get_logger().warning(msg)
+        elif level == "error":
+            self.get_logger().error(msg)
+        else:
+            self.get_logger().info(msg)
+
     
     def get_lateral_command(self):
         lateral_command = Lateral()
-        if self.motion_plan.status.data == "Park" and (self.reset or self.reset_active):
+        if self.reset or self.reset_active:
             self.get_logger().debug("debug PARK")
             lateral_command.steering_tire_angle = 0.0
             lateral_command.steering_tire_rotation_rate = 0.0
@@ -388,33 +403,8 @@ class VehicleControl(Node):
 
         current_speed = self.velocity_report.longitudinal_velocity if self.velocity_report else 0.0
         target_speed = self.speed_limit
-        stop_point = self.motion_plan.stop_point
-        if self.motion_plan.status.data == "Decelerate" and self.collision_prediction_info.collision_detected:
-            stop_point = self.collision_prediction_info.object_position
-        distance_to_stop = self.calculate_distance(stop_point, self.pose.pose.position)
-        front_offset = self.wheel_base + self.front_overhang
-        distance_to_stop = max(0.0, distance_to_stop - front_offset)
-
-        self.get_logger().debug(f"status: {self.motion_plan.status.data}")
-        self.get_logger().debug(f"current_speed: {current_speed}")
-        self.get_logger().debug(f"distance_to_stop: {distance_to_stop}")
-
-        if self.motion_plan.status.data == "Decelerate" or self.motion_plan.status.data == "Stop_red" or self.reset or self.reset_active:
-            # print("debug: ", self.motion_plan.stop_point, type(self.motion_plan.stop_point))
-            # print("debug: ", self.pose.pose.position, type(self.pose.pose.position))
-            
-            target_speed = self.calculate_target_speed_for_stop(distance_to_stop, current_speed)
-            if self.motion_plan.status.data == "Stop_red" and distance_to_stop <= 4.0:
-                self.get_logger().debug("Full stop!")
-                target_speed = 0.0
-            if self.motion_plan.status.data == "Decelerate" and distance_to_stop <= 4.0:
-                self.get_logger().debug("Full stop!")
-                target_speed = 0.0
-            if self.reset or self.reset_active:
-                self.get_logger().debug("Full stop!")
-                target_speed = 0.0
-            
-            self.get_logger().debug(f"Decelerate or stop red target_speed: {target_speed}")
+        if self.reset or self.reset_active:
+            target_speed = 0.0
 
         now_sec = self.get_clock().now().nanoseconds * 1e-9
         accel = self.pid_controller.updatePID(current_speed, target_speed, now_sec)
@@ -422,30 +412,6 @@ class VehicleControl(Node):
         deceleration_rate = self.normal_deceleration_rate
 
         self.get_logger().debug(f"calculated accel: {accel}")
-        if self.motion_plan.status.data == "Decelerate" or self.motion_plan.status.data == "Stop_red" or self.reset or self.reset_active:
-            self.get_logger().debug(
-                f"normal braking deceleration {self.normal_braking_deceleration_rate}"
-            )
-            deceleration_rate = self.normal_braking_deceleration_rate
-
-        if self.motion_plan.status.data == "Decelerate":
-            if self.normal_braking_deceleration_rate != 0.0:
-                stopping_distance = (current_speed ** 2) / (2.0 * abs(self.normal_braking_deceleration_rate))
-            else:
-                stopping_distance = float('inf')
-            if distance_to_stop <= stopping_distance:
-                deceleration_rate = self.max_braking_deceleration_rate
-
-        if self.motion_plan.status.data == "Stop_red":
-            if self.normal_braking_deceleration_rate != 0.0:
-                stopping_distance = (current_speed ** 2) / (2.0 * abs(self.normal_braking_deceleration_rate))
-            else:
-                stopping_distance = float('inf')
-            if distance_to_stop <= stopping_distance or (distance_to_stop <= 8.0 and current_speed >= 2):
-                self.get_logger().debug(
-                    f"MAX braking deceleration {self.max_braking_deceleration_rate}"
-                )
-                deceleration_rate = self.max_braking_deceleration_rate
 
         self.get_logger().debug("--------------------------")
         if accel > self.acceleration_rate:
@@ -460,25 +426,15 @@ class VehicleControl(Node):
         longitudinal_command.jerk = 0.0
         longitudinal_command.is_defined_jerk = False
 
-        if self.motion_plan.status.data == "Decelerate" or self.motion_plan.status.data == "Stop_red":
-            self.get_logger().debug(
+        self.get_logger().debug(
             f'speed: {current_speed}\n'
             f'accel: {accel}\n'
             f'target speed: {target_speed}\n'
-            f'stop distance: {distance_to_stop}\n'
-            f'status : {self.motion_plan.status.data}\n'
         )
-        else:
-            self.get_logger().debug(
-                f'speed: {current_speed}\n'
-                f'accel: {accel}\n'
-                f'target speed: {target_speed}\n'
-                f'status : {self.motion_plan.status.data}\n'
-            )
-        self.publish_status_markers(distance_to_stop)
+        self.publish_status_markers(target_speed)
         return longitudinal_command
 
-    def publish_status_markers(self, distance_to_stop):
+    def publish_status_markers(self, target_speed):
         if not self.pose or not self.pose.pose:
             return
         marker_array = MarkerArray()
@@ -491,8 +447,8 @@ class VehicleControl(Node):
         base_z = self.pose.pose.position.z + 3.0
 
         entries = [
-            ("distance_to_stop", f"{distance_to_stop:.1f} m", (1.0, 0.2, 0.2)),
-            ("motion_status", self.motion_plan.status.data, (1.0, 1.0, 0.2)),
+            ("target_speed", f"{target_speed:.2f} m/s", (1.0, 0.8, 0.2)),
+            ("speed_limit", f"{self.speed_limit:.2f} m/s", (0.8, 0.8, 1.0)),
             ("intersection", self.intersection_awareness_status or "none", (0.2, 1.0, 0.2)),
             ("reset", "true" if self.reset else "false", (1.0, 1.0, 1.0)),
             ("round", str(self.round_number), (0.6, 0.9, 1.0)),
@@ -532,19 +488,6 @@ class VehicleControl(Node):
                 return accel
         return self.acceleration_rate
     
-    def calculate_target_speed_for_stop(self, distance_to_stop, current_speed):
-        # Gradual deceleration based on distance and current speed
-        # Using a nonlinear deceleration curve for smoother braking
-        
-        # Adjusted deceleration factor
-        speed_limit = float(self.speed_limit)
-        if speed_limit <= 0.0:
-            return 0.0
-        target_speed = current_speed * (distance_to_stop / (speed_limit * 3.0))**1.0
-        
-        # Clamp for realistic behavior
-        return min(speed_limit, max(0.0, target_speed))
-
     def filter(self, new_value, previous_value, gain):
         return gain * previous_value + (1 - gain) * new_value
 
@@ -597,7 +540,7 @@ class VehicleControl(Node):
             speed_idx = min(lookahead_idx, len(self.speeds_on_path) - 1)
             self.speed_limit = float(self.speeds_on_path[speed_idx])
         else:
-            self.speed_limit = float(self.motion_behavior_config['motion']['speed_limits']['base'])
+            self.speed_limit = 0.0
         self.publish_lookahead_marker(self.lookahead_point)
 
     def publish_lookahead_marker(self, point):

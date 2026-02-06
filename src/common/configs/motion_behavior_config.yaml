@@ -1,10 +1,15 @@
 motion:
   max_turning_angle: 35.0  # Maximum allowable turning angle (degrees)
   max_lateral_accel: 4.0   # Lateral acceleration limit (m/s^2)
+  curve_calc_dist: 6       # Points on each side used for curvature calculation
   
   speed_limits:
-    base: 15.0     # Default base speed (m/s)
+    base: 8.33     # Default base speed (m/s)
     turning_speed: 3.0 # Default speed on turns (m/s)
+    min: 0.83      # Minimum speed clamp (m/s)
+    cool4_min: 0.83    # Cool4 minimum speed (m/s)
+    cool4_middle: 1.67 # Cool4 middle speed (m/s)
+    cool4_max: 3.33    # Cool4 maximum speed (m/s)
 
   lookahead:
     coefficient: 1.5    # Scaling factor for lookahead distance
@@ -12,6 +17,9 @@ motion:
 
   path:
     densify_interval: 0.5 # meters / Distance between each two consecutive waypoints on a lane
+
+  trajectory:
+    length: 100.0 # meters / Length of motion planning trajectory
 
 control:
   pid:

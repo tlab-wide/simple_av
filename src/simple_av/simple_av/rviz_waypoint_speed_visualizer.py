@@ -1,5 +1,6 @@
 import rclpy
 from rclpy.node import Node
+import math
 
 from geometry_msgs.msg import Point
 from std_msgs.msg import ColorRGBA
@@ -12,7 +13,7 @@ class WaypointSpeedVisualizer(Node):
     def __init__(self):
         super().__init__('rviz_waypoint_speed_visualizer')
 
-        self.declare_parameter('mission_plan_topic', '/simple_av/planning/mission_plan')
+        self.declare_parameter('mission_plan_topic', '/simple_av/motion_planning/trajectory')
         self.declare_parameter('marker_topic', '/waypoint_speed_markers')
         self.declare_parameter('frame_id', 'map')
         self.declare_parameter('point_scale', 1.0)
@@ -27,6 +28,7 @@ class WaypointSpeedVisualizer(Node):
         self.declare_parameter('text_stride', 1)
         self.declare_parameter('max_speed', 11.0)
         self.declare_parameter('min_speed', 0.0)
+        self.declare_parameter('max_lateral_accel', 4.0)
         self.declare_parameter('curvature_gain', 1.0)
         self.declare_parameter('curve_epsilon', 1e-3)
         self.declare_parameter('marker_alpha', 0.9)
@@ -57,13 +59,15 @@ class WaypointSpeedVisualizer(Node):
     def compute_speed(self, curve):
         max_speed = self.get_parameter('max_speed').get_parameter_value().double_value
         min_speed = self.get_parameter('min_speed').get_parameter_value().double_value
+        max_lateral_accel = self.get_parameter('max_lateral_accel').get_parameter_value().double_value
         curvature_gain = self.get_parameter('curvature_gain').get_parameter_value().double_value
         curve_epsilon = self.get_parameter('curve_epsilon').get_parameter_value().double_value
 
         if curve <= curve_epsilon:
             speed = max_speed
         else:
-            speed = min(max_speed, curvature_gain / max(curve, curve_epsilon))
+            effective_lat_accel = max_lateral_accel * max(curvature_gain, 0.0)
+            speed = min(max_speed, math.sqrt(effective_lat_accel / max(curve, curve_epsilon)))
 
         return max(min_speed, speed)
 

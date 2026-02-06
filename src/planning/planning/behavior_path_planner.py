@@ -70,9 +70,16 @@ class BehaviorPathPlanner(Node):
 
         # Load motion & behavior configs
         self.motion_behavior_config = self.config_file_loader("motion_behavior_config.yaml")
-        self.base_speed = self.motion_behavior_config['motion']['speed_limits']['base'] # m/s
-        self.turning_speed = self.motion_behavior_config['motion']['speed_limits']['turning_speed'] # m/s
+        speed_limits = self.motion_behavior_config['motion']['speed_limits']
+        self.base_speed = float(speed_limits['base'])  # m/s
+        self.turning_speed = float(speed_limits['turning_speed'])  # m/s
+        self.MIN_SPEED = float(speed_limits.get('min', 0.0))
+        self.MAX_SPEED = self.base_speed
+        self.COOL4_MIN_SPEED = float(speed_limits.get('cool4_min', self.MIN_SPEED))
+        self.COOL4_MIDDLE_SPEED = float(speed_limits.get('cool4_middle', self.COOL4_MIN_SPEED))
+        self.COOL4_MAX_SPEED = float(speed_limits.get('cool4_max', self.MAX_SPEED))
         self.densify_interval = self.motion_behavior_config['motion']['path']['densify_interval']
+        self.curve_calc_dist = int(self.motion_behavior_config['motion'].get('curve_calc_dist', 6))
         self.max_lateral_accel = self.motion_behavior_config['motion'].get('max_lateral_accel', 4.0)
 
         # Load Vehicle configs
@@ -83,12 +90,6 @@ class BehaviorPathPlanner(Node):
         self.MAX_JERK_ACCEL = self.vehicle_config['performance'].get('max_jerk_accel', 0.7)
         self.MAX_JERK_DECEL = self.vehicle_config['performance'].get('max_jerk_decel', 0.7)
         self.ACCEL_PROFILE = self.vehicle_config['performance'].get('accel_profile', [])
-
-        self.MAX_SPEED = self.vehicle_config['performance']['max_speed']
-        self.MIN_SPEED = self.vehicle_config['performance']['min_speed']
-        self.COOL4_MIN_SPEED = self.vehicle_config['performance']['cool4_min_speed']
-        self.COOL4_MIDDLE_SPEED = self.vehicle_config['performance']['cool4_middle_speed']
-        self.COOL4_MAX_SPEED = self.vehicle_config['performance'].get('cool4_max_speed', self.COOL4_MIDDLE_SPEED)
 
         # Load intersection data
         self.intersection_profiles = self.load_intersections()
@@ -123,16 +124,23 @@ class BehaviorPathPlanner(Node):
             reliability=QoSReliabilityPolicy.RELIABLE,
             durability=QoSDurabilityPolicy.TRANSIENT_LOCAL
         )
-        self.subscription_mission_plan = self.create_subscription(PlanningInternalMissionPlanMsg, 'simple_av/planning/mission_plan', self.mission_plan_callback, qos_profile)
+        self.subscription_mission_plan = self.create_subscription(
+            PlanningInternalMissionPlanMsg,
+            '/simple_av/mission_planning/path',
+            self.mission_plan_callback,
+            qos_profile
+        )
         self.mission_plan = PlanningInternalMissionPlanMsg()
         self.mission_plan_densified_pub = self.create_publisher(
             PlanningInternalMissionPlanMsg,
-            'simple_av/planning/mission_plan_smoothed',
+            '/simple_av/path_planning/trajectory',
             qos_profile
         )
         self.path_as_lanes = None  # List of lanes from start lane to destination
         self.path = None  # List of [waypoints,curve] in order of path_as_lanes
         self.path_of_waypoints = [] # List of waypoints in order of path_as_lanes
+        self.base_path_points = []
+        self.base_max_speed = self.base_speed
         self.intersection_points = []
         self.cool4_triggered = False
 
@@ -142,6 +150,7 @@ class BehaviorPathPlanner(Node):
         self.pending_reset = False
         self._last_log_time = {}
         self.prev_reset = False
+        self.round_number = 0
         self.last_reset_time_ns = None
         self.reset_cooldown = self.scenario_config['scenario'].get('reset_cooldown_seconds', 2.0)
         self.reset_pose = None
@@ -168,7 +177,7 @@ class BehaviorPathPlanner(Node):
         )
         self.path_markers_pub = self.create_publisher(
             MarkerArray,
-            'simple_av/visualization/path_of_waypoints_markers',
+            '/simple_av/path_planning/visualization/smoothed_path',
             qos_profile
         )
         self.search_area_markers_pub = self.create_publisher(
@@ -333,13 +342,15 @@ class BehaviorPathPlanner(Node):
 
     def portal_callback(self, msg):
         now_ns = self.get_clock().now().nanoseconds
+        round_changed = msg.round_number != self.round_number
         reset_edge = msg.reset and not self.prev_reset
         cooldown_ok = (
             self.last_reset_time_ns is None or
             (now_ns - self.last_reset_time_ns) / 1e9 >= self.reset_cooldown
         )
-        self.reset = reset_edge and cooldown_ok
+        self.reset = (reset_edge or round_changed) and cooldown_ok
         self.finished = msg.finished
+        self.round_number = msg.round_number
         if self.reset:
             self.last_reset_time_ns = now_ns
             self.pending_reset = True
@@ -357,8 +368,16 @@ class BehaviorPathPlanner(Node):
     
     def mission_plan_callback(self, msg):
         self.mission_plan = msg
-        self.path = self.mission_plan.path
-        self.path_as_lanes = self.mission_plan.path_as_lanes
+        self.base_path_points = [wp.waypoint for wp in msg.path]
+        self.path_as_lanes = list(msg.path_as_lanes)
+        if msg.path:
+            self.base_max_speed = float(getattr(msg.path[0], 'speed', self.base_speed))
+            self.log_throttle(
+                "info",
+                "base_path_rx",
+                f"Received base path with {len(msg.path)} points",
+                period_sec=1.0,
+            )
 
     def update_pose_from_tf(self):
         try:
@@ -472,25 +491,19 @@ class BehaviorPathPlanner(Node):
     def compute_curves(self, points, curve_calc_dist=6):
         if len(points) < 2 * curve_calc_dist:
             return [0.0 for _ in points]
-        curves = []
-        for _ in range(curve_calc_dist):
-            curves.append(0.0)
+        curves = [0.0 for _ in points]
         for i in range(curve_calc_dist, len(points) - curve_calc_dist):
             p1 = points[i - curve_calc_dist]
             p2 = points[i]
             p3 = points[i + curve_calc_dist]
-            v1 = np.array([p2.x - p1.x, p2.y - p1.y])
-            v2 = np.array([p3.x - p2.x, p3.y - p2.y])
-            mag1 = np.linalg.norm(v1)
-            mag2 = np.linalg.norm(v2)
-            if mag1 < 1e-6 or mag2 < 1e-6:
-                curves.append(0.0)
+            a = math.hypot(p2.x - p1.x, p2.y - p1.y)
+            b = math.hypot(p3.x - p2.x, p3.y - p2.y)
+            c = math.hypot(p3.x - p1.x, p3.y - p1.y)
+            if a < 1e-6 or b < 1e-6 or c < 1e-6:
                 continue
-            dot = float(np.dot(v1, v2))
-            cosang = max(-1.0, min(1.0, dot / (mag1 * mag2)))
-            curves.append(math.acos(cosang))
-        for _ in range(len(points) - curve_calc_dist, len(points)):
-            curves.append(0.0)
+            cross = (p2.x - p1.x) * (p3.y - p1.y) - (p2.y - p1.y) * (p3.x - p1.x)
+            curvature = 2.0 * abs(cross) / (a * b * c)
+            curves[i] = curvature
         return curves
     
     def find_lane_by_name(self, lane_name):
@@ -577,13 +590,16 @@ class BehaviorPathPlanner(Node):
         future = self.mission_planner_client.call_async(request)
         return future
 
-    def adjust_speed_to_curve(self, curvature, max_speed, max_lateral_accel=4.0):
+    def adjust_speed_to_curve(self, curvature, max_speed, max_lateral_accel=4.0, min_speed=0.0):
         # Use lateral acceleration limit: v = sqrt(a_lat / curvature)
-        if curvature <= 0.0:
+        if curvature <= 1e-6:
             return max_speed
         curvature = max(curvature, 1e-6)
         speed = math.sqrt(max_lateral_accel / curvature)
-        return min(max_speed, speed)
+        speed = min(max_speed, speed)
+        if min_speed > 0.0:
+            speed = max(min_speed, speed)
+        return speed
 
     def simple_av_speed_profile_maker(self, path, waypoint_distance=None):
         """
@@ -599,7 +615,12 @@ class BehaviorPathPlanner(Node):
         # 1. Base speeds from curvature
         base_speeds = []
         for i, waypoint in enumerate(path):
-            speed = self.adjust_speed_to_curve(waypoint.curve, self.MAX_SPEED, self.max_lateral_accel)
+            speed = self.adjust_speed_to_curve(
+                waypoint.curve,
+                self.MAX_SPEED,
+                self.max_lateral_accel,
+                self.MIN_SPEED,
+            )
             base_speeds.append(speed)
 
         # 2. Forward pass (acceleration constraint)
@@ -878,11 +899,7 @@ class BehaviorPathPlanner(Node):
             if self.intersection_points and not self.cool4_triggered:
                 trigger_point_index = self.intersection_points[0]
                 if self.calculate_distance(vehicle_pose, self.path[trigger_point_index].waypoint) <= threshold:
-                    self.get_logger().info("Reached Cool4 trigger waypoint — adjusting speed profile...")
-                    self.cool4_speed_profile_adjustment(self.intersection_points)
-                    self.apply_speed_profile_to_path()
-                    self.publish_smoothed_mission_plan()
-                    self.publish_speed_profile_markers()
+                    self.get_logger().info("Reached Cool4 trigger waypoint — motion planner handles speed updates.")
                     self.cool4_triggered = True
 
 
@@ -911,14 +928,104 @@ class BehaviorPathPlanner(Node):
 
         return intersection_points
 
+    def smooth_points(self, points, window_size=5):
+        if len(points) < 3:
+            return list(points)
+        half = max(1, window_size // 2)
+        smoothed = []
+        for i in range(len(points)):
+            start = max(0, i - half)
+            end = min(len(points), i + half + 1)
+            sx = sum(p.x for p in points[start:end])
+            sy = sum(p.y for p in points[start:end])
+            sz = sum(p.z for p in points[start:end])
+            count = end - start
+            smoothed.append(Point(x=sx / count, y=sy / count, z=sz / count))
+        return smoothed
+
+    def resample_points(self, points, spacing):
+        if len(points) < 2:
+            return list(points)
+        if spacing <= 0.0:
+            return list(points)
+
+        cumulative = [0.0]
+        for i in range(1, len(points)):
+            p0 = points[i - 1]
+            p1 = points[i]
+            seg_len = math.sqrt(
+                (p1.x - p0.x) ** 2 +
+                (p1.y - p0.y) ** 2 +
+                (p1.z - p0.z) ** 2
+            )
+            cumulative.append(cumulative[-1] + seg_len)
+
+        total_len = cumulative[-1]
+        if total_len <= 1e-6:
+            return [points[0]]
+
+        num_samples = int(total_len // spacing)
+        sample_distances = [i * spacing for i in range(num_samples + 1)]
+        if sample_distances[-1] < total_len:
+            sample_distances.append(total_len)
+
+        resampled = []
+        seg_idx = 0
+        for d in sample_distances:
+            while seg_idx < len(points) - 1 and d > cumulative[seg_idx + 1]:
+                seg_idx += 1
+            if seg_idx >= len(points) - 1:
+                resampled.append(points[-1])
+                continue
+            p0 = points[seg_idx]
+            p1 = points[seg_idx + 1]
+            seg_len = cumulative[seg_idx + 1] - cumulative[seg_idx]
+            if seg_len <= 1e-6:
+                resampled.append(Point(x=p0.x, y=p0.y, z=p0.z))
+                continue
+            t = (d - cumulative[seg_idx]) / seg_len
+            resampled.append(Point(
+                x=p0.x + (p1.x - p0.x) * t,
+                y=p0.y + (p1.y - p0.y) * t,
+                z=p0.z + (p1.z - p0.z) * t,
+            ))
+        return resampled
+
+    def compute_curves(self, points, curve_calc_dist=6):
+        if len(points) < 2 * curve_calc_dist:
+            return [0.0 for _ in points]
+        curves = [0.0 for _ in points]
+        for i in range(curve_calc_dist, len(points) - curve_calc_dist):
+            p1 = points[i - curve_calc_dist]
+            p2 = points[i]
+            p3 = points[i + curve_calc_dist]
+            a = math.hypot(p2.x - p1.x, p2.y - p1.y)
+            b = math.hypot(p3.x - p2.x, p3.y - p2.y)
+            c = math.hypot(p3.x - p1.x, p3.y - p1.y)
+            if a < 1e-6 or b < 1e-6 or c < 1e-6:
+                continue
+            cross = (p2.x - p1.x) * (p3.y - p1.y) - (p2.y - p1.y) * (p3.x - p1.x)
+            curvature = 2.0 * abs(cross) / (a * b * c)
+            curves[i] = curvature
+        return curves
+
 
     def handle_mission_plan(self):
-        if self.path and self.path_as_lanes:
-            self.get_logger().info(f"received mission planed response")
-            self.path = self.mission_plan.path
-            self.destination = self.path[-1].waypoint
-            self.speeds_on_path = self.simple_av_speed_profile_maker(self.path)
-            self.apply_speed_profile_to_path()
+        if self.base_path_points and self.path_as_lanes:
+            self.get_logger().info("received mission plan response")
+            smoothed_points = self.smooth_points(self.base_path_points, window_size=5)
+            dense_points = self.resample_points(smoothed_points, self.densify_interval)
+            self.curves = self.compute_curves(dense_points, self.curve_calc_dist)
+            self.path = [
+                PlanningWaypoint(
+                    waypoint=pt,
+                    curve=self.curves[i],
+                    speed=float(self.base_max_speed),
+                )
+                for i, pt in enumerate(dense_points)
+            ]
+            self.destination = self.path[-1].waypoint if self.path else Point()
+            self.speeds_on_path = [float(self.base_max_speed)] * len(self.path)
 
             self.path_of_waypoints.clear()
             for waypoint in self.path:
@@ -931,24 +1038,21 @@ class BehaviorPathPlanner(Node):
             self.mission_plan_request_time_ns = None
             self.mission_plan_retry_count = 0
             self.last_closest_point_index = None
-            self.publish_speed_profile_markers()
             self.publish_path_of_waypoints_markers()
             self.publish_smoothed_mission_plan()
+            self.log_throttle(
+                "info",
+                "smoothed_path_pub",
+                f"Published smoothed trajectory with {len(self.path)} points",
+                period_sec=1.0,
+            )
 
             if self.is_cool4_speed_profile_enable:
                 self.intersection_points = self.find_intersection_start_and_exit_using_config(self.path)
                 self.get_logger().info(f"Cool4 is enabled -> Read intersection_points: {self.intersection_points}")
-                #self.get_logger().info(f"intersection speed profile is updated")
                 self.publish_intersection_point_markers()
             return True
         return False
-
-    def apply_speed_profile_to_path(self):
-        if not self.path or not self.speeds_on_path:
-            return
-        count = min(len(self.path), len(self.speeds_on_path))
-        for i in range(count):
-            self.path[i].speed = float(self.speeds_on_path[i])
 
     def publish_smoothed_mission_plan(self):
         densified_msg = PlanningInternalMissionPlanMsg()
@@ -1052,7 +1156,7 @@ class BehaviorPathPlanner(Node):
         self.speed_profile_marker_pub.publish(marker_array)
 
     def publish_path_of_waypoints_markers(self):
-        if not self.path_of_waypoints:
+        if not self.path:
             return
 
         marker_array = MarkerArray()
@@ -1069,16 +1173,40 @@ class BehaviorPathPlanner(Node):
         points_marker.type = Marker.SPHERE_LIST
         points_marker.action = Marker.ADD
         points_marker.pose.orientation.w = 1.0
-        points_marker.scale.x = 1.2
-        points_marker.scale.y = 1.2
-        points_marker.scale.z = 1.2
-        points_marker.color.r = 0.6
-        points_marker.color.g = 0.2
-        points_marker.color.b = 0.8
-        points_marker.color.a = 0.9
+        points_marker.scale.x = 1.0
+        points_marker.scale.y = 1.0
+        points_marker.scale.z = 1.0
 
-        for waypoint in self.path_of_waypoints:
+        text_id = 1
+        text_stride = 5
+        for i, waypoint_profile in enumerate(self.path):
+            waypoint = waypoint_profile.waypoint
+            speed = float(getattr(waypoint_profile, 'speed', self.base_speed))
             points_marker.points.append(Point(x=waypoint.x, y=waypoint.y, z=waypoint.z))
+            points_marker.colors.append(self.speed_to_color(speed))
+
+            if i % text_stride == 0:
+                text_marker = Marker()
+                text_marker.header.frame_id = "map"
+                text_marker.header.stamp = now
+                text_marker.ns = "path_speed"
+                text_marker.id = text_id
+                text_marker.type = Marker.TEXT_VIEW_FACING
+                text_marker.action = Marker.ADD
+                text_marker.pose.position = Point(
+                    x=waypoint.x + 0.8,
+                    y=waypoint.y,
+                    z=waypoint.z + 1.2
+                )
+                text_marker.pose.orientation.w = 1.0
+                text_marker.scale.z = 0.6
+                text_marker.color.r = 1.0
+                text_marker.color.g = 1.0
+                text_marker.color.b = 1.0
+                text_marker.color.a = 0.9
+                text_marker.text = f"{speed:.1f}"
+                marker_array.markers.append(text_marker)
+                text_id += 1
 
         marker_array.markers.append(points_marker)
         self.path_markers_pub.publish(marker_array)
@@ -1222,8 +1350,6 @@ class BehaviorPathPlanner(Node):
             self.get_logger().warning("Vehicle Pose is not accessible")
             return
         
-        self.check_cool4_speed_profile_trigger(vehicle_pose)
-
         search_area, search_area_as_lanes = self.create_search_area()
         current_closest_point_to_vehicle_index = self.find_closest_waypoint_to_vehicle(vehicle_pose, search_area)
         isEndOfPath = self.end_of_path_detection(current_closest_point_to_vehicle_index)
@@ -1232,8 +1358,19 @@ class BehaviorPathPlanner(Node):
             return
 
         isTurnDetected = False
-        if self.speeds_on_path[current_closest_point_to_vehicle_index] < 10.0:
-            isTurnDetected = True
+        if self.curves and current_closest_point_to_vehicle_index < len(self.curves):
+            turn_threshold_rad = math.radians(
+                float(self.motion_behavior_config['motion'].get('max_turning_angle', 35.0))
+            ) * 0.5
+            idx = current_closest_point_to_vehicle_index
+            if 0 <= idx - self.curve_calc_dist and idx + self.curve_calc_dist < len(self.path_of_waypoints):
+                p1 = self.path_of_waypoints[idx - self.curve_calc_dist]
+                p3 = self.path_of_waypoints[idx + self.curve_calc_dist]
+                window_len = self.calculate_distance(p1, p3)
+            else:
+                window_len = self.densify_interval * 2.0 * self.curve_calc_dist
+            turn_angle = self.curves[idx] * window_len
+            isTurnDetected = turn_angle > turn_threshold_rad
 
         self.publish_curve_internal_msg(isTurnDetected, isEndOfPath)
 
