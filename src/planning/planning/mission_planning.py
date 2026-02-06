@@ -488,7 +488,7 @@ class MissionPlanner(Node):
             text_marker.color.g = 1.0
             text_marker.color.b = 1.0
             text_marker.color.a = 0.9
-            text_marker.text = f"{self.max_speed:.1f}"
+            text_marker.text = f"{self.max_speed * 3.6:.1f} km/h"
             marker_array.markers.append(text_marker)
             text_id += 1
 
