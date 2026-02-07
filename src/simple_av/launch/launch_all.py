@@ -112,13 +112,6 @@ def generate_launch_description():
         ),
         Node(
             package='simple_av',
-            executable='rviz_point_visualizer',
-            name='rviz_point_visualizer_node',
-            output='screen',
-            arguments=['--ros-args', '--log-level', LaunchConfiguration('log_level')]
-        ),
-        Node(
-            package='simple_av',
             executable='rviz_intersection_layout_visualizer',
             name='rviz_intersection_layout_visualizer_node',
             output='screen',

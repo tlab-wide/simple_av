@@ -17,6 +17,7 @@ from simple_av_msgs.msg import LocalizationMsg, PlanningInternalMissionPlanMsg
 from simple_av_msgs.msg import Portal
 import yaml
 from rclpy.qos import QoSProfile, QoSHistoryPolicy, QoSReliabilityPolicy, QoSDurabilityPolicy
+from visualization_msgs.msg import Marker
 
 
 class Point:
@@ -62,6 +63,11 @@ class Localization(Node):
         self.reset_cooldown = 0.5 * self.scenario_config['scenario'].get('reset_cooldown_seconds', 2.0)
         # Initialize the publisher
         self.localization_publisher = self.create_publisher(LocalizationMsg, 'simple_av/localization/location', 10)
+        self.current_location_marker_pub = self.create_publisher(
+            Marker,
+            '/simple_av/localization/visualization/curren_location',
+            10,
+        )
 
         qos_profile = QoSProfile(
             history=QoSHistoryPolicy.KEEP_LAST,
@@ -506,11 +512,34 @@ class Localization(Node):
         localization_result.closest_lane_names.data = closest_lane_name
         localization_result.minimal_distance = min_distance
         self.localization_publisher.publish(localization_result)
+        self.publish_current_location_marker(closest_point)
         self.get_logger().debug(
             f"Localization publish lane={closest_lane_name} "
             f"closest_point=({closest_point.x:.2f}, {closest_point.y:.2f}, {closest_point.z:.2f}) "
             f"min_distance={min_distance:.2f}"
         )
+
+    def publish_current_location_marker(self, point):
+        marker = Marker()
+        marker.header.frame_id = "map"
+        marker.header.stamp = self.get_clock().now().to_msg()
+        marker.ns = "current_location"
+        marker.id = 0
+        marker.type = Marker.SPHERE
+        marker.action = Marker.ADD
+        marker.pose.position.x = point.x
+        marker.pose.position.y = point.y
+        marker.pose.position.z = point.z
+        marker.pose.orientation.w = 1.0
+        marker.scale.x = 1.2
+        marker.scale.y = 1.2
+        marker.scale.z = 1.2
+        marker.color.r = 45.0 / 255.0
+        marker.color.g = 120.0 / 255.0
+        marker.color.b = 240.0 / 255.0
+        marker.color.a = 0.9
+        marker.lifetime.sec = 0
+        self.current_location_marker_pub.publish(marker)
 
 def main(args=None):
     rclpy.init(args=args)

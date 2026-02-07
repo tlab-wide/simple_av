@@ -329,16 +329,14 @@ class BehaviorMotionPlanning(Node):
         ]
         if self.is_cool4_speed_profile_enable and self.path:
             self.intersection_points = self.find_intersection_start_and_exit_using_config(self.path)
-        if self.path and not self.isPathPlanned:
-            self.get_logger().info("Path has successfully initialized from Mission Planner")
-            self.destination = self.path[-1].waypoint
-            self.path_of_waypoints.clear()
-            for waypoint in self.path:
-                self.path_of_waypoints.append(waypoint.waypoint)
-            self.route = self.path_as_lanes[:]
-            self.current_lane_index = 0
-            self.isPathPlanned = True
         if self.path:
+            if self.route != self.path_as_lanes:
+                self.route = self.path_as_lanes[:]
+                self.current_lane_index = 0
+            if not self.isPathPlanned:
+                self.get_logger().info("Path has successfully initialized from Mission Planner")
+                self.isPathPlanned = True
+            self.destination = self.path[-1].waypoint
             self.log_throttle(
                 "info",
                 "path_rx",
@@ -1789,8 +1787,13 @@ class BehaviorMotionPlanning(Node):
         if self.reset:
             self.get_logger().warning("RESET")
             self.isPathPlanned = False
-            self.route = self.path_as_lanes[:]
+            self.route = None
             self.current_lane_index = 0
+            self.path = []
+            self.path_as_lanes = []
+            self.path_of_waypoints = []
+            self.max_speeds_on_path = []
+            self.intersection_points = []
             self.reset = False
             self.publish_stop_point_marker(None, "reset")
             return
