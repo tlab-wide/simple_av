@@ -94,7 +94,6 @@ class Localization(Node):
         self.last_pose = Point()
         self.initial_closest_point = None
         self.initial_closest_lane_name = String()
-        self.jumpThreshold = 15.0
 
         # Initialize instance variables for storing closest point and lanes
         self.closest_point = None
@@ -483,13 +482,6 @@ class Localization(Node):
             self.get_logger().info("Experiment finished - Localization stopped")
             self.node_shut = True
             return
-        
-        if self.calculate_distance(self.current_position, self.last_pose) > self.jumpThreshold:
-            self.get_logger().warning("Jump Detected")
-            self.last_pose = self.current_position
-            # self.isGlobalPositioningDone = False
-            self.closest_lane_name = self.initial_closest_lane_name
-            return
 
         if not self.isGlobalPositioningDone:
             self.get_logger().debug("GLOBAL POSITIONING")
@@ -503,13 +495,6 @@ class Localization(Node):
                 return
             
             self.closest_point, self.closest_lane_name, self.min_distance, self.current_position = self.local_positioning(self.closest_point, self.closest_lane_name, self.min_distance)
-
-        if self.calculate_distance(self.current_position, self.last_pose) > self.jumpThreshold:
-            self.get_logger().warning("Jump Detected")
-            self.last_pose = self.current_position
-            self.isGlobalPositioningDone = False
-            self.closest_lane_name = self.initial_closest_lane_name
-            
         
         self.last_pose = self.current_position
         self.publish_vehicle_location(self.closest_point, self.closest_lane_name, self.min_distance)
