@@ -580,8 +580,8 @@ class BehaviorPathPlanner(Node):
             
     def publish_curve_internal_msg(self, isTurnDetected, isEndOfPath):
         internal_msg = PlanningInternalMsg()
-        internal_msg.is_curve_detected = isTurnDetected
-        internal_msg.is_end_of_path = isEndOfPath
+        internal_msg.is_curve_detected = bool(isTurnDetected)
+        internal_msg.is_end_of_path = bool(isEndOfPath)
         self.internal_msg_publisher.publish(internal_msg)
 
     def request_mission_plan(self):
