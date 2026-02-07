@@ -330,7 +330,7 @@ class VehicleControl(Node):
         gear_msg = GearCommand()
         gear_msg.stamp = self.get_clock().now().to_msg()
         if self.reset_active:
-            if not self.reset_cooldown_active() and current_speed > 0.1:
+            if not self.reset_cooldown_active():
                 self.reset_active = False
                 self.get_logger().debug("drive")
                 gear_msg.command = GearCommand.DRIVE
