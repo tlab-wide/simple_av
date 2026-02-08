@@ -14,7 +14,6 @@ from std_msgs.msg import String
 import math
 from sensor_msgs.msg import Imu
 from simple_av_msgs.msg import LocalizationMsg, PlanningInternalMissionPlanMsg
-from simple_av_msgs.msg import Portal
 import yaml
 from rclpy.qos import QoSProfile, QoSHistoryPolicy, QoSReliabilityPolicy, QoSDurabilityPolicy
 from visualization_msgs.msg import Marker
@@ -53,14 +52,6 @@ class Localization(Node):
         self.base_frame = 'base_link'
         self.tf_buffer = Buffer()
         self.tf_listener = TransformListener(self.tf_buffer, self)
-        # Create subscriber to simple_av/portal topic
-        self.subscriptionPortal = self.create_subscription(Portal, 'simple_av/portal', self.portal_callback, 10)
-        self.reset = False
-        self.finished = False
-        self.prev_reset = False
-        self.round_number = 0
-        self.last_reset_time_ns = None
-        self.reset_cooldown = 0.5 * self.scenario_config['scenario'].get('reset_cooldown_seconds', 2.0)
         # Initialize the publisher
         self.localization_publisher = self.create_publisher(LocalizationMsg, 'simple_av/localization/location', 10)
         self.current_location_marker_pub = self.create_publisher(
@@ -135,26 +126,6 @@ class Localization(Node):
             map_data = json.load(json_file)
             return map_data
 
-    def portal_callback(self, msg):
-        now_ns = self.get_clock().now().nanoseconds
-        round_changed = msg.round_number != self.round_number
-        reset_edge = msg.reset and not self.prev_reset
-        cooldown_ok = (
-            self.last_reset_time_ns is None or
-            (now_ns - self.last_reset_time_ns) / 1e9 >= self.reset_cooldown
-        )
-        self.reset = (reset_edge or round_changed) and cooldown_ok
-        self.finished = msg.finished
-        self.round_number = msg.round_number
-        if self.reset:
-            self.last_reset_time_ns = now_ns
-            # Clear mission plan caches so localization falls back to map search after reset.
-            self.mission_plan_points = []
-            self.mission_plan_lanes = []
-            self.trajectory_points = []
-            self.trajectory_lanes = []
-        self.prev_reset = msg.reset
-
     def mission_plan_callback(self, msg):
         self.mission_plan_points = [
             Point(wp.waypoint.x, wp.waypoint.y, wp.waypoint.z) for wp in msg.path
@@ -183,13 +154,6 @@ class Localization(Node):
                 min_distance = distance
                 closest_point = point
         return closest_point, min_distance
-
-    def reset_cooldown_active(self):
-        if self.last_reset_time_ns is None:
-            return False
-        now_ns = self.get_clock().now().nanoseconds
-        return (now_ns - self.last_reset_time_ns) / 1e9 < self.reset_cooldown
-
 
     def update_pose_from_tf(self):
         try:
@@ -455,16 +419,6 @@ class Localization(Node):
         - If already globally positioned, calls local_positioning using previous closest point and lane names.
         - Continues to update self.closest_point, self.closest_lane_name, and self.min_distance accordingly.
         """
-        if self.reset:
-            self.get_logger().warning("RESET")
-            self.isGlobalPositioningDone = False
-            self.isInitialPoseSampled = False
-            self.reset = False
-            return
-
-        if self.reset_cooldown_active():
-            return
-
         mission_points, _ = self.get_active_mission_path()
         if not mission_points:
             return
@@ -482,11 +436,6 @@ class Localization(Node):
             self.isInitialPoseSampled = True
             self.get_logger().info("GLOBAL POSITIONING INITIALIZATION Completed")
             self.publish_vehicle_location(self.closest_point, self.closest_lane_name, self.min_distance)
-            return
-
-        if self.finished:
-            self.get_logger().info("Experiment finished - Localization stopped")
-            self.node_shut = True
             return
 
         if not self.isGlobalPositioningDone:

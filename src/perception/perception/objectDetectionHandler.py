@@ -20,7 +20,6 @@ from rclpy.duration import Duration
 from rclpy.time import Time
 # import transformations as tf
 from transformations import euler_from_quaternion
-from simple_av_msgs.msg import Portal
 
 
 class Perception(Node):
@@ -65,15 +64,6 @@ class Perception(Node):
         
         
         
-        # Create subscriber to simple_av/portal topic
-        self.subscriptionPortal = self.create_subscription(Portal, 'simple_av/portal', self.portal_callback, 10)
-        self.reset = False
-        self.finished = False
-        self.prev_reset = False
-        self.round_number = 0
-        self.last_reset_time_ns = None
-        self.reset_cooldown = self.scenario_config['scenario'].get('reset_cooldown_seconds', 2.0)
-        
         # Create subscriber to simple_av/localization/intersection_status topic
         self.subscriptionIntersectionAwareness = self.create_subscription(LocalizationIntersectionStatus, 'simple_av/localization/intersection_status', self.intersectionAwareness_callback, 10)
         self.intersection_awareness_intersection_name = None
@@ -98,27 +88,6 @@ class Perception(Node):
             config = yaml.safe_load(file)
         return config
     
-    def portal_callback(self, msg):
-        now_ns = self.get_clock().now().nanoseconds
-        round_changed = msg.round_number != self.round_number
-        reset_edge = msg.reset and not self.prev_reset
-        cooldown_ok = (
-            self.last_reset_time_ns is None or
-            (now_ns - self.last_reset_time_ns) / 1e9 >= self.reset_cooldown
-        )
-        self.reset = (reset_edge or round_changed) and cooldown_ok
-        self.finished = msg.finished
-        self.round_number = msg.round_number
-        if self.reset:
-            self.last_reset_time_ns = now_ns
-        self.prev_reset = msg.reset
-
-    def reset_cooldown_active(self):
-        if self.last_reset_time_ns is None:
-            return False
-        now_ns = self.get_clock().now().nanoseconds
-        return (now_ns - self.last_reset_time_ns) / 1e9 < self.reset_cooldown
-
     def intersectionAwareness_callback(self, msg):
         self.intersection_awareness_intersection_name = msg.intersection_name
         self.intersection_awareness_status = msg.status
@@ -372,15 +341,6 @@ class Perception(Node):
 
 
     def objectDetection(self):
-        if self.finished:
-            self.node_shut = True
-            return
-        if self.reset:
-            self.reset = False
-            return
-        if self.reset_cooldown_active():
-            return
-
         if not self.enable_object_detection:
             return
         

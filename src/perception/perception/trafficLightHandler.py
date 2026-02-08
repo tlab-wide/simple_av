@@ -13,7 +13,6 @@ from scipy.spatial.transform import Rotation as R
 import numpy as np
 # import transformations as tf
 from transformations import euler_from_quaternion
-from simple_av_msgs.msg import Portal
 
 
 class TrafficSignalHandler(Node):
@@ -46,15 +45,6 @@ class TrafficSignalHandler(Node):
         # Create subscriber for /sensing/gnss/pose topic
         self.subscriptionPose = self.create_subscription(PoseStamped, '/sensing/gnss/pose', self.pose_callback, 10)
         
-        # Create subscriber to simple_av/portal topic
-        self.subscriptionPortal = self.create_subscription(Portal, 'simple_av/portal', self.portal_callback, 10)
-        self.reset = False
-        self.finished = False
-        self.prev_reset = False
-        self.round_number = 0
-        self.last_reset_time_ns = None
-        self.reset_cooldown = self.scenario_config['scenario'].get('reset_cooldown_seconds', 2.0)
-
         # Create subscriber to simple_av/localization/intersection_status topic
         self.subscriptionIntersectionAwareness = self.create_subscription(LocalizationIntersectionStatus, 'simple_av/localization/intersection_status', self.intersectionAwareness_callback, 10)
         self.intersection_awareness_intersection_name = None
@@ -78,27 +68,6 @@ class TrafficSignalHandler(Node):
     def intersectionAwareness_callback(self, msg):
         self.intersection_awareness_intersection_name = msg.intersection_name
         self.intersection_awareness_status = msg.status
-
-    def portal_callback(self, msg):
-        now_ns = self.get_clock().now().nanoseconds
-        round_changed = msg.round_number != self.round_number
-        reset_edge = msg.reset and not self.prev_reset
-        cooldown_ok = (
-            self.last_reset_time_ns is None or
-            (now_ns - self.last_reset_time_ns) / 1e9 >= self.reset_cooldown
-        )
-        self.reset = (reset_edge or round_changed) and cooldown_ok
-        self.finished = msg.finished
-        self.round_number = msg.round_number
-        if self.reset:
-            self.last_reset_time_ns = now_ns
-        self.prev_reset = msg.reset
-
-    def reset_cooldown_active(self):
-        if self.last_reset_time_ns is None:
-            return False
-        now_ns = self.get_clock().now().nanoseconds
-        return (now_ns - self.last_reset_time_ns) / 1e9 < self.reset_cooldown
 
     def pose_callback(self, msg):
         self.vehicle_pose = msg
@@ -147,15 +116,6 @@ class TrafficSignalHandler(Node):
         return v2i_traffic_signals_id, v2i_traffic_signals_colors
 
     def trafficSignalDetection(self):
-        if self.finished:
-            self.node_shut = True
-            return
-        if self.reset:
-            self.reset = False
-            return
-        if self.reset_cooldown_active():
-            return
-        
         v2i_traffic_signals_id = []
         v2i_traffic_signals_colors = []
 

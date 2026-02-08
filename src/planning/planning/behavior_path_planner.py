@@ -152,7 +152,8 @@ class BehaviorPathPlanner(Node):
         self.prev_reset = False
         self.round_number = 0
         self.last_reset_time_ns = None
-        self.reset_cooldown = self.scenario_config['scenario'].get('reset_cooldown_seconds', 2.0)
+        # Reset cooldown disabled for behavior path planner.
+        # self.reset_cooldown = self.scenario_config['scenario'].get('reset_cooldown_seconds', 2.0)
         self.reset_pose = None
         self.reset_lane = None
         self.reset_closest_point = None
@@ -344,10 +345,12 @@ class BehaviorPathPlanner(Node):
         now_ns = self.get_clock().now().nanoseconds
         round_changed = msg.round_number != self.round_number
         reset_edge = msg.reset and not self.prev_reset
-        cooldown_ok = (
-            self.last_reset_time_ns is None or
-            (now_ns - self.last_reset_time_ns) / 1e9 >= self.reset_cooldown
-        )
+        # Reset cooldown disabled for behavior path planner.
+        # cooldown_ok = (
+        #     self.last_reset_time_ns is None or
+        #     (now_ns - self.last_reset_time_ns) / 1e9 >= self.reset_cooldown
+        # )
+        cooldown_ok = True
         self.reset = (reset_edge or round_changed) and cooldown_ok
         self.finished = msg.finished
         self.round_number = msg.round_number
@@ -357,10 +360,8 @@ class BehaviorPathPlanner(Node):
         self.prev_reset = msg.reset
 
     def reset_cooldown_active(self):
-        if self.last_reset_time_ns is None:
-            return False
-        now_ns = self.get_clock().now().nanoseconds
-        return (now_ns - self.last_reset_time_ns) / 1e9 < self.reset_cooldown
+        # Reset cooldown disabled for behavior path planner.
+        return False
 
     def mission_plan_retry_delay(self):
         delay = self.mission_plan_retry_base_seconds * (self.mission_plan_retry_backoff ** self.mission_plan_retry_count)

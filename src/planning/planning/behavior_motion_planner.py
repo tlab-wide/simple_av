@@ -17,7 +17,7 @@ from simple_av_msgs.msg import TrafficSignalsArray
 from autoware_perception_msgs.msg import PredictedObjects, DetectedObjects
 from simple_av_msgs.msg import PlanningInternalMsg, PlanningInternalMissionPlanMsg, CollisionPredictionInfo, PlanningWaypoint
 from simple_av_msgs.msg import LocalizationMsg, LocalizationIntersectionStatus
-from simple_av_msgs.msg import SimMonitor, Portal
+from simple_av_msgs.msg import SimMonitor
 import numpy as np
 from dataclasses import dataclass, field
 from scipy.spatial.transform import Rotation as R
@@ -161,14 +161,6 @@ class BehaviorMotionPlanning(Node):
         self.subscriptionCurveDetection = self.create_subscription(PlanningInternalMsg, 'simple_av/planning/internal_msg', self.internal_msg_callback, 10)
         self.isTurnDetected = False
         self.isEndOfPath = False
-
-        self.subscriptionPortal = self.create_subscription(Portal, 'simple_av/portal', self.portal_callback, 10)
-        self.reset = False
-        self.finished = False
-        self.prev_reset = False
-        self.round_number = 0
-        self.last_reset_time_ns = None
-        self.reset_cooldown = self.scenario_config['scenario'].get('reset_cooldown_seconds', 2.0)
 
         self.subscriptionSimMonitor = self.create_subscription(SimMonitor, 'simple_av/sim_monitor', self.sim_monitor_callback, 100)
         self.sim_clock_rate = 0
@@ -363,27 +355,6 @@ class BehaviorMotionPlanning(Node):
             config = yaml.safe_load(file)
         return config
     
-    def portal_callback(self, msg):
-        now_ns = self.get_clock().now().nanoseconds
-        round_changed = msg.round_number != self.round_number
-        reset_edge = msg.reset and not self.prev_reset
-        cooldown_ok = (
-            self.last_reset_time_ns is None or
-            (now_ns - self.last_reset_time_ns) / 1e9 >= self.reset_cooldown
-        )
-        self.reset = (reset_edge or round_changed) and cooldown_ok
-        self.finished = msg.finished
-        self.round_number = msg.round_number
-        if self.reset:
-            self.last_reset_time_ns = now_ns
-        self.prev_reset = msg.reset
-
-    def reset_cooldown_active(self):
-        if self.last_reset_time_ns is None:
-            return False
-        now_ns = self.get_clock().now().nanoseconds
-        return (now_ns - self.last_reset_time_ns) / 1e9 < self.reset_cooldown
-
     def internal_msg_callback(self, msg):
         self.isTurnDetected = msg.is_curve_detected
         self.isEndOfPath = msg.is_end_of_path
@@ -1283,8 +1254,6 @@ class BehaviorMotionPlanning(Node):
             color = ColorRGBA(r=1.0, g=0.9, b=0.1, a=0.9)
         elif "park" in reason:
             color = ColorRGBA(r=0.2, g=0.5, b=1.0, a=0.9)
-        elif "reset" in reason:
-            color = ColorRGBA(r=0.6, g=0.6, b=0.6, a=0.6)
         else:
             color = ColorRGBA(r=0.9, g=0.9, b=0.9, a=0.9)
         marker.color = color
@@ -1778,30 +1747,6 @@ class BehaviorMotionPlanning(Node):
             self.publish_stop_point_marker(None, "no_path")
             return
         
-        if self.finished:
-            self.status.data = 'Park'
-            self.node_shut = True
-            self.publish_stop_point_marker(None, "park")
-            return
-        
-        if self.reset:
-            self.get_logger().warning("RESET")
-            self.isPathPlanned = False
-            self.route = None
-            self.current_lane_index = 0
-            self.path = []
-            self.path_as_lanes = []
-            self.path_of_waypoints = []
-            self.max_speeds_on_path = []
-            self.intersection_points = []
-            self.reset = False
-            self.publish_stop_point_marker(None, "reset")
-            return
-
-        if self.reset_cooldown_active():
-            self.publish_stop_point_marker(None, "reset_cooldown")
-            return
-
         search_area, search_area_as_lanes = self.create_search_area()
         self.current_speed = self.velocity_report.longitudinal_velocity if self.velocity_report else 0.0
         self.update_observation_range(self.current_speed, self.current_speed < self.previous_speed_slidingWindow[0])

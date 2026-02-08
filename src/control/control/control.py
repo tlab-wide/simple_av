@@ -22,7 +22,6 @@ import numpy as np
 import yaml
 import os
 from ament_index_python.packages import get_package_share_directory
-from simple_av_msgs.msg import Portal
 from rclpy.parameter import Parameter
 import time
 
@@ -148,14 +147,7 @@ class VehicleControl(Node):
         self.control_period_sec = 0.1
         self.control_timer = self.create_timer(self.control_period_sec, self.control)
 
-        self.subscriptionPortal = self.create_subscription(Portal, 'simple_av/portal', self.portal_callback, 10)
-        self.reset = False
         self.finished = False
-        self.prev_reset = False
-        self.last_reset_time_ns = None
-        self.reset_cooldown = self.scenario_config['scenario'].get('reset_cooldown_seconds', 2.0)
-        self.reset_active = False
-        self.round_number = 0
         self._last_log_time = {}
 
         # Publish topics
@@ -220,28 +212,6 @@ class VehicleControl(Node):
 
     def sim_monitor_callback(self, msg):
         self.sim_clock_rate = msg.sim_clock_rate
-
-    def portal_callback(self, msg):
-        now_ns = self.get_clock().now().nanoseconds
-        round_changed = (self.round_number is not None and msg.round_number != self.round_number)
-        reset_edge = msg.reset and not self.prev_reset
-        cooldown_ok = (
-            self.last_reset_time_ns is None or
-            (now_ns - self.last_reset_time_ns) / 1e9 >= self.reset_cooldown
-        )
-        self.reset = (reset_edge or round_changed) and cooldown_ok
-        self.finished = msg.finished
-        self.round_number = msg.round_number
-        if self.reset:
-            self.last_reset_time_ns = now_ns
-            self.reset_active = True
-        self.prev_reset = msg.reset
-
-    def reset_cooldown_active(self):
-        if self.last_reset_time_ns is None:
-            return False
-        now_ns = self.get_clock().now().nanoseconds
-        return (now_ns - self.last_reset_time_ns) / 1e9 < self.reset_cooldown
 
     def update_pose_from_tf(self):
         try:
@@ -312,9 +282,6 @@ class VehicleControl(Node):
             self.gear_publisher.publish(gear_msg)  
             return
         
-        # if self.reset:
-        #     time.sleep(0.2)
-
         # Steer and Velocity Control
         control_msg = Control()
     
@@ -329,17 +296,8 @@ class VehicleControl(Node):
         # Gear Control
         gear_msg = GearCommand()
         gear_msg.stamp = self.get_clock().now().to_msg()
-        if self.reset_active:
-            if not self.reset_cooldown_active():
-                self.reset_active = False
-                self.get_logger().debug("drive")
-                gear_msg.command = GearCommand.DRIVE
-            else:
-                self.get_logger().debug("park (reset)")
-                gear_msg.command = GearCommand.PARK
-        else:
-            self.get_logger().debug("drive")
-            gear_msg.command = GearCommand.DRIVE
+        self.get_logger().debug("drive")
+        gear_msg.command = GearCommand.DRIVE
 
         self.control_publisher.publish(control_msg)
         # self.turn_indicator_publisher.publish(turn_indicator_msg)
@@ -383,28 +341,21 @@ class VehicleControl(Node):
     
     def get_lateral_command(self):
         lateral_command = Lateral()
-        if self.reset or self.reset_active:
-            self.get_logger().debug("debug PARK")
+        if self.pose and self.lookahead_point:
+            steer = self.pure_pursuit_rear_axel()
+            lateral_command.steering_tire_angle = steer
+            lateral_command.steering_tire_rotation_rate = 0.1
+            lateral_command.is_defined_steering_tire_rotation_rate = True
+        else:
             lateral_command.steering_tire_angle = 0.0
             lateral_command.steering_tire_rotation_rate = 0.0
-        else:
-            if self.pose and self.lookahead_point:
-                steer = self.pure_pursuit_rear_axel()
-                lateral_command.steering_tire_angle = steer
-                lateral_command.steering_tire_rotation_rate = 0.1
-                lateral_command.is_defined_steering_tire_rotation_rate = True
-            else:
-                lateral_command.steering_tire_angle = 0.0
-                lateral_command.steering_tire_rotation_rate = 0.0
-                lateral_command.is_defined_steering_tire_rotation_rate = True
+            lateral_command.is_defined_steering_tire_rotation_rate = True
         return lateral_command
 
     def get_longitudinal_command(self):
 
         current_speed = self.velocity_report.longitudinal_velocity if self.velocity_report else 0.0
         target_speed = self.speed_limit
-        if self.reset or self.reset_active:
-            target_speed = 0.0
 
         now_sec = self.get_clock().now().nanoseconds * 1e-9
         accel = self.pid_controller.updatePID(current_speed, target_speed, now_sec)
@@ -450,8 +401,6 @@ class VehicleControl(Node):
             ("target_speed", f"{target_speed:.2f} m/s", (1.0, 0.8, 0.2)),
             ("speed_limit", f"{self.speed_limit:.2f} m/s", (0.8, 0.8, 1.0)),
             ("intersection", self.intersection_awareness_status or "none", (0.2, 1.0, 0.2)),
-            ("reset", "true" if self.reset else "false", (1.0, 1.0, 1.0)),
-            ("round", str(self.round_number), (0.6, 0.9, 1.0)),
         ]
 
         for idx, (label, value, color) in enumerate(entries):
