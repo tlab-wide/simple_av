@@ -181,6 +181,11 @@ class BehaviorPathPlanner(Node):
             '/simple_av/path_planning/visualization/smoothed_path',
             qos_profile
         )
+        self.curvature_markers_pub = self.create_publisher(
+            MarkerArray,
+            '/simple_av/path_planning/visualization/smoothed_path/curvature',
+            qos_profile
+        )
         self.search_area_markers_pub = self.create_publisher(
             MarkerArray,
             'simple_av/visualization/search_area_markers',
@@ -1040,6 +1045,7 @@ class BehaviorPathPlanner(Node):
             self.mission_plan_retry_count = 0
             self.last_closest_point_index = None
             self.publish_path_of_waypoints_markers()
+            self.publish_curvature_markers()
             self.publish_smoothed_mission_plan()
             self.log_throttle(
                 "info",
@@ -1155,6 +1161,72 @@ class BehaviorPathPlanner(Node):
 
         marker_array.markers.append(points_marker)
         self.speed_profile_marker_pub.publish(marker_array)
+
+    def curvature_to_color(self, curvature, max_curvature):
+        if max_curvature <= 1e-9:
+            t = 0.0
+        else:
+            t = max(0.0, min(1.0, curvature / max_curvature))
+        return ColorRGBA(r=t, g=0.2, b=1.0 - t, a=0.9)
+
+    def publish_curvature_markers(self):
+        marker_array = MarkerArray()
+        clear_marker = Marker()
+        clear_marker.action = Marker.DELETEALL
+        marker_array.markers.append(clear_marker)
+
+        if not self.path:
+            self.curvature_markers_pub.publish(marker_array)
+            return
+
+        max_curvature = max((float(getattr(wp, 'curve', 0.0)) for wp in self.path), default=0.0)
+        now = self.get_clock().now().to_msg()
+
+        points_marker = Marker()
+        points_marker.header.frame_id = "map"
+        points_marker.header.stamp = now
+        points_marker.ns = "path_curvature"
+        points_marker.id = 0
+        points_marker.type = Marker.SPHERE_LIST
+        points_marker.action = Marker.ADD
+        points_marker.pose.orientation.w = 1.0
+        points_marker.scale.x = 0.85
+        points_marker.scale.y = 0.85
+        points_marker.scale.z = 0.85
+
+        text_id = 1
+        text_stride = 5
+        for i, waypoint_profile in enumerate(self.path):
+            waypoint = waypoint_profile.waypoint
+            curvature = float(getattr(waypoint_profile, 'curve', 0.0))
+            color = self.curvature_to_color(curvature, max_curvature)
+            points_marker.points.append(Point(x=waypoint.x, y=waypoint.y, z=waypoint.z))
+            points_marker.colors.append(color)
+
+            if i % text_stride != 0:
+                continue
+
+            text_marker = Marker()
+            text_marker.header.frame_id = "map"
+            text_marker.header.stamp = now
+            text_marker.ns = "path_curvature_text"
+            text_marker.id = text_id
+            text_marker.type = Marker.TEXT_VIEW_FACING
+            text_marker.action = Marker.ADD
+            text_marker.pose.position = Point(
+                x=waypoint.x - 0.6,
+                y=waypoint.y,
+                z=waypoint.z + 1.4
+            )
+            text_marker.pose.orientation.w = 1.0
+            text_marker.scale.z = 0.5
+            text_marker.color = color
+            text_marker.text = f"{curvature:.3f}"
+            marker_array.markers.append(text_marker)
+            text_id += 1
+
+        marker_array.markers.append(points_marker)
+        self.curvature_markers_pub.publish(marker_array)
 
     def publish_path_of_waypoints_markers(self):
         if not self.path:
@@ -1298,6 +1370,7 @@ class BehaviorPathPlanner(Node):
             self.path_as_lanes = None
             self.path_of_waypoints.clear()
             self.speeds_on_path = []
+            self.publish_curvature_markers()
             self.pending_reset = False
             self.reset = False
             return

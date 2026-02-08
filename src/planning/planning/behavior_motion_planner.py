@@ -92,6 +92,7 @@ class BehaviorMotionPlanning(Node):
             .get('length', 100.0)
         )
         self.max_lateral_accel = float(self.motion_behavior_config['motion'].get('max_lateral_accel', 4.0))
+        self.curve_speed_thresholds = self.load_curve_speed_thresholds()
         self.traffic_light_stop_offset = float(
             self.motion_behavior_config.get('behavior', {})
             .get('traffic_light', {})
@@ -197,6 +198,11 @@ class BehaviorMotionPlanning(Node):
         self.trajectory_marker_pub = self.create_publisher(
             MarkerArray,
             '/simple_av/motion_planning/visualization/trajectory',
+            qos_profile
+        )
+        self.curve_formula_speed_marker_pub = self.create_publisher(
+            MarkerArray,
+            '/simple_av/motion_planning/visualization/curve_formula_speed',
             qos_profile
         )
 
@@ -564,11 +570,38 @@ class BehaviorMotionPlanning(Node):
         self.reaction_range = (1 - gain) * (speed * self.prediction_reaction_range_C + self.prediction_reaction_range_B) + gain * self.reaction_range # meters
         self.detection_range = (1 - gain) * (speed * self.prediction_detection_range_C + self.prediction_detection_range_B) + gain * self.detection_range # meters
 
+    def load_curve_speed_thresholds(self):
+        thresholds = []
+        curve_cfg = (
+            self.motion_behavior_config
+            .get('motion', {})
+            .get('curve_speed_thresholds_kmh', [])
+        )
+        for entry in curve_cfg:
+            try:
+                min_curvature = float(entry.get('min_curvature', 0.0))
+                max_curvature_raw = entry.get('max_curvature', None)
+                max_curvature = float(max_curvature_raw) if max_curvature_raw is not None else float('inf')
+                speed_kmh = float(entry.get('speed', self.base_speed * 3.6))
+            except (TypeError, ValueError):
+                continue
+            thresholds.append((min_curvature, max_curvature, speed_kmh / 3.6))
+        thresholds.sort(key=lambda t: t[0])
+        return thresholds
+
+    def curve_speed_from_thresholds(self, curvature):
+        if not self.curve_speed_thresholds:
+            return None
+        k = max(float(curvature), 0.0)
+        for min_curvature, max_curvature, speed in self.curve_speed_thresholds:
+            if k >= min_curvature and k < max_curvature:
+                return speed
+        return self.curve_speed_thresholds[-1][2]
+
     def adjust_speed_to_curve(self, curvature, max_speed, max_lateral_accel=4.0, min_speed=0.0):
-        if curvature <= 1e-6:
+        speed = self.curve_formula_speed(curvature, max_lateral_accel)
+        if not math.isfinite(speed):
             return max_speed
-        curvature = max(curvature, 1e-6)
-        speed = math.sqrt(max_lateral_accel / curvature)
         speed = min(max_speed, speed)
         if min_speed > 0.0:
             speed = max(min_speed, speed)
@@ -654,6 +687,7 @@ class BehaviorMotionPlanning(Node):
 
     def publish_trajectory(self, start_idx, stop_idx_global=None):
         if not self.path or start_idx is None:
+            self.publish_curve_formula_speed_markers([])
             return
         steps = int(self.trajectory_length / max(self.densify_interval, 1e-3))
         end_idx = min(len(self.path) - 1, start_idx + steps)
@@ -690,6 +724,7 @@ class BehaviorMotionPlanning(Node):
             )
         self.trajectory_pub.publish(traj_msg)
         self.publish_trajectory_markers(traj_msg)
+        self.publish_curve_formula_speed_markers(segment)
 
     def speed_to_color(self, speed):
         if self.MAX_SPEED <= self.MIN_SPEED:
@@ -755,6 +790,83 @@ class BehaviorMotionPlanning(Node):
 
         marker_array.markers.append(points_marker)
         self.trajectory_marker_pub.publish(marker_array)
+
+    def curve_formula_speed(self, curvature, max_lateral_accel=None):
+        # TODO: Replace threshold-based curve speed with a better continuous model.
+        threshold_speed = self.curve_speed_from_thresholds(curvature)
+        if threshold_speed is not None:
+            return threshold_speed
+
+        # TODO: Remove this fallback once the improved curve-speed model is implemented.
+        if max_lateral_accel is None:
+            max_lateral_accel = self.max_lateral_accel
+        curvature = float(curvature)
+        if curvature <= 1e-6:
+            return float('inf')
+        return math.sqrt(max(max_lateral_accel, 0.0) / curvature)
+
+    def curve_formula_speed_to_color(self, speed):
+        if not math.isfinite(speed):
+            return ColorRGBA(r=0.2, g=0.2, b=1.0, a=0.9)
+        clamped = min(max(speed, self.MIN_SPEED), self.MAX_SPEED)
+        return self.speed_to_color(clamped)
+
+    def publish_curve_formula_speed_markers(self, segment):
+        marker_array = MarkerArray()
+        clear_marker = Marker()
+        clear_marker.action = Marker.DELETEALL
+        marker_array.markers.append(clear_marker)
+
+        if not segment:
+            self.curve_formula_speed_marker_pub.publish(marker_array)
+            return
+
+        now = self.get_clock().now().to_msg()
+        points_marker = Marker()
+        points_marker.header.frame_id = "map"
+        points_marker.header.stamp = now
+        points_marker.ns = "curve_formula_speed"
+        points_marker.id = 0
+        points_marker.type = Marker.SPHERE_LIST
+        points_marker.action = Marker.ADD
+        points_marker.pose.orientation.w = 1.0
+        points_marker.scale.x = 0.9
+        points_marker.scale.y = 0.9
+        points_marker.scale.z = 0.9
+
+        text_id = 1
+        text_stride = 5
+        for i, wp in enumerate(segment):
+            waypoint = wp.waypoint
+            speed_formula = self.curve_formula_speed(getattr(wp, 'curve', 0.0))
+            color = self.curve_formula_speed_to_color(speed_formula)
+            points_marker.points.append(Point(x=waypoint.x, y=waypoint.y, z=waypoint.z))
+            points_marker.colors.append(color)
+
+            if i % text_stride != 0:
+                continue
+
+            text_marker = Marker()
+            text_marker.header.frame_id = "map"
+            text_marker.header.stamp = now
+            text_marker.ns = "curve_formula_speed_text"
+            text_marker.id = text_id
+            text_marker.type = Marker.TEXT_VIEW_FACING
+            text_marker.action = Marker.ADD
+            text_marker.pose.position = Point(
+                x=waypoint.x - 0.8,
+                y=waypoint.y,
+                z=waypoint.z + 1.4
+            )
+            text_marker.pose.orientation.w = 1.0
+            text_marker.scale.z = 0.55
+            text_marker.color = color
+            text_marker.text = "inf" if not math.isfinite(speed_formula) else f"{speed_formula * 3.6:.1f} km/h"
+            marker_array.markers.append(text_marker)
+            text_id += 1
+
+        marker_array.markers.append(points_marker)
+        self.curve_formula_speed_marker_pub.publish(marker_array)
 
     def log_throttle(self, level, key, msg, period_sec=1.0):
         now = self.get_clock().now().nanoseconds / 1e9
@@ -1745,6 +1857,7 @@ class BehaviorMotionPlanning(Node):
             #self.get_logger().warning("Path has not initialized from Mission Planner!!")
             self.isPathPlanned = False
             self.publish_stop_point_marker(None, "no_path")
+            self.publish_curve_formula_speed_markers([])
             return
         
         search_area, search_area_as_lanes = self.create_search_area()

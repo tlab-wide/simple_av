@@ -2,6 +2,24 @@ motion:
   max_turning_angle: 35.0  # Maximum allowable turning angle (degrees)
   max_lateral_accel: 4.0   # Lateral acceleration limit (m/s^2)
   curve_calc_dist: 6       # Points on each side used for curvature calculation
+  # Temporary heuristic mapping from path curvature (1/m) to target speed (km/h).
+  # TODO: Replace this with a better continuous model that accounts for comfort and stability.
+  curve_speed_thresholds_kmh:
+    - min_curvature: 0.0
+      max_curvature: 0.01
+      speed: 40.0
+    - min_curvature: 0.01
+      max_curvature: 0.03
+      speed: 17.0
+    - min_curvature: 0.03
+      max_curvature: 0.05
+      speed: 15.0
+    - min_curvature: 0.05
+      max_curvature: 0.2
+      speed: 15.0
+    - min_curvature: 0.2
+      max_curvature: null
+      speed: 10.0
   
   speed_limits:
     base: 8.33     # Default base speed (m/s)
