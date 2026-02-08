@@ -697,7 +697,7 @@ class BehaviorMotionPlanning(Node):
         else:
             t = (speed - self.MIN_SPEED) / (self.MAX_SPEED - self.MIN_SPEED)
         t = max(0.0, min(1.0, t))
-        return ColorRGBA(r=t, g=0.2, b=1.0 - t, a=0.9)
+        return ColorRGBA(r=1.0 - t, g=0.2, b=t, a=0.9)
 
     def publish_trajectory_markers(self, traj_msg):
         if not traj_msg.path:
