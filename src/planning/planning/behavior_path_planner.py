@@ -596,117 +596,7 @@ class BehaviorPathPlanner(Node):
         future = self.mission_planner_client.call_async(request)
         return future
 
-    def adjust_speed_to_curve(self, curvature, max_speed, max_lateral_accel=4.0, min_speed=0.0):
-        # Use lateral acceleration limit: v = sqrt(a_lat / curvature)
-        if curvature <= 1e-6:
-            return max_speed
-        curvature = max(curvature, 1e-6)
-        speed = math.sqrt(max_lateral_accel / curvature)
-        speed = min(max_speed, speed)
-        if min_speed > 0.0:
-            speed = max(min_speed, speed)
-        return speed
-
-    def simple_av_speed_profile_maker(self, path, waypoint_distance=None):
-        """
-        Generate smooth, physically constrained speed profile.
-        Vehicle starts at 0 and stops at the last waypoint.
-        Enforces acceleration and deceleration limits and minimum speed.
-        """
-        if waypoint_distance is None:
-            waypoint_distance = self.densify_interval
-
-        _NORMAL_DECEL = abs(self.NORMAL_DECEL) * waypoint_distance
-
-        # 1. Base speeds from curvature
-        base_speeds = []
-        for i, waypoint in enumerate(path):
-            speed = self.adjust_speed_to_curve(
-                waypoint.curve,
-                self.MAX_SPEED,
-                self.max_lateral_accel,
-                self.MIN_SPEED,
-            )
-            base_speeds.append(speed)
-
-        # 2. Forward pass (acceleration constraint)
-        speeds = [0.0]  # Start from speed 0
-        for i in range(1, len(base_speeds)):
-            prev_speed = speeds[-1]
-            accel_limit = self.get_accel_for_speed(prev_speed)
-            accel_limit = max(accel_limit, 0.0)
-            accel_step = max(accel_limit, 0.0) * waypoint_distance
-            # Max speed allowed by acceleration
-            max_next_speed = math.sqrt(prev_speed**2 + 2 * accel_step)
-            # Clamp by curvature and max speed
-            speeds.append(min(base_speeds[i], max_next_speed, self.MAX_SPEED))
-
-        # 3. Backward pass (deceleration constraint)
-        speeds[-1] = 0.0  # Ensure full stop at the end
-        for i in reversed(range(len(speeds) - 1)):
-            next_speed = speeds[i + 1]
-            # Max speed allowed by deceleration to reach next point safely
-            max_prev_speed = math.sqrt(next_speed**2 + 2 * _NORMAL_DECEL * waypoint_distance)
-            speeds[i] = min(speeds[i], max_prev_speed, self.MAX_SPEED)
-
-        # 4. Clamp to MIN_SPEED (except first and last points)
-        for i in range(1, len(speeds)-1):
-            speeds[i] = max(speeds[i], self.MIN_SPEED)
-
-        speeds = self.apply_jerk_limit(speeds, waypoint_distance)
-        for i in range(1, len(speeds) - 1):
-            speeds[i] = max(min(speeds[i], self.MAX_SPEED), self.MIN_SPEED)
-
-        speeds[0] = 0.0
-        speeds[-1] = 0.0
-
-        return speeds
-
-    def get_accel_for_speed(self, speed):
-        for entry in self.ACCEL_PROFILE:
-            try:
-                min_speed = float(entry.get('min_speed', 0.0))
-                max_speed = float(entry.get('max_speed', float('inf')))
-                accel = float(entry.get('accel', self.NORMAL_ACCEL))
-            except (TypeError, ValueError):
-                continue
-            if speed >= min_speed and speed < max_speed:
-                return accel
-        return self.NORMAL_ACCEL
-
-    def apply_jerk_limit(self, speeds, waypoint_distance):
-        if len(speeds) < 3 or waypoint_distance <= 0.0:
-            return speeds
-
-        def forward_pass(input_speeds):
-            output = [input_speeds[0]]
-            a_prev = 0.0
-            v_prev = input_speeds[0]
-
-            for i in range(1, len(input_speeds)):
-                v_des = input_speeds[i]
-                a_des = (v_des**2 - v_prev**2) / (2 * waypoint_distance)
-                if a_des >= 0.0:
-                    j_max = self.MAX_JERK_ACCEL
-                else:
-                    j_max = self.MAX_JERK_DECEL
-
-                a_min = a_prev - j_max * waypoint_distance
-                a_max = a_prev + j_max * waypoint_distance
-                a_clamped = max(a_min, min(a_des, a_max))
-
-                v_new_sq = max(v_prev**2 + 2 * a_clamped * waypoint_distance, 0.0)
-                v_new = min(v_des, math.sqrt(v_new_sq))
-                output.append(v_new)
-
-                a_prev = (v_new**2 - v_prev**2) / (2 * waypoint_distance)
-                v_prev = v_new
-
-            return output
-
-        speeds = forward_pass(speeds)
-        speeds = list(reversed(forward_pass(list(reversed(speeds)))))
-        return speeds
+    # Removed path-level speed shaping; motion planner handles acceleration/deceleration.
     
     
     def get_detected_pedestrians(self):
@@ -822,83 +712,33 @@ class BehaviorPathPlanner(Node):
     #             self.speeds_on_path[exit_idx:end_idx] = accel_profile
 
     def cool4_speed_profile_adjustment(self, intersection_points, waypoint_distance=None):
-        if waypoint_distance is None:
-            waypoint_distance = self.densify_interval
+        """
+        Apply simple speed caps through the intersection; motion planner handles
+        actual acceleration/deceleration shaping.
+        """
         start_idx, exit_idx, end_idx = intersection_points
 
         if exit_idx <= start_idx:
             return
 
-        self.get_logger().info(
-            f"intersection_awareness_intersection_id: {self.intersection_awareness_intersection_id} "
-        )
-        self.get_logger().info(
-            f"intersection_awareness_status: {self.intersection_awareness_status} "
-        )
-
         is_object_in_danger_zone = self.is_object_detected_on_intersection_danger_zones('2')
-        self.get_logger().info(
-            f"At intersection 2, checking danger zones: {is_object_in_danger_zone}"
-        )
-        self.get_logger().info(
-            f"is_RSU_enabled: {self.is_RSU_enabled}, Danger: {is_object_in_danger_zone}"
-        )
 
         if self.is_RSU_enabled and not is_object_in_danger_zone:
-            target_speed = self.COOL4_MAX_SPEED
             cap_speed = self.COOL4_MAX_SPEED
-            self.get_logger().info(
-                "RSU enabled, no danger detected - ramping to max speed through intersection"
-            )
+            self.get_logger().info("RSU enabled, no danger detected - capping to COOL4_MAX_SPEED through intersection")
         else:
-            target_speed = self.COOL4_MIN_SPEED
-            cap_speed = max(self.current_speed, self.COOL4_MIDDLE_SPEED)
-            self.get_logger().info(
-                "Danger detected or RSU disabled - ramping to minimum speed through intersection"
-            )
+            cap_speed = self.COOL4_MIN_SPEED
+            self.get_logger().info("Danger detected or RSU disabled - capping to COOL4_MIN_SPEED through intersection")
 
-        current_speed = min(self.current_speed, cap_speed)
-        ramp_points = exit_idx - start_idx
+        # Cap speeds inside intersection
+        ramp_points = max(0, exit_idx - start_idx)
         if ramp_points > 0:
-            ramp_profile = [cap_speed] * ramp_points
-            ramp_profile[0] = current_speed
-            ramp_profile[-1] = target_speed
+            self.speeds_on_path[start_idx:exit_idx] = [cap_speed] * ramp_points
 
-            for i in range(1, ramp_points):
-                prev_speed = ramp_profile[i - 1]
-                accel_limit = max(self.get_accel_for_speed(prev_speed), 0.0)
-                accel_step = accel_limit * waypoint_distance
-                max_next_speed = math.sqrt(prev_speed**2 + 2 * accel_step)
-                ramp_profile[i] = min(ramp_profile[i], max_next_speed, cap_speed)
-
-            decel_step = abs(self.NORMAL_DECEL) * waypoint_distance
-            for i in reversed(range(ramp_points - 1)):
-                next_speed = ramp_profile[i + 1]
-                max_prev_speed = math.sqrt(next_speed**2 + 2 * decel_step)
-                ramp_profile[i] = min(ramp_profile[i], max_prev_speed, cap_speed)
-
-            ramp_profile = self.apply_jerk_limit(ramp_profile, waypoint_distance)
-            ramp_profile[0] = current_speed
-            ramp_profile[-1] = target_speed
-            for i in range(1, ramp_points - 1):
-                ramp_profile[i] = max(
-                    min(ramp_profile[i], cap_speed),
-                    self.MIN_SPEED
-                )
-
-            self.speeds_on_path[start_idx:exit_idx] = ramp_profile
-
-        n_points_after = end_idx - exit_idx
+        # Restore to base max after intersection
+        n_points_after = max(0, end_idx - exit_idx)
         if n_points_after > 0:
-            accel_profile = []
-            v = target_speed
-            accel_profile.append(v)
-            for _ in range(1, n_points_after):
-                accel_limit = max(self.get_accel_for_speed(v), 0.0)
-                accel_step = accel_limit * waypoint_distance
-                v = min(self.MAX_SPEED, math.sqrt(v**2 + 2 * accel_step))
-                accel_profile.append(v)
-            self.speeds_on_path[exit_idx:end_idx] = accel_profile
+            self.speeds_on_path[exit_idx:end_idx] = [float(self.base_max_speed)] * n_points_after
 
     def check_cool4_speed_profile_trigger(self, vehicle_pose, threshold=6.0):
         if self.is_cool4_speed_profile_enable and self.intersection_awareness_intersection_id == '2' and self.intersection_awareness_status is not None:
