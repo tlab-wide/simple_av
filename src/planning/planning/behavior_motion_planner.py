@@ -177,13 +177,12 @@ class BehaviorMotionPlanning(Node):
             reliability=QoSReliabilityPolicy.RELIABLE,
             durability=QoSDurabilityPolicy.TRANSIENT_LOCAL
         )
-        self.subscription_mission_plan = self.create_subscription(
+        self.subscription_path_planner_trajectory = self.create_subscription(
             PlanningInternalMissionPlanMsg,
             '/simple_av/path_planning/trajectory',
-            self.mission_plan_callback,
+            self.path_planner_trajectory_callback,
             qos_profile
         )
-        self.mission_plan = PlanningInternalMissionPlanMsg()
         self.path_as_lanes = None  # List of lanes from start lane to destination
         self.path = None  # List of waypoints in order of path_as_lanes
         self.path_of_waypoints = [] # List of waypoints in order of path_as_lanes
@@ -253,6 +252,9 @@ class BehaviorMotionPlanning(Node):
         self.stop_reason = String() # Cruise, Decelerate, PrepareToStop, Turn
 
         self.densify_interval = self.motion_behavior_config['motion']['path']['densify_interval']
+        self.apply_jerk_limit_enabled = bool(
+            self.motion_behavior_config['motion'].get('apply_jerk_limit', False)
+        )
 
         # Vehicle dimensions for overlap checks
         self.vehicle_config = self.load_vehicle_config(self.vehicle_model)
@@ -317,10 +319,9 @@ class BehaviorMotionPlanning(Node):
             return config["vehicles"][vehicle_model]
         raise ValueError(f"Vehicle type '{vehicle_model}' not found in the configuration.")
 
-    def mission_plan_callback(self, msg):
-        self.mission_plan = msg
-        self.path = self.mission_plan.path
-        self.path_as_lanes = list(self.mission_plan.path_as_lanes)
+    def path_planner_trajectory_callback(self, msg):
+        self.path = msg.path
+        self.path_as_lanes = list(msg.path_as_lanes)
         self.path_of_waypoints = [wp.waypoint for wp in self.path]
         self.max_speeds_on_path = [
             float(getattr(wp, 'speed', self.base_speed)) for wp in self.path
@@ -332,7 +333,7 @@ class BehaviorMotionPlanning(Node):
                 self.route = self.path_as_lanes[:]
                 self.current_lane_index = 0
             if not self.isPathPlanned:
-                self.get_logger().info("Path has successfully initialized from Mission Planner")
+                self.get_logger().info("Path has successfully initialized from Path Planner")
                 self.isPathPlanned = True
             self.destination = self.path[-1].waypoint
             self.log_throttle(
@@ -564,6 +565,19 @@ class BehaviorMotionPlanning(Node):
                 current_closest_point_to_vehicle = i
         return current_closest_point_to_vehicle
 
+    def get_current_waypoint_index_from_localization(self):
+        """
+        Get current waypoint index from localization topic output.
+        Uses localization.closest_point and maps it to the nearest index
+        in the current motion planner path.
+        """
+        if not self.path_of_waypoints:
+            return None
+        localization_point = getattr(self.location, "closest_point", None)
+        if localization_point is None:
+            return None
+        return self.find_closest_waypoint_index_to_point(localization_point)
+
     def update_observation_range(self, speed, is_speed_declining):
         gain = self.range_low_pass_gain if is_speed_declining else 0
         self.on_path_detection_range = (1 - gain) * (speed * self.on_path_detection_range_C + self.on_path_detection_range_B) + gain * self.on_path_detection_range 
@@ -597,6 +611,33 @@ class BehaviorMotionPlanning(Node):
             if k >= min_curvature and k < max_curvature:
                 return speed
         return self.curve_speed_thresholds[-1][2]
+
+    def speed_profile_stats(self, speeds):
+        if not speeds:
+            return "n=0"
+        n = len(speeds)
+        mn = min(speeds)
+        mx = max(speeds)
+        avg = sum(speeds) / n
+        zeros = sum(1 for s in speeds if s <= 1e-3)
+        return (
+            f"n={n} min={mn:.2f} max={mx:.2f} "
+            f"avg={avg:.2f} zeros={zeros}"
+        )
+
+    def speed_profile_change_stats(self, before, after, eps=1e-3):
+        if not before or not after:
+            return "changed=0/0 max_dv=0.00 mean_dv=0.00"
+        n = min(len(before), len(after))
+        deltas = [abs(after[i] - before[i]) for i in range(n)]
+        changed = sum(1 for d in deltas if d > eps)
+        max_delta = max(deltas) if deltas else 0.0
+        mean_delta = (sum(deltas) / len(deltas)) if deltas else 0.0
+        return f"changed={changed}/{n} max_dv={max_delta:.2f} mean_dv={mean_delta:.2f}"
+
+    def log_speed_stage(self, stage, speeds, reference=None, start_idx=0):
+        # Logging of trajectory waypoints/speeds intentionally disabled.
+        return
 
     def adjust_speed_to_curve(self, curvature, max_speed, max_lateral_accel=4.0, min_speed=0.0):
         speed = self.curve_formula_speed(curvature, max_lateral_accel)
@@ -648,7 +689,7 @@ class BehaviorMotionPlanning(Node):
         backward = list(reversed(forward_pass(list(reversed(forward)))))
         return [min(f, b) for f, b in zip(forward, backward)]
 
-    def build_speed_profile(self, segment, max_speeds, current_speed, stop_idx=None):
+    def build_speed_profile(self, segment, max_speeds, current_speed, stop_idx=None, stage_start_idx=0):
         if not segment:
             return []
         waypoint_distance = max(self.densify_interval, 1e-3)
@@ -664,6 +705,7 @@ class BehaviorMotionPlanning(Node):
                     self.MIN_SPEED,
                 )
             )
+        self.log_speed_stage("curve_adjusted", base_speeds, max_speeds, stage_start_idx)
 
         speeds = []
         speeds.append(min(base_speeds[0], max(current_speed, 0.0)))
@@ -673,16 +715,22 @@ class BehaviorMotionPlanning(Node):
             accel_step = accel_limit * waypoint_distance
             max_next_speed = math.sqrt(prev_speed**2 + 2 * accel_step)
             speeds.append(min(base_speeds[i], max_next_speed, self.MAX_SPEED))
+        self.log_speed_stage("forward_accel_limited", speeds, base_speeds, stage_start_idx)
 
         if stop_idx is not None and 0 <= stop_idx < len(speeds):
+            speeds_before_stop = list(speeds)
             speeds[stop_idx:] = [0.0] * (len(speeds) - stop_idx)
             decel_step = abs(self.NORMAL_DECEL) * waypoint_distance
             for i in reversed(range(stop_idx)):
                 next_speed = speeds[i + 1]
                 max_prev_speed = math.sqrt(next_speed**2 + 2 * decel_step)
                 speeds[i] = min(speeds[i], max_prev_speed, self.MAX_SPEED)
+            self.log_speed_stage("stop_applied", speeds, speeds_before_stop, stage_start_idx)
 
-        speeds = self.apply_jerk_limit(speeds, waypoint_distance)
+        if self.apply_jerk_limit_enabled:
+            speeds_before_jerk = list(speeds)
+            speeds = self.apply_jerk_limit(speeds, waypoint_distance)
+            self.log_speed_stage("jerk_limited", speeds, speeds_before_jerk, stage_start_idx)
         return speeds
 
     def publish_trajectory(self, start_idx, stop_idx_global=None):
@@ -693,6 +741,11 @@ class BehaviorMotionPlanning(Node):
         end_idx = min(len(self.path) - 1, start_idx + steps)
         segment = self.path[start_idx:end_idx + 1]
         max_speeds = self.max_speeds_on_path[start_idx:end_idx + 1] if self.max_speeds_on_path else []
+        speed_limits = []
+        for i, wp in enumerate(segment):
+            src_speed = max_speeds[i] if i < len(max_speeds) else float(getattr(wp, 'speed', self.base_speed))
+            speed_limits.append(max(src_speed, 0.0))
+        self.log_speed_stage("received_from_path_planner", speed_limits, start_idx=start_idx)
 
         if (
             self.is_cool4_speed_profile_enable
@@ -703,27 +756,41 @@ class BehaviorMotionPlanning(Node):
             start_i, exit_i, _ = self.intersection_points
             overlap_start = max(start_idx, start_i)
             overlap_end = min(end_idx, exit_i)
+            speed_limits_before_cool4 = list(speed_limits)
             if overlap_end > overlap_start:
                 for global_idx in range(overlap_start, overlap_end):
                     local_idx = global_idx - start_idx
-                    if 0 <= local_idx < len(max_speeds):
-                        max_speeds[local_idx] = min(max_speeds[local_idx], cap_speed)
+                    if 0 <= local_idx < len(speed_limits):
+                        speed_limits[local_idx] = min(speed_limits[local_idx], cap_speed)
+            self.log_speed_stage("cool4_capped", speed_limits, speed_limits_before_cool4, start_idx)
 
         stop_idx_local = None
         if stop_idx_global is not None and start_idx <= stop_idx_global <= end_idx:
             stop_idx_local = stop_idx_global - start_idx
 
-        speeds = self.build_speed_profile(segment, max_speeds, self.current_speed, stop_idx_local)
+        speeds = self.build_speed_profile(
+            segment,
+            speed_limits,
+            self.current_speed,
+            stop_idx_local,
+            stage_start_idx=start_idx,
+        )
         traj_msg = PlanningInternalMissionPlanMsg()
         traj_msg.path_as_lanes = list(self.path_as_lanes) if self.path_as_lanes else []
         traj_msg.path = []
         for i, wp in enumerate(segment):
-            speed = speeds[i] if i < len(speeds) else (max_speeds[i] if i < len(max_speeds) else self.base_speed)
+            speed = speeds[i] if i < len(speeds) else speed_limits[i]
             traj_msg.path.append(
                 PlanningWaypoint(waypoint=wp.waypoint, curve=wp.curve, speed=float(speed))
             )
+        self.log_speed_stage(
+            "published_trajectory",
+            [float(getattr(wp, 'speed', 0.0)) for wp in traj_msg.path],
+            speed_limits,
+            start_idx,
+        )
         self.trajectory_pub.publish(traj_msg)
-        self.publish_trajectory_markers(traj_msg)
+        self.publish_trajectory_markers(traj_msg, start_idx)
         self.publish_curve_formula_speed_markers(segment)
 
     def speed_to_color(self, speed):
@@ -734,7 +801,7 @@ class BehaviorMotionPlanning(Node):
         t = max(0.0, min(1.0, t))
         return ColorRGBA(r=1.0 - t, g=0.2, b=t, a=0.9)
 
-    def publish_trajectory_markers(self, traj_msg):
+    def publish_trajectory_markers(self, traj_msg, segment_start_idx=None):
         if not traj_msg.path:
             return
         marker_array = MarkerArray()
@@ -787,6 +854,42 @@ class BehaviorMotionPlanning(Node):
             text_marker.text = f"{speed * 3.6:.1f} km/h"
             marker_array.markers.append(text_marker)
             text_id += 1
+
+        if segment_start_idx is not None and traj_msg.path:
+            closest_wp = traj_msg.path[0].waypoint
+
+            closest_marker = Marker()
+            closest_marker.header.frame_id = "map"
+            closest_marker.header.stamp = now
+            closest_marker.ns = "motion_planner_closest_idx"
+            closest_marker.id = 10000
+            closest_marker.type = Marker.SPHERE
+            closest_marker.action = Marker.ADD
+            closest_marker.pose.position = Point(x=closest_wp.x, y=closest_wp.y, z=closest_wp.z)
+            closest_marker.pose.orientation.w = 1.0
+            closest_marker.scale.x = 1.8
+            closest_marker.scale.y = 1.8
+            closest_marker.scale.z = 1.8
+            closest_marker.color = ColorRGBA(r=1.0, g=1.0, b=0.0, a=0.95)
+            marker_array.markers.append(closest_marker)
+
+            closest_text_marker = Marker()
+            closest_text_marker.header.frame_id = "map"
+            closest_text_marker.header.stamp = now
+            closest_text_marker.ns = "motion_planner_closest_idx_text"
+            closest_text_marker.id = 10001
+            closest_text_marker.type = Marker.TEXT_VIEW_FACING
+            closest_text_marker.action = Marker.ADD
+            closest_text_marker.pose.position = Point(
+                x=closest_wp.x,
+                y=closest_wp.y,
+                z=closest_wp.z + 2.2
+            )
+            closest_text_marker.pose.orientation.w = 1.0
+            closest_text_marker.scale.z = 0.9
+            closest_text_marker.color = ColorRGBA(r=1.0, g=1.0, b=0.0, a=1.0)
+            closest_text_marker.text = f"closest_idx={segment_start_idx}"
+            marker_array.markers.append(closest_text_marker)
 
         marker_array.markers.append(points_marker)
         self.trajectory_marker_pub.publish(marker_array)
@@ -1860,13 +1963,19 @@ class BehaviorMotionPlanning(Node):
             self.publish_curve_formula_speed_markers([])
             return
         
-        search_area, search_area_as_lanes = self.create_search_area()
         self.current_speed = self.velocity_report.longitudinal_velocity if self.velocity_report else 0.0
         self.update_observation_range(self.current_speed, self.current_speed < self.previous_speed_slidingWindow[0])
         vehicle_pose = self.pose.pose.position
 
         self.publish_range_markers(vehicle_pose)
-        current_closest_waypoint_to_vehicle_index = self.find_closest_waypoint_to_vehicle(vehicle_pose, search_area)
+        current_closest_waypoint_to_vehicle_index = self.get_current_waypoint_index_from_localization()
+        if current_closest_waypoint_to_vehicle_index is None:
+            # Fallback keeps planner functional if localization.closest_point is not ready.
+            search_area, _ = self.create_search_area()
+            current_closest_waypoint_to_vehicle_index = self.find_closest_waypoint_to_vehicle(vehicle_pose, search_area)
+        if current_closest_waypoint_to_vehicle_index is None:
+            self.get_logger().warning("Failed to resolve current waypoint index")
+            return
         stop_point, closest_event, candidate_events = self.motion_planner(current_closest_waypoint_to_vehicle_index)
 
         stop_point_for_traj = stop_point
