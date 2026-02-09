@@ -159,6 +159,8 @@ class VehicleControl(Node):
         self.control_timer = self.create_timer(self.control_period_sec, self.control)
 
         self.finished = False
+        self.round_number = 0
+        self.last_accel_cmd = 0.0
         self._last_log_time = {}
 
         # Publish topics
@@ -225,6 +227,7 @@ class VehicleControl(Node):
         self.sim_clock_rate = msg.sim_clock_rate
 
     def portal_callback(self, msg):
+        self.round_number = int(msg.round_number)
         if not msg.finished or self.finished:
             return
         self.finished = True
@@ -239,6 +242,7 @@ class VehicleControl(Node):
         gear_msg.stamp = self.get_clock().now().to_msg()
         gear_msg.command = GearCommand.PARK
         self.gear_publisher.publish(gear_msg)
+        self.publish_status_markers(0.0, 0.0)
         self.node_shut = True
         self.get_logger().info("Scenario finished from portal -> parking and stopping control loop")
 
@@ -405,6 +409,7 @@ class VehicleControl(Node):
             accel = self.get_accel_for_speed(current_speed)
         if accel < deceleration_rate:
             accel = deceleration_rate
+        self.last_accel_cmd = accel
 
         longitudinal_command = Longitudinal()
         longitudinal_command.velocity = self.velocity_report.longitudinal_velocity
@@ -418,10 +423,10 @@ class VehicleControl(Node):
             f'accel: {accel}\n'
             f'target speed: {target_speed}\n'
         )
-        self.publish_status_markers(target_speed)
+        self.publish_status_markers(target_speed, accel)
         return longitudinal_command
 
-    def publish_status_markers(self, target_speed):
+    def publish_status_markers(self, target_speed, accel_cmd=None):
         if not self.pose or not self.pose.pose:
             return
         marker_array = MarkerArray()
@@ -432,18 +437,57 @@ class VehicleControl(Node):
         base_x = self.pose.pose.position.x
         base_y = self.pose.pose.position.y - 2.0
         base_z = self.pose.pose.position.z + 3.0
+        accel_value = self.last_accel_cmd if accel_cmd is None else float(accel_cmd)
+        accel_is_decel = accel_value < -1e-3
 
         entries = [
-            ("target_speed", f"{target_speed:.2f} m/s", (1.0, 0.8, 0.2)),
-            ("speed_limit", f"{self.speed_limit:.2f} m/s", (0.8, 0.8, 1.0)),
-            ("intersection", self.intersection_awareness_status or "none", (0.2, 1.0, 0.2)),
+            (
+                "control_status_target_speed",
+                "target_speed",
+                f"{target_speed * 3.6:.1f} km/h",
+                (1.0, 0.8, 0.2),
+            ),
+            (
+                "control_status_speed_limit",
+                "speed_limit",
+                f"{self.speed_limit * 3.6:.1f} km/h",
+                (0.8, 0.8, 1.0),
+            ),
+            (
+                "control_status_acceleration",
+                "acceleration",
+                f"{accel_value:.2f} m/s^2" if accel_is_decel else f"{abs(accel_value):.2f} m/s^2",
+                (1.0, 0.2, 0.2) if accel_is_decel else (0.2, 1.0, 0.2),
+            ),
+            (
+                "control_status_intersection",
+                "intersection",
+                self.intersection_awareness_status or "none",
+                (0.2, 1.0, 0.2),
+            ),
+            (
+                "control_status_round",
+                "round",
+                f"{self.round_number}",
+                (0.9, 0.9, 0.9),
+            ),
         ]
 
-        for idx, (label, value, color) in enumerate(entries):
+        if self.finished:
+            entries.append(
+                (
+                    "control_status_finished",
+                    "scenario",
+                    f"round {self.round_number} finished",
+                    (1.0, 0.4, 0.1),
+                )
+            )
+
+        for idx, (namespace, label, value, color) in enumerate(entries):
             marker = Marker()
             marker.header.frame_id = "map"
             marker.header.stamp = self.get_clock().now().to_msg()
-            marker.ns = "control_status"
+            marker.ns = namespace
             marker.id = idx
             marker.type = Marker.TEXT_VIEW_FACING
             marker.action = Marker.ADD
