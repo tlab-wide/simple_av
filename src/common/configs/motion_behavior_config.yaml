@@ -46,7 +46,8 @@ motion:
   performance:
     lexus:
       acceleration_rate: 3.8
-      normal_deceleration_rate: -1.0
+      normal_deceleration_rate: -0.6  # Normal profile decel magnitude is 0.6 m/s^2
+      stop_deceleration: -1.0         # Used for stop light / collision / prediction stops
       max_jerk_accel: 0.7
       max_jerk_decel: 0.7
       accel_profile:
@@ -55,7 +56,8 @@ motion:
           accel: 3.8
     bus:
       acceleration_rate: 1.2
-      normal_deceleration_rate: -1.0
+      normal_deceleration_rate: -0.6  # Normal profile decel magnitude is 0.6 m/s^2
+      stop_deceleration: -1.0         # Used for stop light / collision / prediction stops
       max_jerk_accel: 0.2
       max_jerk_decel: 0.2
       accel_profile:

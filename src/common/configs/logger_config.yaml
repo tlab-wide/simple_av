@@ -74,7 +74,7 @@ logger_module:
         z: 18.76
         threshold: 1.0
       - name: "after_30km"
-        x: 4415.47
-        y: 73150.55
+        x: 4440.0
+        y: 73090.0
         z: 18.62
         threshold: 1.0

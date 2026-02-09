@@ -99,7 +99,14 @@ class VehicleControl(Node):
         self.ACCEL_PROFILE = perf_cfg.get('accel_profile', [])
         
         self.maximum_Stereing = None
-        self.normal_deceleration_rate = perf_cfg.get('normal_deceleration_rate', -1.0)
+        self.normal_deceleration_rate = float(perf_cfg.get('normal_deceleration_rate', -1.0))
+        self.stop_deceleration_rate = float(
+            perf_cfg.get(
+                'stop_deceleration',
+                perf_cfg.get('stop_deceleration_rate', self.normal_deceleration_rate)
+            )
+        )
+        self.stop_speed_threshold = 0.1
         
         # Use TF from localization fusion (map -> base_link)
         self.pose = PoseStamped()
@@ -405,8 +412,12 @@ class VehicleControl(Node):
 
         now_sec = self.get_clock().now().nanoseconds * 1e-9
         accel = self.pid_controller.updatePID(current_speed, target_speed, now_sec)
-        
-        deceleration_rate = self.normal_deceleration_rate
+
+        # Use stronger decel limits when trajectory indicates a full stop ahead.
+        stop_target_ahead = self.has_stop_target_ahead()
+        deceleration_rate = (
+            self.stop_deceleration_rate if stop_target_ahead else self.normal_deceleration_rate
+        )
 
         self.get_logger().debug(f"calculated accel: {accel}")
 
@@ -431,6 +442,13 @@ class VehicleControl(Node):
         )
         self.publish_status_markers(target_speed, accel)
         return longitudinal_command
+
+    def has_stop_target_ahead(self):
+        if not self.speeds_on_path or self.lookahead_index is None:
+            return False
+
+        start_idx = max(0, min(self.lookahead_index, len(self.speeds_on_path) - 1))
+        return any(speed <= self.stop_speed_threshold for speed in self.speeds_on_path[start_idx:])
 
     def publish_status_markers(self, target_speed, accel_cmd=None):
         if self.status_text_frame_id == "map" and (not self.pose or not self.pose.pose):

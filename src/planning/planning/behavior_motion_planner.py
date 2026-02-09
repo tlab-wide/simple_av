@@ -283,6 +283,12 @@ class BehaviorMotionPlanning(Node):
         )
         self.NORMAL_ACCEL = float(perf_cfg.get('acceleration_rate', 1.0))
         self.NORMAL_DECEL = float(perf_cfg.get('normal_deceleration_rate', -1.0))
+        self.STOP_DECEL = float(
+            perf_cfg.get(
+                'stop_deceleration',
+                perf_cfg.get('stop_deceleration_rate', self.NORMAL_DECEL)
+            )
+        )
         self.MAX_JERK_ACCEL = float(perf_cfg.get('max_jerk_accel', 0.7))
         self.MAX_JERK_DECEL = float(perf_cfg.get('max_jerk_decel', 0.7))
         self.ACCEL_PROFILE = perf_cfg.get('accel_profile', [])
@@ -818,7 +824,7 @@ class BehaviorMotionPlanning(Node):
         if stop_idx is not None and 0 <= stop_idx < len(speeds):
             speeds_before_stop = list(speeds)
             speeds[stop_idx:] = [0.0] * (len(speeds) - stop_idx)
-            decel_step = abs(self.NORMAL_DECEL) * waypoint_distance
+            decel_step = abs(self.STOP_DECEL) * waypoint_distance
             for i in reversed(range(stop_idx)):
                 next_speed = speeds[i + 1]
                 max_prev_speed = math.sqrt(next_speed**2 + 2 * decel_step)
