@@ -196,6 +196,11 @@ class VehicleControl(Node):
         i_gain = float(pid_config.get('i_gain', 5.0))
         d_gain = float(pid_config.get('d_gain', 1.5))
         self.pid_controller = PIDController(p_gain=p_gain, i_gain=i_gain, d_gain=d_gain, logger=self.get_logger())
+        status_text_cfg = self.motion_behavior_config.get('control', {}).get('status_text', {})
+        self.status_text_offset_x = float(status_text_cfg.get('offset_x', 0.0))
+        self.status_text_offset_y = float(status_text_cfg.get('offset_y', -2.0))
+        self.status_text_offset_z = float(status_text_cfg.get('offset_z', 3.0))
+        self.status_text_line_spacing = float(status_text_cfg.get('line_spacing', 0.6))
 
         self.node_shut = False
     
@@ -434,9 +439,9 @@ class VehicleControl(Node):
         clear_marker.action = Marker.DELETEALL
         marker_array.markers.append(clear_marker)
 
-        base_x = self.pose.pose.position.x
-        base_y = self.pose.pose.position.y - 2.0
-        base_z = self.pose.pose.position.z + 3.0
+        base_x = self.pose.pose.position.x + self.status_text_offset_x
+        base_y = self.pose.pose.position.y + self.status_text_offset_y
+        base_z = self.pose.pose.position.z + self.status_text_offset_z
         accel_value = self.last_accel_cmd if accel_cmd is None else float(accel_cmd)
         accel_is_decel = accel_value < -1e-3
 
@@ -494,7 +499,7 @@ class VehicleControl(Node):
             marker.pose.position = Point(
                 x=base_x,
                 y=base_y,
-                z=base_z - idx * 0.6,
+                z=base_z - idx * self.status_text_line_spacing,
             )
             marker.pose.orientation.w = 1.0
             marker.scale.z = 0.6
