@@ -227,6 +227,8 @@ class BehaviorPathPlanner(Node):
         self.loop_timer = self.create_timer(self.loop_period_sec, self.lane_following_timer_cb)
 
     def lane_following_timer_cb(self):
+        if self.node_shut:
+            return
         try:
             self.lane_following()
         except Exception:
@@ -1242,8 +1244,11 @@ class BehaviorPathPlanner(Node):
             return
          
         if self.finished:
-            self.get_logger().info("Scenario Finished, Parking the Vehicle...")
-            self.node_shut = True
+            if not self.node_shut:
+                self.get_logger().info("Scenario Finished, Parking the Vehicle...")
+                self.node_shut = True
+                if self.loop_timer is not None:
+                    self.loop_timer.cancel()
             return
 
         if self.reset_cooldown_active():
