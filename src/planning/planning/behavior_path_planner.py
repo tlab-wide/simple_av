@@ -82,18 +82,8 @@ class BehaviorPathPlanner(Node):
         self.curve_calc_dist = int(self.motion_behavior_config['motion'].get('curve_calc_dist', 6))
         self.max_lateral_accel = self.motion_behavior_config['motion'].get('max_lateral_accel', 4.0)
 
-        # Load Vehicle configs
+        # Vehicle configs (geometry only; performance handled by motion planner)
         self.vehicle_config = self.load_vehicle_config(self.vehicle_model)
-        perf_cfg = (
-            self.motion_behavior_config['motion']
-            .get('performance', {})
-            .get(self.vehicle_model, {})
-        )
-        self.NORMAL_ACCEL = perf_cfg.get('acceleration_rate', 1.0)
-        self.NORMAL_DECEL = perf_cfg.get('normal_deceleration_rate', -1.0)
-        self.MAX_JERK_ACCEL = perf_cfg.get('max_jerk_accel', 0.7)
-        self.MAX_JERK_DECEL = perf_cfg.get('max_jerk_decel', 0.7)
-        self.ACCEL_PROFILE = perf_cfg.get('accel_profile', [])
 
         # Load intersection data
         self.intersection_profiles = self.load_intersections()
