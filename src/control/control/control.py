@@ -197,6 +197,7 @@ class VehicleControl(Node):
         d_gain = float(pid_config.get('d_gain', 1.5))
         self.pid_controller = PIDController(p_gain=p_gain, i_gain=i_gain, d_gain=d_gain, logger=self.get_logger())
         status_text_cfg = self.motion_behavior_config.get('control', {}).get('status_text', {})
+        self.status_text_frame_id = str(status_text_cfg.get('frame_id', self.base_frame))
         self.status_text_offset_x = float(status_text_cfg.get('offset_x', 0.0))
         self.status_text_offset_y = float(status_text_cfg.get('offset_y', -2.0))
         self.status_text_offset_z = float(status_text_cfg.get('offset_z', 3.0))
@@ -432,16 +433,21 @@ class VehicleControl(Node):
         return longitudinal_command
 
     def publish_status_markers(self, target_speed, accel_cmd=None):
-        if not self.pose or not self.pose.pose:
+        if self.status_text_frame_id == "map" and (not self.pose or not self.pose.pose):
             return
         marker_array = MarkerArray()
         clear_marker = Marker()
         clear_marker.action = Marker.DELETEALL
         marker_array.markers.append(clear_marker)
 
-        base_x = self.pose.pose.position.x + self.status_text_offset_x
-        base_y = self.pose.pose.position.y + self.status_text_offset_y
-        base_z = self.pose.pose.position.z + self.status_text_offset_z
+        if self.status_text_frame_id == "map":
+            base_x = self.pose.pose.position.x + self.status_text_offset_x
+            base_y = self.pose.pose.position.y + self.status_text_offset_y
+            base_z = self.pose.pose.position.z + self.status_text_offset_z
+        else:
+            base_x = self.status_text_offset_x
+            base_y = self.status_text_offset_y
+            base_z = self.status_text_offset_z
         accel_value = self.last_accel_cmd if accel_cmd is None else float(accel_cmd)
         accel_is_decel = accel_value < -1e-3
 
@@ -490,7 +496,7 @@ class VehicleControl(Node):
 
         for idx, (namespace, label, value, color) in enumerate(entries):
             marker = Marker()
-            marker.header.frame_id = "map"
+            marker.header.frame_id = self.status_text_frame_id
             marker.header.stamp = self.get_clock().now().to_msg()
             marker.ns = namespace
             marker.id = idx
