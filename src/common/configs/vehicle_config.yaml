@@ -9,21 +9,7 @@ vehicles:
       front_overhang: 1.0 # Distance from front axle to vehicle front (meters)
       rear_overhang: 1.0  # Distance from rear axle to vehicle back (meters)
     weight: 3000  # Vehicle weight (kg)
-    performance:
-      max_speed: 20.0         # Maximum speed (m/s)
-      min_speed: 0.83          # Minimum speed (m/s)
-      cool4_min_speed: 0.83    # Cool4 minimum speed (m/s)
-      cool4_middle_speed: 1.67 # Cool4 middle speed (m/s)
-      cool4_max_speed: 3.33    # Cool4 maximum speed (m/s)
-      acceleration_rate: 3.8     # acceleration rate (m/s²)
-      normal_deceleration_rate: -1.0 # Normal deceleration (m/s²)
-      max_jerk_accel: 0.7        # Max jerk when accelerating (m/s³)
-      max_jerk_decel: 0.7        # Max jerk when decelerating (m/s³)
-      accel_profile:            # Speed-dependent accel (m/s)
-        - min_speed: 0.0
-          max_speed: 1000.0
-          accel: 3.8
-      # braking-specific decel limits removed; using normal_deceleration_rate
+    # Performance parameters moved to motion_behavior_config.yaml under motion.performance.lexus
 
   bus:
     model: "TierIV"
@@ -35,21 +21,4 @@ vehicles:
       front_overhang: 2.3 # Distance from front axle to vehicle front (meters)
       rear_overhang: 3.2  # Distance from rear axle to vehicle back (meters)
     weight: 7000  # Vehicle weight (kg)
-    performance:
-      max_speed: 8.5         # Maximum speed (m/s)
-      min_speed: 0.84          # Minimum speed (m/s)
-      cool4_min_speed: 0.84    # Cool4 minimum speed (m/s)
-      cool4_middle_speed: 1.67 # Cool4 middle speed (m/s)
-      cool4_max_speed: 3.34    # Cool4 maximum speed (m/s)
-      normal_deceleration_rate: -0.6 # Normal deceleration (m/s²)
-      max_jerk_accel: 0.2        # Max jerk when accelerating (m/s³) - default 0.7
-      max_jerk_decel: 0.2        # Max jerk when decelerating (m/s³) - default 0.7
-      accel_profile:            # Speed-dependent accel (m/s) - Primary
-        - min_speed: 0.0
-          max_speed: 3.33
-          accel: 0.227
-        - min_speed: 3.33
-          max_speed: 20.0
-          accel: 0.455
-      acceleration_rate: 1.2     # Acceleration rate (m/s²) - Fallback
-      # braking-specific decel limits removed; using normal_deceleration_rate
+    # Performance parameters moved to motion_behavior_config.yaml under motion.performance.bus

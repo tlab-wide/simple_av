@@ -90,11 +90,16 @@ class VehicleControl(Node):
         
         self.previous_steering_angle = 0
         self.steering_gain = 0.2  # Proportional gain for steering
-        self.acceleration_rate = self.vehicle_config['performance']['acceleration_rate']
-        self.ACCEL_PROFILE = self.vehicle_config['performance'].get('accel_profile', [])
+        perf_cfg = (
+            self.motion_behavior_config['motion']
+            .get('performance', {})
+            .get(self.vehicle_model, {})
+        )
+        self.acceleration_rate = perf_cfg.get('acceleration_rate', 1.0)
+        self.ACCEL_PROFILE = perf_cfg.get('accel_profile', [])
         
         self.maximum_Stereing = None
-        self.normal_deceleration_rate = self.vehicle_config['performance']['normal_deceleration_rate']
+        self.normal_deceleration_rate = perf_cfg.get('normal_deceleration_rate', -1.0)
         
         # Use TF from localization fusion (map -> base_link)
         self.pose = PoseStamped()

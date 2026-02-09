@@ -256,18 +256,24 @@ class BehaviorMotionPlanning(Node):
             self.motion_behavior_config['motion'].get('apply_jerk_limit', False)
         )
 
-        # Vehicle dimensions for overlap checks
+        # Vehicle geometry for overlap checks
         self.vehicle_config = self.load_vehicle_config(self.vehicle_model)
         self.ego_length = float(self.vehicle_config['dimensions']['length'])
         self.ego_width = float(self.vehicle_config['dimensions']['width'])
         self.wheel_base = float(self.vehicle_config['dimensions'].get('wheel_base', 0.0))
         self.front_overhang = float(self.vehicle_config['dimensions'].get('front_overhang', 0.0))
-        self.NORMAL_ACCEL = float(self.vehicle_config['performance'].get('acceleration_rate', 1.0))
-        self.NORMAL_DECEL = float(self.vehicle_config['performance'].get('normal_deceleration_rate', -1.0))
-        self.MAX_JERK_ACCEL = float(self.vehicle_config['performance'].get('max_jerk_accel', 0.7))
-        self.MAX_JERK_DECEL = float(self.vehicle_config['performance'].get('max_jerk_decel', 0.7))
-        self.ACCEL_PROFILE = self.vehicle_config['performance'].get('accel_profile', [])
-        # Speed limits come only from motion_behavior_config.yaml
+
+        # Performance parameters now sourced from motion_behavior_config
+        perf_cfg = (
+            self.motion_behavior_config['motion']
+            .get('performance', {})
+            .get(self.vehicle_model, {})
+        )
+        self.NORMAL_ACCEL = float(perf_cfg.get('acceleration_rate', 1.0))
+        self.NORMAL_DECEL = float(perf_cfg.get('normal_deceleration_rate', -1.0))
+        self.MAX_JERK_ACCEL = float(perf_cfg.get('max_jerk_accel', 0.7))
+        self.MAX_JERK_DECEL = float(perf_cfg.get('max_jerk_decel', 0.7))
+        self.ACCEL_PROFILE = perf_cfg.get('accel_profile', [])
         self.front_offset = self.wheel_base + self.front_overhang
         if self.densify_interval > 0.0:
             self.front_offset_steps = int(self.front_offset / self.densify_interval)

@@ -42,6 +42,30 @@ motion:
   # Enable jerk limiting in speed profile generation. Default is disabled.
   apply_jerk_limit: false
 
+  # Vehicle performance parameters (m/s, m/s², m/s³) keyed by vehicle model
+  performance:
+    lexus:
+      acceleration_rate: 3.8
+      normal_deceleration_rate: -1.0
+      max_jerk_accel: 0.7
+      max_jerk_decel: 0.7
+      accel_profile:
+        - min_speed: 0.0
+          max_speed: 1000.0
+          accel: 3.8
+    bus:
+      acceleration_rate: 1.2
+      normal_deceleration_rate: -1.5
+      max_jerk_accel: 0.2
+      max_jerk_decel: 0.2
+      accel_profile:
+        - min_speed: 0.0
+          max_speed: 3.33
+          accel: 0.227
+        - min_speed: 3.33
+          max_speed: 20.0
+          accel: 0.455
+
 control:
   pid:
     p_gain: 5.0
