@@ -73,4 +73,6 @@ behavior:
         base: 50.0      # Base detection radius (meters)
 
   traffic_light:
-    stop_offset: 1.0  # Stop this many meters before the stop line (meters)
+    # Offset (meters) from stop line to base_link; vehicle front_overhang + wheel_base
+    # are added automatically so the front bumper respects the line.
+    stop_offset: 1.0

@@ -494,12 +494,18 @@ class BehaviorMotionPlanning(Node):
         return min_idx
 
     def offset_stop_point_before_line(self, stop_point, offset_m):
-        if stop_point is None or not self.path_of_waypoints or offset_m <= 0.0:
+        """
+        Shift the traffic-light stop point upstream so the vehicle's FRONT
+        (base_link ➜ front_overhang) stops before the line.
+        """
+        if stop_point is None or not self.path_of_waypoints:
             return stop_point
         stop_idx = self.find_closest_waypoint_index_to_point(stop_point)
         if stop_idx is None:
             return stop_point
-        offset_idx = int(offset_m / max(self.densify_interval, 1e-6))
+        # Add vehicle front offset so the bumper, not base_link, respects the line
+        total_offset_m = max(offset_m, 0.0) + self.front_offset
+        offset_idx = int(total_offset_m / max(self.densify_interval, 1e-6))
         new_idx = max(0, stop_idx - offset_idx)
         return self.path_of_waypoints[new_idx]
 
@@ -1354,7 +1360,9 @@ class BehaviorMotionPlanning(Node):
             self.get_logger().debug("CP - INSTANT STOP!!")
             return (vehicle_pose, event_waypoint)
 
-        stop_point_index = self.path_of_waypoints.index(event_waypoint) - int(saftey_distance/self.densify_interval)
+        # Add front_offset so the front bumper, not base_link, clears the obstacle/stop line
+        effective_distance = saftey_distance + self.front_offset
+        stop_point_index = self.path_of_waypoints.index(event_waypoint) - int(effective_distance / max(self.densify_interval, 1e-6))
         stop_point = self.path_of_waypoints[stop_point_index]
         return (Point(x=stop_point.x, y=stop_point.y, z=stop_point.z), event_waypoint)
          
