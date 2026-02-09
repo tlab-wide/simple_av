@@ -74,8 +74,8 @@ control:
   status_text:
     frame_id: base_link
     offset_x: -4.0
-    offset_y: -2.0
-    offset_z: 1.0
+    offset_y: 4.0
+    offset_z: 2
     line_spacing: 0.6
 
 behavior:

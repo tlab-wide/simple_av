@@ -1,5 +1,5 @@
 scenario:
   destination: 'lanelet1050' # End of the main route lanelet40, intersection2 scenario2 end: lanelet1181
-  repeat_count: 2  # Number of times to repeat the scenario for testing
+  repeat_count: 10  # Number of times to repeat the scenario for testing
   vehicle_model: 'bus' # Selecting vehicle model based on what model is loaded on AWSIM: Lexus/bus or custom vehicle
   reset_cooldown_seconds: 4.0 # Portal reset cooldown (seconds)
