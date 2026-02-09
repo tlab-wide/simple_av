@@ -737,7 +737,16 @@ class BehaviorMotionPlanning(Node):
         backward = list(reversed(forward_pass(list(reversed(forward)))))
         return [min(f, b) for f, b in zip(forward, backward)]
 
-    def build_speed_profile(self, segment, max_speeds, current_speed, stop_idx=None, stage_start_idx=0):
+    def build_speed_profile(
+        self,
+        segment,
+        max_speeds,
+        current_speed,
+        stop_idx=None,
+        cool4_target_idx=None,
+        cool4_target_speed=None,
+        stage_start_idx=0,
+    ):
         if not segment:
             return []
         waypoint_distance = max(self.densify_interval, 1e-3)
@@ -764,6 +773,33 @@ class BehaviorMotionPlanning(Node):
             max_next_speed = math.sqrt(prev_speed**2 + 2 * accel_step)
             speeds.append(min(base_speeds[i], max_next_speed, self.MAX_SPEED))
         self.log_speed_stage("forward_accel_limited", speeds, base_speeds, stage_start_idx)
+
+        # Cool4 policy: force a target speed at the intersection exit, then keep
+        # a physically feasible profile using decel-before / accel-after passes.
+        if (
+            cool4_target_idx is not None
+            and cool4_target_speed is not None
+            and 0 <= cool4_target_idx < len(speeds)
+            and (stop_idx is None or stop_idx > cool4_target_idx)
+        ):
+            speeds_before_cool4 = list(speeds)
+            target_speed = min(max(float(cool4_target_speed), 0.0), self.MAX_SPEED)
+            speeds[cool4_target_idx] = target_speed
+
+            decel_step = abs(self.NORMAL_DECEL) * waypoint_distance
+            for i in reversed(range(cool4_target_idx)):
+                next_speed = speeds[i + 1]
+                max_prev_speed = math.sqrt(next_speed**2 + 2 * decel_step)
+                speeds[i] = min(speeds[i], max_prev_speed, self.MAX_SPEED)
+
+            for i in range(cool4_target_idx + 1, len(speeds)):
+                prev_speed = speeds[i - 1]
+                accel_limit = max(self.get_accel_for_speed(prev_speed), 0.0)
+                accel_step = accel_limit * waypoint_distance
+                max_next_speed = math.sqrt(prev_speed**2 + 2 * accel_step)
+                speeds[i] = min(speeds[i], max_next_speed, self.MAX_SPEED)
+
+            self.log_speed_stage("cool4_exit_target", speeds, speeds_before_cool4, stage_start_idx)
 
         if stop_idx is not None and 0 <= stop_idx < len(speeds):
             speeds_before_stop = list(speeds)
@@ -795,22 +831,20 @@ class BehaviorMotionPlanning(Node):
             speed_limits.append(max(src_speed, 0.0))
         self.log_speed_stage("received_from_path_planner", speed_limits, start_idx=start_idx)
 
+        cool4_target_idx_local = None
+        cool4_target_speed = None
+
         if (
             self.is_cool4_speed_profile_enable
             and self.intersection_points
             and self.intersection_awareness_intersection_name == '2'
         ):
-            cap_speed = self.COOL4_MAX_SPEED if (self.use_RSU_for_object_detection and not self.rsu_danger_detected) else self.COOL4_MIN_SPEED
-            start_i, exit_i, _ = self.intersection_points
-            overlap_start = max(start_idx, start_i)
-            overlap_end = min(end_idx, exit_i)
-            speed_limits_before_cool4 = list(speed_limits)
-            if overlap_end > overlap_start:
-                for global_idx in range(overlap_start, overlap_end):
-                    local_idx = global_idx - start_idx
-                    if 0 <= local_idx < len(speed_limits):
-                        speed_limits[local_idx] = min(speed_limits[local_idx], cap_speed)
-            self.log_speed_stage("cool4_capped", speed_limits, speed_limits_before_cool4, start_idx)
+            _, exit_i, _ = self.intersection_points
+            if start_idx <= exit_i <= end_idx:
+                cool4_target_idx_local = exit_i - start_idx
+                cool4_target_speed = self.COOL4_MIN_SPEED
+                if self.use_RSU_for_object_detection and not self.rsu_danger_detected:
+                    cool4_target_speed = self.COOL4_MAX_SPEED
 
         stop_idx_local = None
         if stop_idx_global is not None and start_idx <= stop_idx_global <= end_idx:
@@ -821,6 +855,8 @@ class BehaviorMotionPlanning(Node):
             speed_limits,
             self.current_speed,
             stop_idx_local,
+            cool4_target_idx_local,
+            cool4_target_speed,
             stage_start_idx=start_idx,
         )
         traj_msg = PlanningInternalMissionPlanMsg()
