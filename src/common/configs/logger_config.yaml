@@ -4,11 +4,49 @@ logger_module:
   state: ON # ON/OFF
   intersection: '2' # Kakaiken: 2 - Ganken: 1
   scenario: '2' # scenario number
-  log_time_interval: 0.05
+  log_time_interval: 0.1
   # log_speed: None
   # log_traffic_signal_state: None
   # log_position: None
   # log_other_vehicles: None
+
+  # TF frames to publish and log each timestamp.
+  # If "tree" is omitted, logger loads transforms from source_config.
+  tf_logging:
+    enabled: true
+    publish_tf: true
+    source_config: sensors_calibration.yaml
+    root_frame: base_link
+    tree:
+      base_link:
+        bus_front:
+          x: 7.25
+          y: 0.0
+          z: 0.0
+          roll: 0.0
+          pitch: 0.0
+          yaw: 0.0
+        bus_tail:
+          x: -3.15     # forward (meters)
+          y: 0.0      # lateral offset if any
+          z: 0.0     # height above vehicle ref point
+          roll: 0.0   # orientation if sensor is tilted
+          pitch: 0.0
+          yaw: 0.0
+        isuzu_bus_front:
+          x: 6.165    # forward (meters)
+          y: 0.0      # lateral offset if any
+          z: 0.0     # height above vehicle ref point
+          roll: 0.0   # orientation if sensor is tilted
+          pitch: 0.0
+          yaw: 0.0
+        isuzu_bus_tail:
+          x: -2.69     # forward (meters)
+          y: 0.0      # lateral offset if any
+          z: 0.0     # height above vehicle ref point
+          roll: 0.0   # orientation if sensor is tilted
+          pitch: 0.0
+          yaw: 0.0
 
   # Points to log when the vehicle approaches them.
   # Distance threshold is in meters.

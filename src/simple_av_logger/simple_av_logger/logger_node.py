@@ -1,6 +1,6 @@
 import rclpy
 from rclpy.node import Node
-from geometry_msgs.msg import PoseStamped, Point
+from geometry_msgs.msg import PoseStamped, Point, TransformStamped
 from visualization_msgs.msg import Marker, MarkerArray
 from autoware_vehicle_msgs.msg import VelocityReport
 import numpy as np
@@ -13,10 +13,12 @@ from std_msgs.msg import Bool, String
 from autoware_control_msgs.msg import Control, Lateral, Longitudinal
 import csv
 import json
-from typing import List, Tuple
+from typing import List, Tuple, Dict, Any
 from dataclasses import dataclass
 from scipy.spatial.transform import Rotation as R
 from datetime import datetime
+from collections import deque
+from tf2_ros import StaticTransformBroadcaster
 
 @dataclass
 class PolygonRegion:
@@ -42,6 +44,23 @@ class Logger(Node):
 
         # Load av features configs
         self.av_features = self.config_file_loader("av_features.yaml")
+
+        # TF logging/publishing config
+        tf_logging_cfg = self.logger_config.get('logger_module', {}).get('tf_logging', {})
+        self.tf_logging_enabled = bool(tf_logging_cfg.get('enabled', True))
+        self.tf_publish_enabled = bool(tf_logging_cfg.get('publish_tf', True))
+        self.tf_source_config = tf_logging_cfg.get('source_config', 'sensors_calibration.yaml')
+        self.tf_root_frame = str(tf_logging_cfg.get('root_frame', 'base_link'))
+        self.tf_tree = self.load_tf_tree(tf_logging_cfg)
+        self.tf_edges = self.parse_tf_edges(self.tf_tree)
+        self.tf_relative_transforms, self.tf_log_frames = self.resolve_tf_chain_to_root(
+            self.tf_edges,
+            self.tf_root_frame
+        )
+        self.tf_column_names = []
+        for frame in self.tf_log_frames:
+            self.tf_column_names.extend([f"{frame}_x", f"{frame}_y", f"{frame}_z"])
+        self.tf_broadcaster = None
     
         # Handle logger off
         if not self.logger_state:
@@ -105,6 +124,7 @@ class Logger(Node):
             'lane_id', 
             'pose_x', 
             'pose_y', 
+            'pose_z',
             'is_in_intersection', 
             'does_danger_detected', 
             'rsu_detection_box_occupied', # previous rsu_detection - check when enter to the intersection 
@@ -130,6 +150,7 @@ class Logger(Node):
                 name = f"point_{idx}"
             self.logging_point_names.append(name)
         header.extend(self.logging_point_names)
+        header.extend(self.tf_column_names)
         self.writer.writerow(header)
 
         # --- Round summary CSV ---
@@ -151,6 +172,10 @@ class Logger(Node):
         self.red_light_stop_time = 0.0
         self.last_snapshot_sim_time = None
         self.red_stop_speed_threshold = 0.1
+
+        if self.tf_publish_enabled and self.tf_edges:
+            self.tf_broadcaster = StaticTransformBroadcaster(self)
+            self.publish_static_tf_tree()
 
         # Subscriptions
         self.subscriptionPose = self.create_subscription(PoseStamped, '/sensing/gnss/pose', self.pose_callback, 10)
@@ -241,6 +266,143 @@ class Logger(Node):
         self.last_speed = 0
         self.visited_lanes = []          # ordered list of visited lane names/IDs
         self.last_lane = None            # to detect lane changes
+
+    def load_tf_tree(self, tf_logging_cfg):
+        inline_tree = tf_logging_cfg.get('tree')
+        if isinstance(inline_tree, dict) and inline_tree:
+            return inline_tree
+        try:
+            return self.config_file_loader(self.tf_source_config)
+        except Exception as exc:
+            self.get_logger().warning(
+                f"Failed to load TF tree config '{self.tf_source_config}': {exc}"
+            )
+            return {}
+
+    def parse_tf_edges(self, tree: Dict[str, Any]):
+        edges = []
+        if not isinstance(tree, dict):
+            return edges
+        for parent_frame, children in tree.items():
+            if not isinstance(children, dict):
+                continue
+            for child_frame, spec in children.items():
+                if not isinstance(spec, dict):
+                    continue
+                try:
+                    normalized = self.normalize_tf_spec(spec)
+                except (TypeError, ValueError):
+                    self.get_logger().warning(
+                        f"Skipping TF spec for {parent_frame}->{child_frame}: invalid numeric values"
+                    )
+                    continue
+                edges.append((str(parent_frame), str(child_frame), normalized))
+        return edges
+
+    def normalize_tf_spec(self, spec):
+        return {
+            'x': float(spec.get('x', 0.0)),
+            'y': float(spec.get('y', 0.0)),
+            'z': float(spec.get('z', 0.0)),
+            'roll': float(spec.get('roll', 0.0)),
+            'pitch': float(spec.get('pitch', 0.0)),
+            'yaw': float(spec.get('yaw', 0.0)),
+        }
+
+    def resolve_tf_chain_to_root(self, edges, root_frame):
+        children_by_parent = {}
+        for parent_frame, child_frame, spec in edges:
+            children_by_parent.setdefault(parent_frame, []).append((child_frame, spec))
+
+        relative_transforms = {
+            root_frame: (np.zeros(3, dtype=float), R.identity())
+        }
+        ordered_frames = []
+        queue = deque([root_frame])
+
+        while queue:
+            parent_frame = queue.popleft()
+            parent_translation, parent_rotation = relative_transforms[parent_frame]
+            for child_frame, spec in children_by_parent.get(parent_frame, []):
+                if child_frame in relative_transforms:
+                    continue
+                local_translation = np.array([spec['x'], spec['y'], spec['z']], dtype=float)
+                local_rotation = R.from_euler(
+                    'xyz',
+                    [spec['roll'], spec['pitch'], spec['yaw']]
+                )
+                child_translation = parent_translation + parent_rotation.apply(local_translation)
+                child_rotation = parent_rotation * local_rotation
+                relative_transforms[child_frame] = (child_translation, child_rotation)
+                ordered_frames.append(child_frame)
+                queue.append(child_frame)
+
+        if self.tf_logging_enabled and edges and not ordered_frames:
+            self.get_logger().warning(
+                f"No TF frames are reachable from root frame '{root_frame}'"
+            )
+        return relative_transforms, ordered_frames
+
+    def publish_static_tf_tree(self):
+        if not self.tf_broadcaster or not self.tf_edges:
+            return
+        stamp = self.get_clock().now().to_msg()
+        transforms = []
+        for parent_frame, child_frame, spec in self.tf_edges:
+            transform = TransformStamped()
+            transform.header.stamp = stamp
+            transform.header.frame_id = parent_frame
+            transform.child_frame_id = child_frame
+            transform.transform.translation.x = spec['x']
+            transform.transform.translation.y = spec['y']
+            transform.transform.translation.z = spec['z']
+            qx, qy, qz, qw = R.from_euler(
+                'xyz',
+                [spec['roll'], spec['pitch'], spec['yaw']]
+            ).as_quat()
+            transform.transform.rotation.x = float(qx)
+            transform.transform.rotation.y = float(qy)
+            transform.transform.rotation.z = float(qz)
+            transform.transform.rotation.w = float(qw)
+            transforms.append(transform)
+        self.tf_broadcaster.sendTransform(transforms)
+        self.get_logger().info(
+            f"Published {len(transforms)} static TF transforms from logger config"
+        )
+
+    def get_logged_tf_world_positions(self, vehicle_pose, vehicle_orientation):
+        if not self.tf_logging_enabled or not self.tf_log_frames:
+            return []
+
+        base_translation = np.array([vehicle_pose.x, vehicle_pose.y, vehicle_pose.z], dtype=float)
+        try:
+            base_rotation = R.from_quat(
+                [
+                    vehicle_orientation.x,
+                    vehicle_orientation.y,
+                    vehicle_orientation.z,
+                    vehicle_orientation.w
+                ]
+            )
+        except ValueError:
+            base_rotation = R.identity()
+
+        tf_values = []
+        for frame in self.tf_log_frames:
+            rel_transform = self.tf_relative_transforms.get(frame)
+            if rel_transform is None:
+                tf_values.extend(['', '', ''])
+                continue
+            rel_translation, _ = rel_transform
+            frame_translation = base_translation + base_rotation.apply(rel_translation)
+            tf_values.extend(
+                [
+                    f"{frame_translation[0]:.4f}",
+                    f"{frame_translation[1]:.4f}",
+                    f"{frame_translation[2]:.4f}"
+                ]
+            )
+        return tf_values
 
     def config_file_loader(self, file_name):
         # Path to the YAML file
@@ -789,6 +951,8 @@ class Logger(Node):
         vehicle_pose = self.pose.pose.position
         x = vehicle_pose.x
         y = vehicle_pose.y
+        z = vehicle_pose.z
+        vehicle_orientation = self.pose.pose.orientation
         self.update_is_vehicle_inside_intersection_state(vehicle_pose)
         localization_point = None
         if self.location and self.location.closest_lane_names.data:
@@ -852,6 +1016,7 @@ class Logger(Node):
             self.location.closest_lane_names.data, 
             x, 
             y,
+            z,
             self.is_vehicle_inside_intersection,
             self.has_pedesrian_detected_at_danger_zones,
             self.rsu_detected,
@@ -863,6 +1028,7 @@ class Logger(Node):
         ]
         for name in self.logging_point_names:
             row.append(str(name in self.reached_logging_points))
+        row.extend(self.get_logged_tf_world_positions(vehicle_pose, vehicle_orientation))
         self.writer.writerow(row)
         
     def destroy_node(self):

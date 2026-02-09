@@ -1,4 +1,32 @@
 base_link:
+  bus_front:
+    x: 7.25
+    y: 0.0
+    z: 0.0
+    roll: 0.0
+    pitch: 0.0
+    yaw: 0.0
+  bus_tail:
+    x: -3.15
+    y: 0.0
+    z: 0.0
+    roll: 0.0
+    pitch: 0.0
+    yaw: 0.0
+  isuzu_bus_front:
+    x: 6.165
+    y: 0.0
+    z: 0.0
+    roll: 0.0
+    pitch: 0.0
+    yaw: 0.0
+  isuzu_bus_tail:
+    x: -2.69
+    y: 0.0
+    z: 0.0
+    roll: 0.0
+    pitch: 0.0
+    yaw: 0.0
   sensor_kit_base_link:
     x: 4.57     # forward (meters)
     y: 0.0      # lateral offset if any
