@@ -14,7 +14,7 @@ from std_msgs.msg import Float32
 
 from rclpy.qos import QoSProfile, DurabilityPolicy, HistoryPolicy, ReliabilityPolicy
 from simple_av_msgs.msg import PlanningInternalMissionPlanMsg
-from simple_av_msgs.msg import SimMonitor, LocalizationIntersectionStatus
+from simple_av_msgs.msg import SimMonitor, LocalizationIntersectionStatus, Portal
 import time
 import math
 from collections import deque
@@ -147,6 +147,12 @@ class VehicleControl(Node):
 
         self.subscriptionSimMonitor = self.create_subscription(SimMonitor, 'simple_av/sim_monitor', self.sim_monitor_callback, 100)
         self.sim_clock_rate = 0
+        self.subscriptionPortal = self.create_subscription(
+            Portal,
+            'simple_av/portal',
+            self.portal_callback,
+            10
+        )
 
         # Control loop timer (uses ROS time when use_sim_time is enabled)
         self.control_period_sec = 0.1
@@ -218,6 +224,27 @@ class VehicleControl(Node):
     def sim_monitor_callback(self, msg):
         self.sim_clock_rate = msg.sim_clock_rate
 
+    def portal_callback(self, msg):
+        if not msg.finished or self.finished:
+            return
+        self.finished = True
+        self.path_of_waypoints = []
+        self.speeds_on_path = []
+        self.lookahead_point = None
+        self.lookahead_index = None
+        self.speed_limit = 0.0
+        self.last_closest_point_index = None
+
+        gear_msg = GearCommand()
+        gear_msg.stamp = self.get_clock().now().to_msg()
+        gear_msg.command = GearCommand.PARK
+        self.gear_publisher.publish(gear_msg)
+        self.node_shut = True
+        self.get_logger().info("Scenario finished from portal -> parking and stopping control loop")
+
+        if self.control_timer is not None:
+            self.control_timer.cancel()
+
     def update_pose_from_tf(self):
         try:
             tf = self.tf_buffer.lookup_transform(
@@ -245,6 +272,8 @@ class VehicleControl(Node):
         self.velocity_report = msg
 
     def trajectory_callback(self, msg):
+        if self.finished:
+            return
         self.path_of_waypoints = [wp.waypoint for wp in msg.path]
         self.speeds_on_path = [float(getattr(wp, 'speed', 0.0)) for wp in msg.path]
         self.last_closest_point_index = None
@@ -271,6 +300,13 @@ class VehicleControl(Node):
     def control(self):
         self.update_pose_from_tf()
 
+        if self.finished:
+            gear_msg = GearCommand()
+            gear_msg.stamp = self.get_clock().now().to_msg()
+            gear_msg.command = GearCommand.PARK
+            self.gear_publisher.publish(gear_msg)
+            return
+
         if not self.pose or not self.path_of_waypoints:
             self.get_logger().warning("No path or pose data")
             gear_msg = GearCommand()
@@ -281,15 +317,6 @@ class VehicleControl(Node):
 
         self.update_lookahead_point()
         current_speed = self.velocity_report.longitudinal_velocity if self.velocity_report else 0.0
-        
-        if self.finished:
-            self.node_shut = True
-            gear_msg = GearCommand()
-            gear_msg.stamp = self.get_clock().now().to_msg()
-            self.get_logger().debug("park")
-            gear_msg.command = GearCommand.PARK
-            self.gear_publisher.publish(gear_msg)  
-            return
         
         # Steer and Velocity Control
         control_msg = Control()

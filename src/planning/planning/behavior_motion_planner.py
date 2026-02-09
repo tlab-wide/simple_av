@@ -17,7 +17,7 @@ from simple_av_msgs.msg import TrafficSignalsArray
 from autoware_perception_msgs.msg import PredictedObjects, DetectedObjects
 from simple_av_msgs.msg import PlanningInternalMsg, PlanningInternalMissionPlanMsg, CollisionPredictionInfo, PlanningWaypoint
 from simple_av_msgs.msg import LocalizationMsg, LocalizationIntersectionStatus
-from simple_av_msgs.msg import SimMonitor
+from simple_av_msgs.msg import SimMonitor, Portal
 import numpy as np
 from dataclasses import dataclass, field
 from scipy.spatial.transform import Rotation as R
@@ -165,6 +165,13 @@ class BehaviorMotionPlanning(Node):
 
         self.subscriptionSimMonitor = self.create_subscription(SimMonitor, 'simple_av/sim_monitor', self.sim_monitor_callback, 100)
         self.sim_clock_rate = 0
+        self.subscriptionPortal = self.create_subscription(
+            Portal,
+            'simple_av/portal',
+            self.portal_callback,
+            10
+        )
+        self.finished = False
 
         # Create subscriber to simple_av/localization/intersection_status topic
         self.subscriptionIntersectionAwareness = self.create_subscription(LocalizationIntersectionStatus, 'simple_av/localization/intersection_status', self.intersectionAwareness_callback, 10)
@@ -326,6 +333,8 @@ class BehaviorMotionPlanning(Node):
         raise ValueError(f"Vehicle type '{vehicle_model}' not found in the configuration.")
 
     def path_planner_trajectory_callback(self, msg):
+        if self.finished:
+            return
         self.path = msg.path
         self.path_as_lanes = list(msg.path_as_lanes)
         self.path_of_waypoints = [wp.waypoint for wp in self.path]
@@ -355,6 +364,33 @@ class BehaviorMotionPlanning(Node):
 
     def sim_monitor_callback(self, msg):
         self.sim_clock_rate = msg.sim_clock_rate
+
+    def portal_callback(self, msg):
+        if not msg.finished or self.finished:
+            return
+        self.finished = True
+        self.get_logger().info(
+            "Scenario finished from portal -> clearing motion planner path and publishing empty trajectory"
+        )
+
+        self.path = None
+        self.path_as_lanes = []
+        self.path_of_waypoints = []
+        self.max_speeds_on_path = []
+        self.route = None
+        self.current_lane_index = 0
+        self.intersection_points = []
+        self.isPathPlanned = False
+
+        empty_traj = PlanningInternalMissionPlanMsg()
+        empty_traj.path_as_lanes = []
+        empty_traj.path = []
+        self.trajectory_pub.publish(empty_traj)
+        self.publish_curve_formula_speed_markers([])
+        self.publish_stop_point_marker(None, "finished")
+
+        if self.loop_timer is not None:
+            self.loop_timer.cancel()
     
     def velocity_report_callback(self, msg):
         self.velocity_report = msg
@@ -1965,6 +2001,8 @@ class BehaviorMotionPlanning(Node):
         return (closest_event['stop_point'] if closest_event else None), closest_event, candidate_events
             
     def motion_planning(self):
+        if self.finished:
+            return
         self.update_pose_from_tf()
         if not self.location and not self.pose:
             self.get_logger().warning("No location/pose input")
