@@ -55,7 +55,7 @@ motion:
           accel: 3.8
     bus:
       acceleration_rate: 1.2
-      normal_deceleration_rate: -1.5
+      normal_deceleration_rate: -1.0
       max_jerk_accel: 0.2
       max_jerk_decel: 0.2
       accel_profile:
