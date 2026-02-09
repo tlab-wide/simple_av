@@ -760,13 +760,19 @@ class BehaviorPathPlanner(Node):
                     nearest = i
             return nearest
 
-        p1 = Point(x=points['1']['x'], y=points['1']['y'], z=points['1']['z'])
-        p2 = Point(x=points['2']['x'], y=points['2']['y'], z=points['2']['z'])
-        intersection_points.append(nearest_index(p1))
-        intersection_points.append(nearest_index(p2))
-        if '3' in points:
-            p3 = Point(x=points['3']['x'], y=points['3']['y'], z=points['3']['z'])
-            intersection_points.append(nearest_index(p3))
+        enter_point = points.get('enter', points.get('1'))
+        mid_point = points.get('mid', points.get('2'))
+        exit_point = points.get('exit', points.get('3'))
+
+        if enter_point is not None:
+            p_enter = Point(x=enter_point['x'], y=enter_point['y'], z=enter_point['z'])
+            intersection_points.append(nearest_index(p_enter))
+        if mid_point is not None:
+            p_mid = Point(x=mid_point['x'], y=mid_point['y'], z=mid_point['z'])
+            intersection_points.append(nearest_index(p_mid))
+        if exit_point is not None:
+            p_exit = Point(x=exit_point['x'], y=exit_point['y'], z=exit_point['z'])
+            intersection_points.append(nearest_index(p_exit))
 
         return intersection_points
 
@@ -1165,9 +1171,9 @@ class BehaviorPathPlanner(Node):
 
         now = self.get_clock().now().to_msg()
         colors = [
-            (0.1, 0.9, 0.1),  # start: green
-            (0.9, 0.1, 0.1),  # exit: red
-            (0.1, 0.3, 0.9),  # end: blue
+            (0.1, 0.9, 0.1),  # enter: green
+            (0.9, 0.1, 0.1),  # mid: red
+            (0.1, 0.3, 0.9),  # exit: blue
         ]
 
         for idx, point_index in enumerate(self.intersection_points[:3]):

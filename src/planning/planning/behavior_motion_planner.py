@@ -839,8 +839,13 @@ class BehaviorMotionPlanning(Node):
             and self.intersection_points
             and self.intersection_awareness_intersection_name == '2'
         ):
-            _, exit_i, _ = self.intersection_points
-            if start_idx <= exit_i <= end_idx:
+            if len(self.intersection_points) >= 3:
+                exit_i = self.intersection_points[2]
+            elif len(self.intersection_points) >= 2:
+                exit_i = self.intersection_points[1]
+            else:
+                exit_i = None
+            if exit_i is not None and start_idx <= exit_i <= end_idx:
                 cool4_target_idx_local = exit_i - start_idx
                 cool4_target_speed = self.COOL4_MIN_SPEED
                 if self.use_RSU_for_object_detection and not self.rsu_danger_detected:
@@ -1087,13 +1092,19 @@ class BehaviorMotionPlanning(Node):
                     nearest = i
             return nearest
 
-        p1 = Point(x=points['1']['x'], y=points['1']['y'], z=points['1']['z'])
-        p2 = Point(x=points['2']['x'], y=points['2']['y'], z=points['2']['z'])
-        intersection_points.append(nearest_index(p1))
-        intersection_points.append(nearest_index(p2))
-        if '3' in points:
-            p3 = Point(x=points['3']['x'], y=points['3']['y'], z=points['3']['z'])
-            intersection_points.append(nearest_index(p3))
+        enter_point = points.get('enter', points.get('1'))
+        mid_point = points.get('mid', points.get('2'))
+        exit_point = points.get('exit', points.get('3'))
+
+        if enter_point is not None:
+            p_enter = Point(x=enter_point['x'], y=enter_point['y'], z=enter_point['z'])
+            intersection_points.append(nearest_index(p_enter))
+        if mid_point is not None:
+            p_mid = Point(x=mid_point['x'], y=mid_point['y'], z=mid_point['z'])
+            intersection_points.append(nearest_index(p_mid))
+        if exit_point is not None:
+            p_exit = Point(x=exit_point['x'], y=exit_point['y'], z=exit_point['z'])
+            intersection_points.append(nearest_index(p_exit))
 
         return intersection_points
 
