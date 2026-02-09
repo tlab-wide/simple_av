@@ -267,7 +267,11 @@ class VehicleControl(Node):
         self.update_pose_from_tf()
 
         if not self.pose or not self.path_of_waypoints:
-            self.get_logger().error("No path or pose data")
+            self.get_logger().warning("No path or pose data")
+            gear_msg = GearCommand()
+            gear_msg.stamp = self.get_clock().now().to_msg()
+            gear_msg.command = GearCommand.PARK
+            self.gear_publisher.publish(gear_msg)
             return
 
         self.update_lookahead_point()
