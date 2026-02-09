@@ -185,12 +185,6 @@ class BehaviorPathPlanner(Node):
             'simple_av/visualization/search_area_markers',
             qos_profile
         )
-        self.intersection_markers_pub = self.create_publisher(
-            MarkerArray,
-            'simple_av/visualization/intersection_point_markers',
-            qos_profile
-        )
-
         self.mission_planner_client = self.create_client(TriggerMissionPlan, '/planning/trigger_mission_plan')
         # Optional: check if service is ready
         while not self.mission_planner_client.wait_for_service(timeout_sec=1.0):
@@ -899,7 +893,7 @@ class BehaviorPathPlanner(Node):
             if self.is_cool4_speed_profile_enable:
                 self.intersection_points = self.find_intersection_start_and_exit_using_config(self.path)
                 self.get_logger().info(f"Cool4 is enabled -> Read intersection_points: {self.intersection_points}")
-                self.publish_intersection_point_markers()
+                # Cool4 point visualization is published by motion planner.
             return True
         return False
 
@@ -1157,47 +1151,6 @@ class BehaviorPathPlanner(Node):
 
         marker_array.markers.append(points_marker)
         self.search_area_markers_pub.publish(marker_array)
-
-    def publish_intersection_point_markers(self):
-        if not self.intersection_points or not self.path:
-            return
-        if len(self.intersection_points) < 2:
-            return
-
-        marker_array = MarkerArray()
-        clear_marker = Marker()
-        clear_marker.action = Marker.DELETEALL
-        marker_array.markers.append(clear_marker)
-
-        now = self.get_clock().now().to_msg()
-        colors = [
-            (0.1, 0.9, 0.1),  # enter: green
-            (0.9, 0.1, 0.1),  # mid: red
-            (0.1, 0.3, 0.9),  # exit: blue
-        ]
-
-        for idx, point_index in enumerate(self.intersection_points[:3]):
-            marker = Marker()
-            marker.header.frame_id = "map"
-            marker.header.stamp = now
-            marker.ns = "intersection_points"
-            marker.id = idx
-            marker.type = Marker.CUBE
-            marker.action = Marker.ADD
-            waypoint = self.path[point_index].waypoint
-            marker.pose.position = Point(x=waypoint.x, y=waypoint.y, z=waypoint.z)
-            marker.pose.orientation.w = 1.0
-            marker.scale.x = 1.5
-            marker.scale.y = 1.5
-            marker.scale.z = 1.5
-            r, g, b = colors[idx]
-            marker.color.r = r
-            marker.color.g = g
-            marker.color.b = b
-            marker.color.a = 0.9
-            marker_array.markers.append(marker)
-
-        self.intersection_markers_pub.publish(marker_array)
 
     def lane_following(self):
         if self.pending_reset:

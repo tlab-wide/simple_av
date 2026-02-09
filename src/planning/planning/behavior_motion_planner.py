@@ -211,6 +211,11 @@ class BehaviorMotionPlanning(Node):
             '/simple_av/motion_planning/visualization/curve_formula_speed',
             qos_profile
         )
+        self.intersection_markers_pub = self.create_publisher(
+            MarkerArray,
+            'simple_av/visualization/intersection_point_markers',
+            qos_profile
+        )
 
         self.pub = self.create_publisher(
             TrafficLightGroup,
@@ -343,6 +348,10 @@ class BehaviorMotionPlanning(Node):
         ]
         if self.is_cool4_speed_profile_enable and self.path:
             self.intersection_points = self.find_intersection_start_and_exit_using_config(self.path)
+            self.publish_intersection_point_markers()
+        else:
+            self.intersection_points = []
+            self.publish_intersection_point_markers(clear_only=True)
         if self.path:
             if self.route != self.path_as_lanes:
                 self.route = self.path_as_lanes[:]
@@ -386,6 +395,7 @@ class BehaviorMotionPlanning(Node):
         empty_traj.path_as_lanes = []
         empty_traj.path = []
         self.trajectory_pub.publish(empty_traj)
+        self.publish_intersection_point_markers(clear_only=True)
         self.publish_curve_formula_speed_markers([])
         self.publish_stop_point_marker(None, "finished")
 
@@ -982,6 +992,48 @@ class BehaviorMotionPlanning(Node):
 
         marker_array.markers.append(points_marker)
         self.trajectory_marker_pub.publish(marker_array)
+
+    def publish_intersection_point_markers(self, clear_only=False):
+        marker_array = MarkerArray()
+        clear_marker = Marker()
+        clear_marker.action = Marker.DELETEALL
+        marker_array.markers.append(clear_marker)
+
+        if clear_only or not self.intersection_points or not self.path or len(self.intersection_points) < 2:
+            self.intersection_markers_pub.publish(marker_array)
+            return
+
+        now = self.get_clock().now().to_msg()
+        colors = [
+            (0.1, 0.9, 0.1),  # enter: green
+            (0.9, 0.1, 0.1),  # mid: red
+            (0.1, 0.3, 0.9),  # exit: blue
+        ]
+
+        for idx, point_index in enumerate(self.intersection_points[:3]):
+            if point_index is None or point_index < 0 or point_index >= len(self.path):
+                continue
+            marker = Marker()
+            marker.header.frame_id = "map"
+            marker.header.stamp = now
+            marker.ns = "intersection_points"
+            marker.id = idx
+            marker.type = Marker.CUBE
+            marker.action = Marker.ADD
+            waypoint = self.path[point_index].waypoint
+            marker.pose.position = Point(x=waypoint.x, y=waypoint.y, z=waypoint.z)
+            marker.pose.orientation.w = 1.0
+            marker.scale.x = 1.5
+            marker.scale.y = 1.5
+            marker.scale.z = 1.5
+            r, g, b = colors[idx]
+            marker.color.r = r
+            marker.color.g = g
+            marker.color.b = b
+            marker.color.a = 0.9
+            marker_array.markers.append(marker)
+
+        self.intersection_markers_pub.publish(marker_array)
 
     def curve_formula_speed(self, curvature, max_lateral_accel=None):
         # TODO: Replace threshold-based curve speed with a better continuous model.
