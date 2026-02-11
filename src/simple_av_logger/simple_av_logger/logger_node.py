@@ -120,7 +120,7 @@ class Logger(Node):
         header = [
             'round_number',
             'timestamp', 
-            'system_time_unix_ns',
+            'system_time_unix_ms',
             'real_timestamp_from_sim_start',
             'speed', 
             'acceleration',
@@ -1019,12 +1019,12 @@ class Logger(Node):
             return
 
         collision_predicted = self.get_collision_prediction_info(self.intersection_id)
-        system_time_unix_ns = time.time_ns()
+        system_time_unix_ms = int(time.time() * 1000.0)
 
         row = [
             self.round_number,
             f"{self.sim_time:.1f}",
-            system_time_unix_ns,
+            system_time_unix_ms,
             f"{self.real_elapsed_from_sim_start:.3f}",
             f"{current_speed:.2f}", 
             self.acceleration,
