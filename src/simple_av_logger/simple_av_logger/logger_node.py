@@ -13,6 +13,7 @@ from std_msgs.msg import Bool, String
 from autoware_control_msgs.msg import Control, Lateral, Longitudinal
 import csv
 import json
+import time
 from typing import List, Tuple, Dict, Any
 from dataclasses import dataclass
 from scipy.spatial.transform import Rotation as R
@@ -119,6 +120,7 @@ class Logger(Node):
         header = [
             'round_number',
             'timestamp', 
+            'real_timestamp_from_sim_start',
             'speed', 
             'acceleration',
             'lane_id', 
@@ -194,6 +196,8 @@ class Logger(Node):
         self.subscriptionSimMonitor = self.create_subscription(SimMonitor, 'simple_av/sim_monitor', self.sim_monitor_callback, 100)
         self.sim_time = 0
         self.sim_clock_rate = 0
+        self.sim_start_wall_time = None
+        self.real_elapsed_from_sim_start = 0.0
 
         self.subscriptionPortal = self.create_subscription(Portal, 'simple_av/portal', self.portal_callback, 10)
         self.reset = False
@@ -801,8 +805,15 @@ class Logger(Node):
         return cw_zones
 
     def sim_monitor_callback(self, msg):
+        previous_sim_time = self.sim_time
+        if self.sim_start_wall_time is None or msg.sim_time < previous_sim_time:
+            self.sim_start_wall_time = time.monotonic()
         self.sim_time = msg.sim_time
         self.sim_clock_rate = msg.sim_clock_rate
+        if self.sim_start_wall_time is None:
+            self.real_elapsed_from_sim_start = 0.0
+        else:
+            self.real_elapsed_from_sim_start = max(0.0, time.monotonic() - self.sim_start_wall_time)
         self.simulation_snapshot()
             
     def update_lane_history(self, lane):
@@ -1011,6 +1022,7 @@ class Logger(Node):
         row = [
             self.round_number,
             f"{self.sim_time:.1f}",
+            f"{self.real_elapsed_from_sim_start:.3f}",
             f"{current_speed:.2f}", 
             self.acceleration,
             self.location.closest_lane_names.data, 
